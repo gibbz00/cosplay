@@ -13,3 +13,7 @@ version.workspace = true
 workspace = true
 
 [dependencies]
+thiserror.workspace = true
+
+[dev-dependencies]
+serial_test = { version = "3.2", default-features = false }
