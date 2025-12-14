@@ -2,4 +2,4 @@ mod message;
 pub(crate) use message::*;
 
 mod id;
-pub(crate) use id::ObjectId;
+pub(crate) use id::{ObjectId, ObjectIdBounds, ObjectIdFromRawError};

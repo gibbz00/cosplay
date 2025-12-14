@@ -2,7 +2,7 @@ use std::{marker::PhantomData, ops::RangeInclusive};
 
 use crate::*;
 
-trait ObjectIdBounds {
+pub(crate) trait ObjectIdBounds {
     const RANGE: RangeInclusive<u32>;
 }
 
@@ -14,8 +14,8 @@ impl ObjectIdBounds for Server {
     const RANGE: RangeInclusive<u32> = 0xFF000000..=0xFFFFFFFF;
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-#[impl_tools::autoimpl(Debug)]
+#[derive(Clone, Copy)]
+#[impl_tools::autoimpl(Debug, PartialEq, Eq)]
 pub struct ObjectId<E> {
     inner: u32,
     entity_marker: PhantomData<E>,
@@ -34,61 +34,47 @@ impl<E: ObjectIdBounds> ObjectId<E> {
 
         Self { inner: next, entity_marker: PhantomData }
     }
+
+    /// Parse a raw u32 into an optional `ObjectId`.
+    ///
+    /// Zero is used to represent a null or non-existent object, so `raw == 0` returns `Ok(None)`.
+    const fn from_raw(raw: u32) -> Result<Option<Self>, ObjectIdFromRawError<E>> {
+        if raw == 0 {
+            return Ok(None);
+        }
+
+        // IMPROVEMENT: use Result::map when or if const_result_trait_fn stabilizes
+        match Self::from_raw_expected(raw) {
+            Ok(id) => Ok(Some(id)),
+            Err(err) => Err(err),
+        }
+    }
+
+    /// Parse a raw u32 into an `ObjectId`.
+    ///
+    /// A raw value outside the bounds for the given entity results in an error being returned.
+    pub(crate) const fn from_raw_expected(raw: u32) -> Result<Self, ObjectIdFromRawError<E>> {
+        let start = *E::RANGE.start();
+        if raw < start {
+            return Err(ObjectIdFromRawError::RawLessThanMin(raw, PhantomData));
+        }
+
+        let end = *E::RANGE.end();
+        if raw > end {
+            return Err(ObjectIdFromRawError::RawGreaterThanMax(raw, PhantomData));
+        }
+
+        Ok(Self { inner: raw, entity_marker: PhantomData })
+    }
 }
 
-macro_rules! from_raw_impl {
-    ($err:ty, $($check:tt)*) => {
-        /// Parse a raw u32 into an ObjectId.
-        ///
-        /// Zero is used to represent a null or non-existent object, so `raw == 0` returns `Ok(None)`.
-        ///
-        /// A raw value outside the bounds for the given entity results in an error being returned.
-        pub(crate) fn from_raw(raw: u32) -> Result<Option<Self>, $err> {
-            if raw == 0 {
-                return Ok(None);
-            }
-
-            ($($check)*(raw))?;
-
-            Ok(Some(Self { inner: raw, entity_marker: PhantomData }))
-        }
-    };
-}
-
-#[derive(Debug, PartialEq, thiserror::Error)]
-#[error("provided value '{0:X}' greater than allowed maximum '{max:X}' for client IDs", max = Client::RANGE.start())]
-pub(crate) struct ObjectIdOutOfClientBounds(u32);
-
-impl ObjectId<Client> {
-    from_raw_impl!(
-        ObjectIdOutOfClientBounds,
-        |raw: u32| -> Result<(), ObjectIdOutOfClientBounds> {
-            let end = *Client::RANGE.end();
-            if raw > end {
-                return Err(ObjectIdOutOfClientBounds(raw));
-            }
-
-            Ok(())
-        }
-    );
-}
-
-#[derive(Debug, PartialEq, thiserror::Error)]
-#[error("provided value '{0:X}' less than allowed minimum '{min:X}' for server IDs", min = Server::RANGE.end())]
-pub(crate) struct ObjectIdOutOfServerBounds(u32);
-
-impl ObjectId<Server> {
-    from_raw_impl!(
-        ObjectIdOutOfServerBounds,
-        |raw: u32| -> Result<(), ObjectIdOutOfServerBounds> {
-            let start = *Server::RANGE.start();
-            if raw < start {
-                return Err(ObjectIdOutOfServerBounds(raw));
-            }
-
-            Ok(())
-        }
-    );
+#[derive(thiserror::Error)]
+#[impl_tools::autoimpl(Debug, PartialEq)]
+pub enum ObjectIdFromRawError<E: ObjectIdBounds> {
+    #[error("provided value '{0:X}' greater than allowed maximum '{max:X}'", max = E::RANGE.end())]
+    RawGreaterThanMax(u32, PhantomData<E>),
+    #[error("provided value '{0:X}' less than allowed minimum '{min:X}'", min = E::RANGE.start())]
+    RawLessThanMin(u32, PhantomData<E>),
 }
 
 #[cfg(test)]
@@ -168,14 +154,14 @@ mod tests {
     #[test]
     fn from_client_raw_greater_than_error() {
         let actual_error = ObjectId::<Client>::from_raw(0xFFFF0000).unwrap_err();
-        let expected_error = ObjectIdOutOfClientBounds(0xFFFF0000);
+        let expected_error = ObjectIdFromRawError::RawGreaterThanMax(0xFFFF0000, PhantomData);
         assert_eq!(expected_error, actual_error);
     }
 
     #[test]
     fn from_server_raw_less_than_error() {
         let actual_error = ObjectId::<Server>::from_raw(3).unwrap_err();
-        let expected_error = ObjectIdOutOfServerBounds(3);
+        let expected_error = ObjectIdFromRawError::RawLessThanMin(3, PhantomData);
         assert_eq!(expected_error, actual_error);
     }
 }

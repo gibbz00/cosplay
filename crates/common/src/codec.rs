@@ -1,7 +1,11 @@
+use std::marker::PhantomData;
+
 use crate::*;
 
 // mod decode
-pub struct MessageDecoder {}
+pub struct MessageDecoder<E> {
+    entity_marker: PhantomData<E>,
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum MessageDecoderError {
@@ -9,9 +13,9 @@ pub enum MessageDecoderError {
     Io(#[from] std::io::Error),
 }
 
-impl tokio_util::codec::Decoder for MessageDecoder {
+impl<E> tokio_util::codec::Decoder for MessageDecoder<E> {
     type Error = MessageDecoderError;
-    type Item = Message;
+    type Item = Message<E>;
 
     fn decode(&mut self, src: &mut tokio_util::bytes::BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         todo!()
@@ -19,7 +23,9 @@ impl tokio_util::codec::Decoder for MessageDecoder {
 }
 
 // mod encode
-pub struct MessageEncoder {}
+pub struct MessageEncoder<E> {
+    entity_marker: PhantomData<E>,
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum MessageEncoderError {
@@ -27,10 +33,10 @@ pub enum MessageEncoderError {
     Io(#[from] std::io::Error),
 }
 
-impl tokio_util::codec::Encoder<Message> for MessageEncoder {
+impl<E> tokio_util::codec::Encoder<Message<E>> for MessageEncoder<E> {
     type Error = MessageEncoderError;
 
-    fn encode(&mut self, message: Message, dst: &mut tokio_util::bytes::BytesMut) -> Result<(), Self::Error> {
+    fn encode(&mut self, message: Message<E>, dst: &mut tokio_util::bytes::BytesMut) -> Result<(), Self::Error> {
         todo!()
     }
 }

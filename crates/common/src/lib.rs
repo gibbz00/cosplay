@@ -1,8 +1,8 @@
 //! async-wayland commons.
 
-mod codec;
-
 pub mod socket_path;
+
+mod codec;
 
 mod entity;
 pub(crate) use entity::{Client, Server};
