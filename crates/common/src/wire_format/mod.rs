@@ -1,5 +1,5 @@
 mod message;
 pub(crate) use message::*;
 
-mod id;
-pub(crate) use id::{ObjectId, ObjectIdBounds, ObjectIdFromRawError};
+mod object_id;
+pub(crate) use object_id::{ObjectId, ObjectIdBounds, ObjectIdFromRawError};
