@@ -35,6 +35,10 @@ impl<E: ObjectIdBounds> ObjectId<E> {
         Self { inner: next, entity_marker: PhantomData }
     }
 
+    pub const fn inner(&self) -> u32 {
+        self.inner
+    }
+
     /// Parse a raw u32 into an optional `ObjectId`.
     ///
     /// Zero is used to represent a null or non-existent object, so `raw == 0` returns `Ok(None)`.

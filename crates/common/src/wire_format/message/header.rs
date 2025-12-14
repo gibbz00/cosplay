@@ -1,4 +1,4 @@
-use bytes::{Buf, BytesMut};
+use bytes::{Buf, BufMut, BytesMut};
 
 use crate::*;
 
@@ -18,7 +18,13 @@ pub enum MessageHeaderDecodeError<E: ObjectIdBounds> {
 }
 
 impl<E: ObjectIdBounds> MessageHeader<E> {
-    fn decode(src: &mut BytesMut) -> Result<Option<Self>, MessageHeaderDecodeError<E>> {
+    pub(crate) fn encode(&self, dst: &mut BytesMut) {
+        dst.put_u32_ne(self.id.inner());
+        dst.put_u16_ne(self.size);
+        dst.put_u16_ne(self.op_code);
+    }
+
+    pub(crate) fn decode(src: &mut BytesMut) -> Result<Option<Self>, MessageHeaderDecodeError<E>> {
         if src.len() < std::mem::size_of::<Self>() {
             return Ok(None);
         }
@@ -63,5 +69,17 @@ mod tests {
         let expected = MessageHeader::<Client> { id: ObjectId::from_raw_expected(1).unwrap(), size: 2, op_code: 3 };
 
         assert_eq!(expected, actual)
+    }
+
+    #[test]
+    fn bijective_encoding() {
+        let header = MessageHeader::<Client> { id: ObjectId::from_raw_expected(1).unwrap(), size: 2, op_code: 3 };
+
+        let mut bytes = BytesMut::new();
+        header.encode(&mut bytes);
+
+        let decoded_header = MessageHeader::decode(&mut bytes).unwrap().unwrap();
+
+        assert_eq!(header, decoded_header)
     }
 }
