@@ -8,8 +8,9 @@ format_code_in_doc_comments = true
 wrap_comments = true
 
 # Code widths
-max_width = 140
+max_width = 120
 struct_lit_width = 70
 
 # Miscellaneous
+hex_literal_case = "Upper"
 reorder_impl_items = true
