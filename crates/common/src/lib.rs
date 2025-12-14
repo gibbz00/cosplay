@@ -1,5 +1,7 @@
 //! async-wayland commons.
 
+mod codec;
+
 pub mod socket_path;
 
 mod entity;

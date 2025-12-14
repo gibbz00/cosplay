@@ -15,6 +15,7 @@ workspace = true
 [dependencies]
 impl-tools.workspace = true
 thiserror.workspace = true
+tokio-util = { workspace = true, features = ["codec"] }
 
 [dev-dependencies]
 serial_test = { version = "3.2", default-features = false }
