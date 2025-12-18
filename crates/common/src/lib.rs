@@ -1,6 +1,4 @@
-//! async-wayland commons.
-
-pub mod socket_path;
+//! # `async-wayland-common`
 
 mod codec;
 

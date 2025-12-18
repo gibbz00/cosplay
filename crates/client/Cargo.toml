@@ -1,5 +1,5 @@
 [package]
-name = "async-wayland-playground"
+name = "async-wayland-client"
 
 authors.workspace = true
 edition.workspace = true
@@ -9,11 +9,11 @@ readme.workspace = true
 repository.workspace = true
 version.workspace = true
 
+[dependencies]
+thiserror.workspace = true
+
+[dev-dependencies]
+serial_test = { version = "3.2", default-features = false }
+
 [lints]
 workspace = true
-
-[dependencies]
-async-wayland-client.workspace = true
-
-anyhow.workspace = true
-tokio = { workspace = true, features = ["full"] }

@@ -12,6 +12,7 @@ repository = "https://github.com/gibbz00/async-wayland"
 version = "0.1.0"
 
 [workspace.dependencies]
+async-wayland-client = { path = "./crates/client" }
 async-wayland-common = { path = "./crates/common" }
 
 anyhow = "1"
