@@ -1,0 +1,15 @@
+[package]
+name = "async-wayland-generator"
+
+authors.workspace = true
+edition.workspace = true
+exclude.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true
