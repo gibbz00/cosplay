@@ -18,5 +18,8 @@ impl-tools.workspace = true
 thiserror.workspace = true
 tokio-util = { workspace = true, features = ["codec"] }
 
+# TEMP: prototyping dependency
+sealed.workspace = true
+
 [dev-dependencies]
 serial_test = { version = "3.2", default-features = false }
