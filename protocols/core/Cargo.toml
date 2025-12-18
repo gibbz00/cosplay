@@ -1,0 +1,16 @@
+[package]
+name = "async-wayland-core-protocol"
+
+authors.workspace = true
+edition.workspace = true
+exclude.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+async-wayland-common.workspace = true
+
+[lints]
+workspace = true
