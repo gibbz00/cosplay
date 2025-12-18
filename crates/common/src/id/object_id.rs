@@ -21,6 +21,12 @@ pub struct ObjectId<E> {
     entity_marker: PhantomData<E>,
 }
 
+impl<E> ObjectId<E> {
+    pub const fn inner(&self) -> u32 {
+        self.inner
+    }
+}
+
 impl<E: ObjectIdBounds> ObjectId<E> {
     const fn first() -> Self {
         Self { inner: *E::RANGE.start(), entity_marker: PhantomData }
@@ -33,10 +39,6 @@ impl<E: ObjectIdBounds> ObjectId<E> {
         };
 
         Self { inner: next, entity_marker: PhantomData }
-    }
-
-    pub const fn inner(&self) -> u32 {
-        self.inner
     }
 
     // TODO: from AnyId?

@@ -15,6 +15,13 @@ pub trait Message {
     /// interface with the requests A and B and the event X, will have the
     /// opcodes 1, 2, and 1 respectively.
     const OP_CODE: u16;
+
+    /// Payload size to be included in the message header.
+    ///
+    /// The size returned as usize even if it is technically limited to a u16.
+    /// The idea is that this should limit the amount of (possibly unchecked)
+    /// u16 conversions.
+    fn size(&self) -> usize;
 }
 
 /// Marker trait for indicating message direction.
