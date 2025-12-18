@@ -22,6 +22,9 @@ pub trait Message {
     /// The idea is that this should limit the amount of (possibly unchecked)
     /// u16 conversions.
     fn size(&self) -> usize;
+
+    /// Encode message arguments into bytes.
+    fn encode(&self, dst: &mut bytes::BytesMut);
 }
 
 /// Marker trait for indicating message direction.

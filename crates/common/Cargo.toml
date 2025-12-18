@@ -14,8 +14,10 @@ workspace = true
 
 [dependencies]
 bytes.workspace = true
+futures-util = { workspace = true, features = ["sink"] }
 impl-tools.workspace = true
 thiserror.workspace = true
+tokio.workspace = true
 tokio-util = { workspace = true, features = ["codec"] }
 
 # TEMP: prototyping dependency
