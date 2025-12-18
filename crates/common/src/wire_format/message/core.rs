@@ -1,6 +1,6 @@
 use crate::*;
 
-pub struct Message<T> {
+pub struct MessageTemp<T> {
     pub(crate) header: MessageHeader,
     pub(crate) body: Box<dyn MessageBody<T>>,
 }

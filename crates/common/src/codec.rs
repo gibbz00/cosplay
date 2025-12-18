@@ -19,7 +19,7 @@ pub enum MessageDecoderError {
 
 impl<T> tokio_util::codec::Decoder for MessageDecoder<T> {
     type Error = MessageDecoderError;
-    type Item = Message<T>;
+    type Item = MessageTemp<T>;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         let _header = MessageHeader::decode(src)?;
@@ -38,10 +38,10 @@ pub enum MessageEncoderError {
     Io(#[from] std::io::Error),
 }
 
-impl<T> tokio_util::codec::Encoder<Message<T>> for MessageEncoder<T> {
+impl<T> tokio_util::codec::Encoder<MessageTemp<T>> for MessageEncoder<T> {
     type Error = MessageEncoderError;
 
-    fn encode(&mut self, message: Message<T>, dst: &mut BytesMut) -> Result<(), Self::Error> {
+    fn encode(&mut self, message: MessageTemp<T>, dst: &mut BytesMut) -> Result<(), Self::Error> {
         message.header.encode(dst);
         todo!()
     }

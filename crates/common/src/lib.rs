@@ -10,3 +10,6 @@ pub(crate) use wire_format::*;
 
 pub mod id;
 pub(crate) use id::*;
+
+pub mod message;
+pub(crate) use message::{Event, Message, Request};
