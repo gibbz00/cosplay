@@ -1,6 +1,6 @@
 use crate::*;
 
-pub struct Message<E> {
-    pub(crate) header: MessageHeader<E>,
-    pub(crate) body: Vec<u8>,
+pub struct Message<T> {
+    pub(crate) header: MessageHeader,
+    pub(crate) body: Box<dyn MessageBody<T>>,
 }

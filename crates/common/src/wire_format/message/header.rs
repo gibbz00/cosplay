@@ -2,34 +2,34 @@ use bytes::{Buf, BufMut, BytesMut};
 
 use crate::*;
 
-#[impl_tools::autoimpl(Debug, PartialEq)]
-pub struct MessageHeader<E> {
-    pub(crate) id: ObjectId<E>,
+#[derive(Debug, PartialEq)]
+pub struct MessageHeader {
+    pub(crate) id: AnyObjectId,
     /// header of 8 bytes included
     pub(crate) size: u16,
     // TODO: typeset?
     pub(crate) op_code: u16,
 }
 
-#[derive(thiserror::Error)]
-#[impl_tools::autoimpl(Debug)]
-pub enum MessageHeaderDecodeError<E: ObjectIdBounds> {
-    ObjectId(#[from] ObjectIdFromRawError<E>),
+#[derive(Debug, thiserror::Error)]
+pub enum MessageHeaderDecodeError {
+    #[error("zero is not a valid ID value")]
+    InvalidId,
 }
 
-impl<E: ObjectIdBounds> MessageHeader<E> {
+impl MessageHeader {
     pub(crate) fn encode(&self, dst: &mut BytesMut) {
         dst.put_u32_ne(self.id.inner());
         dst.put_u16_ne(self.size);
         dst.put_u16_ne(self.op_code);
     }
 
-    pub(crate) fn decode(src: &mut BytesMut) -> Result<Option<Self>, MessageHeaderDecodeError<E>> {
+    pub(crate) fn decode(src: &mut BytesMut) -> Result<Option<Self>, MessageHeaderDecodeError> {
         if src.len() < std::mem::size_of::<Self>() {
             return Ok(None);
         }
 
-        let id = ObjectId::<E>::from_raw_expected(src.get_u32_ne())?;
+        let id = AnyObjectId::from_raw(src.get_u32_ne()).ok_or(MessageHeaderDecodeError::InvalidId)?;
         let size = src.get_u16_ne();
         let op_code = src.get_u16_ne();
 
@@ -45,15 +45,14 @@ mod tests {
 
     #[test]
     fn size() {
-        assert_eq!(8, std::mem::size_of::<MessageHeader<Client>>());
-        assert_eq!(8, std::mem::size_of::<MessageHeader<Server>>());
+        assert_eq!(8, std::mem::size_of::<MessageHeader>());
     }
 
     #[test]
     fn decode_header_none() {
         // At least 8 bytes are required
         let mut bytes = BytesMut::from_iter([0; 7]);
-        let actual = MessageHeader::<Client>::decode(&mut bytes);
+        let actual = MessageHeader::decode(&mut bytes);
         assert!(actual.unwrap().is_none());
     }
 
@@ -66,14 +65,14 @@ mod tests {
 
         let actual = MessageHeader::decode(&mut bytes).unwrap().unwrap();
 
-        let expected = MessageHeader::<Client> { id: ObjectId::from_raw_expected(1).unwrap(), size: 2, op_code: 3 };
+        let expected = MessageHeader { id: AnyObjectId::from_raw(1).unwrap(), size: 2, op_code: 3 };
 
         assert_eq!(expected, actual)
     }
 
     #[test]
     fn bijective_encoding() {
-        let header = MessageHeader::<Client> { id: ObjectId::from_raw_expected(1).unwrap(), size: 2, op_code: 3 };
+        let header = MessageHeader { id: AnyObjectId::from_raw(1).unwrap(), size: 2, op_code: 3 };
 
         let mut bytes = BytesMut::new();
         header.encode(&mut bytes);

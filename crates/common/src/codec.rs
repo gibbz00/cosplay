@@ -5,31 +5,31 @@ use bytes::BytesMut;
 use crate::*;
 
 // mod decode
-pub struct MessageDecoder<E> {
-    entity_marker: PhantomData<E>,
+pub struct MessageDecoder<T> {
+    message_type_marker: PhantomData<T>,
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum MessageDecoderError<E: ObjectIdBounds> {
+pub enum MessageDecoderError {
     #[error("failed to decode header")]
-    Header(#[from] MessageHeaderDecodeError<E>),
+    Header(#[from] MessageHeaderDecodeError),
     #[error("encountered unknown IO error")]
     Io(#[from] std::io::Error),
 }
 
-impl<E: ObjectIdBounds> tokio_util::codec::Decoder for MessageDecoder<E> {
-    type Error = MessageDecoderError<E>;
-    type Item = Message<E>;
+impl<T> tokio_util::codec::Decoder for MessageDecoder<T> {
+    type Error = MessageDecoderError;
+    type Item = Message<T>;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        let _header = MessageHeader::<E>::decode(src)?;
+        let _header = MessageHeader::decode(src)?;
         todo!()
     }
 }
 
 // mod encode
-pub struct MessageEncoder<E> {
-    entity_marker: PhantomData<E>,
+pub struct MessageEncoder<T> {
+    message_type_marker: PhantomData<T>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -38,10 +38,10 @@ pub enum MessageEncoderError {
     Io(#[from] std::io::Error),
 }
 
-impl<E: ObjectIdBounds> tokio_util::codec::Encoder<Message<E>> for MessageEncoder<E> {
+impl<T> tokio_util::codec::Encoder<Message<T>> for MessageEncoder<T> {
     type Error = MessageEncoderError;
 
-    fn encode(&mut self, message: Message<E>, dst: &mut BytesMut) -> Result<(), Self::Error> {
+    fn encode(&mut self, message: Message<T>, dst: &mut BytesMut) -> Result<(), Self::Error> {
         message.header.encode(dst);
         todo!()
     }
