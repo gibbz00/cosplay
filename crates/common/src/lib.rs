@@ -3,7 +3,7 @@
 mod codec;
 
 pub mod entity;
-pub(crate) use entity::{Client, Server};
+pub(crate) use entity::{Client, Entity, Server};
 
 pub mod wire_format;
 pub(crate) use wire_format::*;
@@ -13,3 +13,6 @@ pub(crate) use id::*;
 
 pub mod message;
 pub(crate) use message::{Event, Message, Request};
+
+mod interface;
+pub use interface::Interface;

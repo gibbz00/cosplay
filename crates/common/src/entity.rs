@@ -1,7 +1,17 @@
 //! Wayland protocol entity markers.
 
-/// Server Entity Marker
+/// Marker trait for protocol entities.
+#[sealed::sealed]
+pub trait Entity {}
+
+/// Server [Entity] Marker
 pub struct Server;
 
-/// Client Entity Marker
+#[sealed::sealed]
+impl Entity for Server {}
+
+/// Client [Entity] Marker
 pub struct Client;
+
+#[sealed::sealed]
+impl Entity for Client {}

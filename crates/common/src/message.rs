@@ -1,5 +1,10 @@
+use crate::*;
+
 /// Base message declaration trait.
 pub trait Message {
+    /// Interface for which the message belongs to.
+    type Interface: Interface;
+
     /// Associated type for indicating whether a message is a [Request] or an [Event].
     type Type: MessageType;
 
