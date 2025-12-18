@@ -1,6 +1,6 @@
 use crate::*;
 
 pub struct Message<E> {
-    header: MessageHeader<E>,
-    body: Vec<u8>,
+    pub(crate) header: MessageHeader<E>,
+    pub(crate) body: Vec<u8>,
 }
