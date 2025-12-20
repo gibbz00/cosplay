@@ -70,4 +70,6 @@ pub trait MessageDecoder {
 pub enum MessageDecoderError {
     #[error("failed to parse object id")]
     ObjectId(#[from] ObjectIdFromRawError),
+    #[error("bytes to UTF-8 encoded string conversion failed")]
+    String(#[from] std::string::FromUtf8Error),
 }
