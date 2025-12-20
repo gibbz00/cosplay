@@ -102,25 +102,71 @@ impl ArgumentDecode for ArgumentDecoder<String> {
                 }
                 Err(_) => Ok(None),
             },
-            Some(length) => {
-                let padding = length % std::mem::size_of::<u32>();
-
-                if src.len() < length + padding {
-                    return Ok(None);
-                }
-
-                // -1 for null terminator
-                let string_bytes = src.copy_to_bytes(length - 1);
-
-                let string = String::from_utf8(string_bytes.to_vec())?;
-
-                // +1 for null terminator
-                src.advance(1 + padding);
-
-                Ok(Some(string))
-            }
+            Some(length) => decode_string_impl(length, src),
         }
     }
+}
+
+#[sealed::sealed]
+impl ArgumentEncode for Option<String> {
+    fn size(&self) -> usize {
+        self.as_ref()
+            .map(String::size)
+            // length byte only
+            .unwrap_or(std::mem::size_of::<u32>())
+    }
+
+    fn encode(&self, dst: &mut bytes::BytesMut) {
+        match self {
+            Some(str) => str.encode(dst),
+            None => dst.put_u32_ne(0),
+        }
+    }
+}
+
+#[sealed::sealed]
+impl ArgumentDecoderState for Option<String> {
+    type State = Option<usize>;
+}
+
+#[sealed::sealed]
+impl ArgumentDecode for ArgumentDecoder<Option<String>> {
+    type Item = Option<String>;
+
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Option<String>>, MessageDecoderError> {
+        match self.state {
+            None => match src.try_get_u32_ne() {
+                Ok(length) => {
+                    if length == 0 {
+                        return Ok(Some(None));
+                    }
+
+                    self.state = Some(length as usize);
+                    self.decode(src)
+                }
+                Err(_) => Ok(None),
+            },
+            Some(length) => decode_string_impl(length, src).map(Some),
+        }
+    }
+}
+
+fn decode_string_impl(length: usize, src: &mut BytesMut) -> Result<Option<String>, MessageDecoderError> {
+    let padding = length % std::mem::size_of::<u32>();
+
+    if src.len() < length + padding {
+        return Ok(None);
+    }
+
+    // -1 for null terminator
+    let string_bytes = src.copy_to_bytes(length - 1);
+
+    let string = String::from_utf8(string_bytes.to_vec())?;
+
+    // +1 for null terminator
+    src.advance(1 + padding);
+
+    Ok(Some(string))
 }
 
 #[cfg(test)]
@@ -139,6 +185,13 @@ mod tests {
     }
 
     #[test]
+    fn optional_string_encoding() {
+        let string = "🦀".to_string();
+        assert_bijective_encoding(Some(string));
+        assert_bijective_encoding(None);
+    }
+
+    #[test]
     fn string_padding() {
         let string = "a".to_string();
 
@@ -150,6 +203,16 @@ mod tests {
             b'a', b'\0', 0, 0, // string + padding
         ];
         assert_eq!(&expected, buffer.to_vec().as_slice())
+    }
+
+    #[test]
+    fn optional_string_none_bytes() {
+        let string = Option::<String>::None;
+
+        let mut buffer = BytesMut::new();
+        string.encode(&mut buffer);
+
+        assert_eq!(&[0, 0, 0, 0], buffer.to_vec().as_slice())
     }
 
     fn assert_bijective_encoding<T>(value: T)
