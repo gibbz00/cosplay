@@ -20,5 +20,6 @@ thiserror.workspace = true
 tokio.workspace = true
 tokio-util = { workspace = true, features = ["codec"] }
 
-# TEMP: prototyping dependency
+# TEMP: arguably prototyping dependencies
+paste.workspace = true
 sealed.workspace = true

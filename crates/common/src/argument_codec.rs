@@ -36,30 +36,42 @@ pub trait ArgumentDecode {
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, MessageDecoderError>;
 }
 
-#[sealed::sealed]
-impl ArgumentEncode for u32 {
-    fn size(&self) -> usize {
-        std::mem::size_of::<Self>()
-    }
+macro_rules! num_impl {
+    ($num:ty) => {
+        #[sealed::sealed]
+        impl ArgumentEncode for $num {
+            fn size(&self) -> usize {
+                std::mem::size_of::<Self>()
+            }
 
-    fn encode(&self, dst: &mut bytes::BytesMut) {
-        dst.put_u32_ne(*self);
-    }
+            fn encode(&self, dst: &mut bytes::BytesMut) {
+                paste::paste! {
+                    dst.[<put_ $num _ne>](*self)
+                }
+            }
+        }
+
+        #[sealed::sealed]
+        impl ArgumentDecoderState for $num {
+            type State = ();
+        }
+
+        #[sealed::sealed]
+        impl ArgumentDecode for ArgumentDecoder<$num> {
+            type Item = $num;
+
+            fn decode(&mut self, src: &mut BytesMut) -> Result<Option<$num>, MessageDecoderError> {
+                let item = paste::paste! {
+                    src.[<try_get_ $num _ne>]().ok()
+                };
+                Ok(item)
+            }
+        }
+    };
 }
 
-#[sealed::sealed]
-impl ArgumentDecoderState for u32 {
-    type State = ();
-}
-
-#[sealed::sealed]
-impl ArgumentDecode for ArgumentDecoder<u32> {
-    type Item = u32;
-
-    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<u32>, MessageDecoderError> {
-        Ok(src.try_get_u32_ne().ok())
-    }
-}
+num_impl!(u32);
+num_impl!(i32);
 
 #[sealed::sealed]
 impl ArgumentEncode for String {
@@ -174,8 +186,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn u32_encoding() {
+    fn num_encoding() {
         assert_bijective_encoding(123u32);
+        assert_bijective_encoding(-41i32);
     }
 
     #[test]
