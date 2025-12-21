@@ -304,6 +304,38 @@ impl<E: ObjectIdBounds> ArgumentDecode for ArgumentDecoder<Option<ObjectId<E>>> 
     }
 }
 
+#[sealed::sealed]
+impl<E, I> ArgumentEncode for NewObjectId<E, I> {
+    fn size(&self) -> usize {
+        std::mem::size_of::<u32>()
+    }
+
+    fn encode(&self, dst: &mut bytes::BytesMut) {
+        self.inner.encode(dst);
+    }
+}
+
+#[sealed::sealed]
+impl<E, I> ArgumentDecoderState for NewObjectId<E, I> {
+    type State = ();
+}
+
+#[sealed::sealed]
+impl<E: ObjectIdBounds, I> ArgumentDecode for ArgumentDecoder<NewObjectId<E, I>> {
+    type Item = NewObjectId<E, I>;
+
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, MessageDecoderError> {
+        let Some(raw) = src.try_get_u32_ne().ok() else {
+            return Ok(None);
+        };
+
+        ObjectId::from_raw_expected(raw)
+            .map(NewObjectId::new)
+            .map(Some)
+            .map_err(Into::into)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -368,6 +400,13 @@ mod tests {
         let object_id = ObjectId::<Client>::from_raw_expected(1).unwrap();
         assert_bijective_encoding(Some(object_id));
         assert_bijective_encoding(Option::<String>::None);
+    }
+
+    #[test]
+    fn new_object_id_encoding() {
+        let inner = ObjectId::<Client>::from_raw_expected(1).unwrap();
+        let new_id = NewObjectId::<Client, ()>::new(inner);
+        assert_bijective_encoding(new_id);
     }
 
     fn assert_bijective_encoding<T>(value: T)
