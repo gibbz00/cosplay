@@ -15,9 +15,17 @@ pub trait ArgumentEncode {
 ///
 /// 1. An [`ArgumentDecoderState`] needs to be implemented for `T`.
 /// 2. An [`ArgumentDecode`] needs to be implemented for `ArgumentDecoder<T>`
-#[derive(Default)]
 pub struct ArgumentDecoder<T: ArgumentDecoderState> {
     state: T::State,
+}
+
+impl<T: ArgumentDecoderState> Default for ArgumentDecoder<T>
+where
+    T::State: Default,
+{
+    fn default() -> Self {
+        Self { state: Default::default() }
+    }
 }
 
 /// Type association trait is used to remove the need for the generator
@@ -36,6 +44,15 @@ pub trait ArgumentDecode {
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, MessageDecoderError>;
 }
 
+macro_rules! stateless_decoder_impl {
+    ($type:ty) => {
+        #[sealed::sealed]
+        impl ArgumentDecoderState for $type {
+            type State = ();
+        }
+    };
+}
+
 macro_rules! num_impl {
     ($num:ty) => {
         #[sealed::sealed]
@@ -51,11 +68,7 @@ macro_rules! num_impl {
             }
         }
 
-        #[sealed::sealed]
-        impl ArgumentDecoderState for $num {
-            type State = ();
-        }
-
+        stateless_decoder_impl!($num);
         #[sealed::sealed]
         impl ArgumentDecode for ArgumentDecoder<$num> {
             type Item = $num;
@@ -181,6 +194,58 @@ fn decode_string_impl(length: usize, src: &mut BytesMut) -> Result<Option<String
     Ok(Some(string))
 }
 
+/// Signed 24.8 decimal numbers. It is a signed decimal type which offers a
+/// sign bit, 23 bits of integer precision and 8 bits of decimal precision.
+/// Conversions from i32 and f64 mimic those done by
+/// [libwayland](libwayland_impl).
+///
+/// [libwayland_impl]: https://gitlab.freedesktop.org/wayland/wayland/-/blob/99638501a1314e68c79176fa2cafa3bbe6cf55ea/src/wayland-util.h#L621-673
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Fixed(i32);
+
+impl Fixed {
+    pub const fn from_f64(f: f64) -> Self {
+        Self((f * 256.0).round() as i32)
+    }
+
+    pub const fn as_f64(&self) -> f64 {
+        self.0 as f64 / 256.0
+    }
+
+    /// # Panics
+    ///
+    /// If `i * 256` overflows.
+    pub const fn from_i32(i: i32) -> Self {
+        Self(i * 256)
+    }
+
+    pub const fn as_i32(&self) -> i32 {
+        self.0 / 256
+    }
+}
+
+#[sealed::sealed]
+impl ArgumentEncode for Fixed {
+    fn size(&self) -> usize {
+        self.0.size()
+    }
+
+    fn encode(&self, dst: &mut bytes::BytesMut) {
+        self.0.encode(dst);
+    }
+}
+
+stateless_decoder_impl!(Fixed);
+#[sealed::sealed]
+impl ArgumentDecode for ArgumentDecoder<Fixed> {
+    type Item = Fixed;
+
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Fixed>, MessageDecoderError> {
+        let inner = src.try_get_i32_ne().ok().map(Fixed);
+        Ok(inner)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -226,6 +291,12 @@ mod tests {
         string.encode(&mut buffer);
 
         assert_eq!(&[0, 0, 0, 0], buffer.to_vec().as_slice())
+    }
+
+    #[test]
+    fn fixed_encoding() {
+        let fixed = Fixed::from_i32(123);
+        assert_bijective_encoding(fixed);
     }
 
     fn assert_bijective_encoding<T>(value: T)
