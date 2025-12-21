@@ -336,6 +336,88 @@ impl<E: ObjectIdBounds, I> ArgumentDecode for ArgumentDecoder<NewObjectId<E, I>>
     }
 }
 
+#[sealed::sealed]
+impl<E> ArgumentEncode for OpaqueNewObjectId<E> {
+    fn size(&self) -> usize {
+        self.interface_name.size() + self.interface_version.size() + self.inner.size()
+    }
+
+    fn encode(&self, dst: &mut bytes::BytesMut) {
+        self.interface_name.encode(dst);
+        self.interface_version.encode(dst);
+        self.inner.encode(dst);
+    }
+}
+
+pub enum OpaqueNewIdDecoderState {
+    WantsName(Option<usize>),
+    WantsVersion(String),
+    WantsId(String, u32),
+}
+
+impl Default for OpaqueNewIdDecoderState {
+    fn default() -> Self {
+        Self::WantsName(None)
+    }
+}
+
+#[sealed::sealed]
+impl<E> ArgumentDecoderState for OpaqueNewObjectId<E> {
+    type State = OpaqueNewIdDecoderState;
+}
+
+#[sealed::sealed]
+impl<E: ObjectIdBounds> ArgumentDecode for ArgumentDecoder<OpaqueNewObjectId<E>> {
+    type Item = OpaqueNewObjectId<E>;
+
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, MessageDecoderError> {
+        // take to avoid excessive cloning, needs to be placed back before returning Ok(None)
+        let current_state = std::mem::take(&mut self.state);
+
+        match current_state {
+            OpaqueNewIdDecoderState::WantsName(maybe_string_length) => match maybe_string_length {
+                None => match src.try_get_u32_ne() {
+                    Ok(length) => {
+                        self.state = OpaqueNewIdDecoderState::WantsName(Some(length as usize));
+                        self.decode(src)
+                    }
+                    Err(_) => Ok(None),
+                },
+                Some(length) => match decode_string_impl(length, src)? {
+                    Some(string) => {
+                        self.state = OpaqueNewIdDecoderState::WantsVersion(string);
+                        self.decode(src)
+                    }
+                    None => {
+                        self.state = current_state;
+                        Ok(None)
+                    }
+                },
+            },
+            OpaqueNewIdDecoderState::WantsVersion(interface_name) => match src.try_get_u32_ne() {
+                Ok(version) => {
+                    self.state = OpaqueNewIdDecoderState::WantsId(interface_name, version);
+                    self.decode(src)
+                }
+                Err(_) => {
+                    self.state = OpaqueNewIdDecoderState::WantsVersion(interface_name);
+                    Ok(None)
+                }
+            },
+            OpaqueNewIdDecoderState::WantsId(interface_name, interface_version) => match src.try_get_u32_ne() {
+                Ok(raw_id) => {
+                    let inner = ObjectId::from_raw_expected(raw_id)?;
+                    Ok(Some(OpaqueNewObjectId { interface_name, interface_version, inner }))
+                }
+                Err(_) => {
+                    self.state = OpaqueNewIdDecoderState::WantsId(interface_name, interface_version);
+                    Ok(None)
+                }
+            },
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -406,6 +488,13 @@ mod tests {
     fn new_object_id_encoding() {
         let inner = ObjectId::<Client>::from_raw_expected(1).unwrap();
         let new_id = NewObjectId::<Client, ()>::new(inner);
+        assert_bijective_encoding(new_id);
+    }
+
+    #[test]
+    fn opaque_new_object_id_encoding() {
+        let inner = ObjectId::<Client>::from_raw_expected(1).unwrap();
+        let new_id = OpaqueNewObjectId::<Client> { interface_name: "wl_xxx".to_string(), interface_version: 1, inner };
         assert_bijective_encoding(new_id);
     }
 
