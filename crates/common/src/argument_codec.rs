@@ -73,7 +73,7 @@ macro_rules! num_impl {
         impl ArgumentDecode for ArgumentDecoder<$num> {
             type Item = $num;
 
-            fn decode(&mut self, src: &mut BytesMut) -> Result<Option<$num>, MessageDecoderError> {
+            fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, MessageDecoderError> {
                 let item = paste::paste! {
                     src.[<try_get_ $num _ne>]().ok()
                 };
@@ -118,7 +118,7 @@ impl ArgumentDecoderState for String {
 impl ArgumentDecode for ArgumentDecoder<String> {
     type Item = String;
 
-    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<String>, MessageDecoderError> {
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, MessageDecoderError> {
         match self.state {
             None => match src.try_get_u32_ne() {
                 Ok(length) => {
@@ -158,7 +158,7 @@ impl ArgumentDecoderState for Option<String> {
 impl ArgumentDecode for ArgumentDecoder<Option<String>> {
     type Item = Option<String>;
 
-    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Option<String>>, MessageDecoderError> {
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, MessageDecoderError> {
         match self.state {
             None => match src.try_get_u32_ne() {
                 Ok(length) => {
@@ -240,9 +240,38 @@ stateless_decoder_impl!(Fixed);
 impl ArgumentDecode for ArgumentDecoder<Fixed> {
     type Item = Fixed;
 
-    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Fixed>, MessageDecoderError> {
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, MessageDecoderError> {
         let inner = src.try_get_i32_ne().ok().map(Fixed);
         Ok(inner)
+    }
+}
+
+#[sealed::sealed]
+impl<E> ArgumentEncode for ObjectId<E> {
+    fn size(&self) -> usize {
+        std::mem::size_of::<u32>()
+    }
+
+    fn encode(&self, dst: &mut bytes::BytesMut) {
+        self.inner().encode(dst);
+    }
+}
+
+#[sealed::sealed]
+impl<E> ArgumentDecoderState for ObjectId<E> {
+    type State = ();
+}
+
+#[sealed::sealed]
+impl<E: ObjectIdBounds> ArgumentDecode for ArgumentDecoder<ObjectId<E>> {
+    type Item = ObjectId<E>;
+
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, MessageDecoderError> {
+        let Some(raw) = src.try_get_u32_ne().ok() else {
+            return Ok(None);
+        };
+
+        ObjectId::from_raw_expected(raw).map(Some).map_err(Into::into)
     }
 }
 
@@ -297,6 +326,12 @@ mod tests {
     fn fixed_encoding() {
         let fixed = Fixed::from_i32(123);
         assert_bijective_encoding(fixed);
+    }
+
+    #[test]
+    fn object_id_encoding() {
+        let object_id = ObjectId::<Client>::from_raw_expected(1).unwrap();
+        assert_bijective_encoding(object_id);
     }
 
     fn assert_bijective_encoding<T>(value: T)
