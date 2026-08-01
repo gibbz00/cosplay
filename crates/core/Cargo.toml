@@ -5,3 +5,7 @@ edition.workspace = true
 version.workspace = true
 
 [dependencies]
+rustix = { workspace = true, features = ["net"] }
+
+# TEMP:
+tokio = { version = "1", features = ["net"] }

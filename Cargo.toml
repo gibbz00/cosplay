@@ -10,3 +10,4 @@ version = "0.1.0"
 crane.name = "async-wayland"
 
 [workspace.dependencies]
+rustix = "1"
