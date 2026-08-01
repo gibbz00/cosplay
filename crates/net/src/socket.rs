@@ -159,6 +159,8 @@ fn rustix_to_io_err(rustix_err: rustix::io::Errno) -> std::io::Error {
 
 #[cfg(test)]
 mod tests {
+    use std::os::fd::AsRawFd;
+
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     use super::*;
@@ -217,5 +219,26 @@ mod tests {
         channel_reader.read_to_string(&mut received_string).await.unwrap();
 
         assert_eq!(mock_str, received_string);
+    }
+
+    #[tokio::test]
+    async fn preserve_fd_order() {
+        let (first, second) = mock_pair();
+
+        let sent_order = [first.socket.as_raw_fd(), second.socket.as_raw_fd()];
+
+        let (mut reader, mut writer) = mock_pair();
+
+        writer.push_outbound(first.socket.into_inner());
+        writer.push_outbound(second.socket.into_inner());
+        writer.write_u8(1).await.unwrap();
+
+        reader.read_u8().await.unwrap();
+        let received_first = reader.pop_inbound().unwrap();
+        let received_second = reader.pop_inbound().unwrap();
+
+        let received_order = [received_first.as_raw_fd(), received_second.as_raw_fd()];
+
+        assert_eq!(sent_order, received_order);
     }
 }
