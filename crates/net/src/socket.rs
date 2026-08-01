@@ -22,7 +22,7 @@ pub type WaylandUnixStream = UnixStreamImpl<{ rustix::cmsg_space!(ScmRights(FD_L
 pub struct UnixStreamImpl<const S: usize> {
     socket: AsyncFd<OwnedFd>,
     inbound_fds: VecDeque<OwnedFd>,
-    outbound_fds: VecDeque<OwnedFd>,
+    outbound_fds: Vec<OwnedFd>,
 }
 
 impl<const S: usize> UnixStreamImpl<S> {
@@ -40,6 +40,14 @@ impl<const S: usize> UnixStreamImpl<S> {
         rustix::net::connect(&fd, &addr)?;
 
         Self::new_impl(fd)
+    }
+
+    pub fn pop_inbound(&mut self) -> Option<OwnedFd> {
+        self.inbound_fds.pop_front()
+    }
+
+    pub fn push_outbound(&mut self, fd: OwnedFd) {
+        self.outbound_fds.push(fd);
     }
 
     /// Invariants: The file descriptor points to a *connected* unix domain
@@ -183,5 +191,31 @@ mod tests {
         reader.read_to_string(&mut receive_buffer).await.unwrap();
 
         assert_eq!(mock_str, receive_buffer)
+    }
+
+    #[tokio::test]
+    async fn send_receive_fd() {
+        let mock_str = "channel hello";
+
+        let (mut reader, mut writer) = mock_pair();
+
+        tokio::task::spawn(async move {
+            reader.read_u8().await.unwrap();
+            let received_fd = reader.pop_inbound().unwrap();
+
+            let mut received_writer = WaylandUnixStream::new_impl(received_fd).unwrap();
+            received_writer.write_all(mock_str.as_bytes()).await.unwrap();
+            received_writer.shutdown().await.unwrap();
+        });
+
+        let (mut channel_reader, channel_writer) = mock_pair();
+
+        writer.push_outbound(channel_writer.socket.into_inner());
+        writer.write_u8(1).await.unwrap();
+
+        let mut received_string = String::new();
+        channel_reader.read_to_string(&mut received_string).await.unwrap();
+
+        assert_eq!(mock_str, received_string);
     }
 }
