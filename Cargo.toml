@@ -11,3 +11,4 @@ crane.name = "async-wayland"
 
 [workspace.dependencies]
 rustix = "1"
+tokio = "1"

@@ -26,7 +26,7 @@ pub struct UnixStreamImpl<const S: usize> {
 }
 
 impl<const S: usize> UnixStreamImpl<S> {
-    // TODO: document: panic if called outside the tokio runtime
+    // FIXME: document: panic if called outside the tokio runtime
     pub fn new(path: &Path) -> std::io::Result<Self> {
         let addr = rustix::net::SocketAddrUnix::new(path)?;
 

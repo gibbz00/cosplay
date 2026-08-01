@@ -5,6 +5,10 @@ version = 4
 [[package]]
 name = "async-wayland-core"
 version = "0.1.0"
+
+[[package]]
+name = "async-wayland-net"
+version = "0.1.0"
 dependencies = [
  "rustix",
  "tokio",

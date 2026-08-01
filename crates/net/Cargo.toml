@@ -1,0 +1,9 @@
+[package]
+name = "async-wayland-net"
+
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+rustix = { workspace = true, features = ["net"] }
+tokio = { workspace = true, features = ["net"] }
