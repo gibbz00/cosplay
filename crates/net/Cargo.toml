@@ -6,7 +6,9 @@ version.workspace = true
 
 [dependencies]
 rustix = { workspace = true, features = ["net"] }
+thiserror.workspace = true
 tokio = { workspace = true, features = ["net"] }
 
 [dev-dependencies]
+serial_test.workspace = true
 tokio = { workspace = true, features = ["io-util", "macros", "rt-multi-thread"] }

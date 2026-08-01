@@ -2,3 +2,6 @@
 
 mod socket;
 pub use socket::WaylandUnixStream;
+
+mod path;
+pub use path::{SocketPath, SocketPathError};
