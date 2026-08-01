@@ -39,9 +39,17 @@ impl<const S: usize> UnixStreamImpl<S> {
 
         rustix::net::connect(&fd, &addr)?;
 
-        let socket = AsyncFd::new(fd)?;
+        Self::new_impl(fd)
+    }
 
-        Ok(Self { socket, inbound_fds: VecDeque::new(), outbound_fds: VecDeque::new() })
+    /// Invariants: The file descriptor points to a *connected* unix domain
+    /// socket stream in non-blocking mode and close on exec.
+    fn new_impl(fd: OwnedFd) -> std::io::Result<Self> {
+        AsyncFd::new(fd).map(|socket| Self {
+            socket,
+            inbound_fds: Default::default(),
+            outbound_fds: Default::default(),
+        })
     }
 }
 
@@ -139,4 +147,41 @@ impl<const S: usize> tokio::io::AsyncWrite for UnixStreamImpl<S> {
 
 fn rustix_to_io_err(rustix_err: rustix::io::Errno) -> std::io::Error {
     std::io::Error::from_raw_os_error(rustix_err.raw_os_error())
+}
+
+#[cfg(test)]
+mod tests {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    use super::*;
+
+    fn mock_pair() -> (WaylandUnixStream, WaylandUnixStream) {
+        let (left, right) = rustix::net::socketpair(
+            rustix::net::AddressFamily::UNIX,
+            rustix::net::SocketType::STREAM,
+            rustix::net::SocketFlags::NONBLOCK | rustix::net::SocketFlags::CLOEXEC,
+            None,
+        )
+        .unwrap();
+
+        (
+            WaylandUnixStream::new_impl(left).unwrap(),
+            WaylandUnixStream::new_impl(right).unwrap(),
+        )
+    }
+
+    #[tokio::test]
+    async fn send_receive_bytes() {
+        let mock_str = "hello";
+
+        let (mut writer, mut reader) = mock_pair();
+
+        writer.write_all(mock_str.as_bytes()).await.unwrap();
+        writer.shutdown().await.unwrap();
+
+        let mut receive_buffer = String::new();
+        reader.read_to_string(&mut receive_buffer).await.unwrap();
+
+        assert_eq!(mock_str, receive_buffer)
+    }
 }
