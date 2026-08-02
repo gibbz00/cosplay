@@ -29,7 +29,7 @@ impl<R: AsyncRead + async_wayland_ancillary::AncillaryRead + Unpin> futures_core
         let next = std::task::ready!(std::pin::pin!(&mut self.inner).poll_next(cx));
 
         let mapped_next = next.map(|result| {
-            // No need to drain on error. (Shouldn't be any fds to drain if recv errored.)
+            // No need to drain on error. (Shouldn't be any fds from recv if so.)
             result.map(|OpaqueMessageFrame { object_id, op_code, body: data }| OpaqueMessage {
                 object_id,
                 op_code,

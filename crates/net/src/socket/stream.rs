@@ -1,14 +1,16 @@
 use std::{
     collections::VecDeque,
-    io::{IoSlice, IoSliceMut},
-    mem::MaybeUninit,
-    os::fd::{AsFd, OwnedFd},
+    io::IoSlice,
+    os::fd::OwnedFd,
     path::Path,
     pin::Pin,
+    sync::Arc,
     task::{Context, Poll},
 };
 
 use tokio::io::unix::AsyncFd;
+
+use crate::*;
 
 /// From the Wayland reference implementation (`MAX_FDS_OUT`).
 const FD_LIMIT: usize = 28;
@@ -17,15 +19,15 @@ const FD_LIMIT: usize = 28;
 /// messages.
 ///
 /// Implements [`AsyncRead`] and [`AsyncWrite`], with vectored write support.
-pub type WaylandUnixStream = UnixStreamImpl<{ rustix::cmsg_space!(ScmRights(FD_LIMIT)) }>;
+pub type WaylandUnixStream = UnixStream<{ rustix::cmsg_space!(ScmRights(FD_LIMIT)) }>;
 
-pub struct UnixStreamImpl<const S: usize> {
-    socket: AsyncFd<OwnedFd>,
+pub struct UnixStream<const S: usize> {
+    socket: UnixStreamSocket,
     inbound_fds: VecDeque<OwnedFd>,
     outbound_fds: Vec<OwnedFd>,
 }
 
-impl<const S: usize> UnixStreamImpl<S> {
+impl<const S: usize> UnixStream<S> {
     // FIXME: document: panic if called outside the tokio runtime
     pub fn new(path: &Path) -> std::io::Result<Self> {
         let addr = rustix::net::SocketAddrUnix::new(path)?;
@@ -50,111 +52,57 @@ impl<const S: usize> UnixStreamImpl<S> {
         self.outbound_fds.push(fd);
     }
 
+    pub fn into_split(self) -> (UnixStreamReadHalf<S>, UnixStreamWriteHalf<S>) {
+        let Self { socket, inbound_fds, outbound_fds } = self;
+
+        let shared_socket = Arc::new(socket);
+
+        let read = UnixStreamReadHalf { socket: shared_socket.clone(), inbound_fds };
+
+        let write = UnixStreamWriteHalf { shutdown_on_drop: true, socket: shared_socket, outbound_fds };
+
+        (read, write)
+    }
+
     /// Invariants: The file descriptor points to a *connected* unix domain
     /// socket stream in non-blocking mode and close on exec.
     fn new_impl(fd: OwnedFd) -> std::io::Result<Self> {
-        AsyncFd::new(fd).map(|socket| Self {
-            socket,
+        AsyncFd::new(fd).map(|inner| Self {
+            socket: UnixStreamSocket { inner },
             inbound_fds: Default::default(),
             outbound_fds: Default::default(),
         })
     }
 }
 
-impl<const S: usize> tokio::io::AsyncRead for UnixStreamImpl<S> {
-    fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut tokio::io::ReadBuf<'_>) -> Poll<std::io::Result<()>> {
-        let mut cmsg_space = [MaybeUninit::uninit(); S];
-        let mut ancillary = rustix::net::RecvAncillaryBuffer::new(&mut cmsg_space);
-
-        loop {
-            let mut guard = std::task::ready!(self.socket.poll_read_ready(cx))?;
-
-            let unfilled = buf.initialize_unfilled();
-
-            let recv_result = guard.try_io(|inner| {
-                rustix::net::recvmsg(
-                    inner,
-                    &mut [IoSliceMut::new(unfilled)],
-                    &mut ancillary,
-                    rustix::net::RecvFlags::CMSG_CLOEXEC,
-                )
-                .map_err(rustix_to_io_err)
-            });
-
-            match recv_result {
-                Err(_would_block) => continue,
-                Ok(result) => {
-                    let result = result.map(|msg| {
-                        buf.advance(msg.bytes);
-
-                        for message in ancillary.drain() {
-                            if let rustix::net::RecvAncillaryMessage::ScmRights(fds) = message {
-                                for fd in fds {
-                                    self.inbound_fds.push_back(fd);
-                                }
-                            }
-                        }
-                    });
-
-                    return Poll::Ready(result);
-                }
-            }
-        }
+impl<const S: usize> tokio::io::AsyncRead for UnixStream<S> {
+    fn poll_read(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut tokio::io::ReadBuf<'_>) -> Poll<std::io::Result<()>> {
+        let this = self.get_mut();
+        this.socket.poll_read::<S>(cx, buf, &mut this.inbound_fds)
     }
 }
 
-impl<const S: usize> tokio::io::AsyncWrite for UnixStreamImpl<S> {
+impl<const S: usize> tokio::io::AsyncWrite for UnixStream<S> {
     fn poll_write(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<std::io::Result<usize>> {
         self.poll_write_vectored(cx, &[IoSlice::new(buf)])
     }
 
-    fn poll_write_vectored(mut self: Pin<&mut Self>, cx: &mut Context<'_>, bufs: &[IoSlice<'_>]) -> Poll<std::io::Result<usize>> {
-        let outbound_fds = self.outbound_fds.iter().map(OwnedFd::as_fd).collect::<Vec<_>>();
-
-        loop {
-            let mut guard = std::task::ready!(self.socket.poll_write_ready(cx))?;
-
-            let mut cmsg_space = [MaybeUninit::uninit(); S];
-            let mut ancillary = rustix::net::SendAncillaryBuffer::new(&mut cmsg_space);
-
-            if !outbound_fds.is_empty() {
-                ancillary.push(rustix::net::SendAncillaryMessage::ScmRights(&outbound_fds));
-            }
-
-            let send_result = guard.try_io(|inner| {
-                rustix::net::sendmsg(inner, bufs, &mut ancillary, rustix::net::SendFlags::NOSIGNAL).map_err(rustix_to_io_err)
-            });
-
-            match send_result {
-                Err(_would_block) => continue,
-                Ok(result) => {
-                    if result.is_ok() {
-                        self.outbound_fds.clear();
-                    }
-
-                    return Poll::Ready(result);
-                }
-            }
-        }
+    fn poll_write_vectored(self: Pin<&mut Self>, cx: &mut Context<'_>, bufs: &[IoSlice<'_>]) -> Poll<std::io::Result<usize>> {
+        let this = self.get_mut();
+        this.socket.poll_write_vectored::<S>(cx, bufs, &mut this.outbound_fds)
     }
 
     fn is_write_vectored(&self) -> bool {
         true
     }
 
-    fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
-        Poll::Ready(Ok(()))
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        self.socket.poll_flush(cx)
     }
 
     fn poll_shutdown(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
-        rustix::net::shutdown(self.get_mut().socket.as_fd(), rustix::net::Shutdown::Write)?;
-
-        Poll::Ready(Ok(()))
+        self.socket.shutdown_write().into()
     }
-}
-
-fn rustix_to_io_err(rustix_err: rustix::io::Errno) -> std::io::Error {
-    std::io::Error::from_raw_os_error(rustix_err.raw_os_error())
 }
 
 #[cfg(test)]
@@ -212,7 +160,7 @@ mod tests {
 
         let (mut channel_reader, channel_writer) = mock_pair();
 
-        writer.push_outbound(channel_writer.socket.into_inner());
+        writer.push_outbound(channel_writer.socket.inner.into_inner());
         writer.write_u8(1).await.unwrap();
 
         let mut received_string = String::new();
@@ -225,12 +173,12 @@ mod tests {
     async fn preserve_fd_order() {
         let (first, second) = mock_pair();
 
-        let sent_order = [first.socket.as_raw_fd(), second.socket.as_raw_fd()];
+        let sent_order = [first.socket.inner.as_raw_fd(), second.socket.inner.as_raw_fd()];
 
         let (mut reader, mut writer) = mock_pair();
 
-        writer.push_outbound(first.socket.into_inner());
-        writer.push_outbound(second.socket.into_inner());
+        writer.push_outbound(first.socket.inner.into_inner());
+        writer.push_outbound(second.socket.inner.into_inner());
         writer.write_u8(1).await.unwrap();
 
         reader.read_u8().await.unwrap();
