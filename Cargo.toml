@@ -10,9 +10,14 @@ version = "0.1.0"
 crane.name = "async-wayland"
 
 [workspace.dependencies]
+async-wayland-ancillary = { path = "./crates/ancillary" }
+
+bytes = "1"
+futures-core = "0.3"
 rustix = "1"
 thiserror = "2"
 tokio = "1"
+tokio-util = "0.7"
 
 # Testing
 serial_test = { version = "4", default-features = false }
