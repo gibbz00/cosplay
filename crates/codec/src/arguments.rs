@@ -77,7 +77,7 @@ impl MarshalArgument for Fixed {
 #[sealed::sealed]
 impl ParseArgument for Fixed {
     fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
-        let inner = <u32 as ParseArgument>::parse(body)?.to_be_bytes();
+        let inner = u32::parse(body)?.to_be_bytes();
 
         let fixed = Fixed {
             integer: i24::I24::from_be_bytes([inner[0], inner[1], inner[2]]),
@@ -94,8 +94,8 @@ impl MarshalArgument for String {
         // +1 for null terminator
         let length = self.len() + 1;
 
-        // FIXME: handle potential usize to u32 overflow, ~4.2 GB string is not
-        // entirely unfeasable to create.
+        // FIXME: Handle potential usize to u32 overflow, ~4.2 GB
+        // string is not entirely unfeasable to create.
         body.bytes.put_u32_ne(length as u32);
 
         body.bytes.put_slice(self.as_bytes());
@@ -109,7 +109,7 @@ impl MarshalArgument for String {
 #[sealed::sealed]
 impl ParseArgument for String {
     fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
-        <Option<String> as ParseArgument>::parse(body)?.ok_or(ArgumentDecodeError::MissingString)
+        Option::<String>::parse(body)?.ok_or(ArgumentDecodeError::MissingString)
     }
 }
 
@@ -126,14 +126,16 @@ impl MarshalArgument for Option<String> {
 #[sealed::sealed]
 impl ParseArgument for Option<String> {
     fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
-        let length = <u32 as ParseArgument>::parse(body)? as usize;
+        let length = u32::parse(body)? as usize;
 
         match length == 0 {
             true => Ok(None),
             false => {
-                // FIXME: assert length before proceeding
-
                 let padding = length % std::mem::size_of::<u32>();
+
+                if body.bytes.len() < length + padding {
+                    return Err(ArgumentDecodeError::NotEnoughBytesLeft);
+                }
 
                 // -1 for null terminator
                 let string_bytes = body.bytes.split_to(length - 1);
@@ -159,7 +161,7 @@ impl<E> MarshalArgument for ObjectId<E> {
 #[sealed::sealed]
 impl<E: ObjectIdBounds> ParseArgument for ObjectId<E> {
     fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
-        <Option<ObjectId<E>> as ParseArgument>::parse(body)?.ok_or(ArgumentDecodeError::MissingObjectId)
+        Option::<ObjectId<E>>::parse(body)?.ok_or(ArgumentDecodeError::MissingObjectId)
     }
 }
 
@@ -188,7 +190,7 @@ impl<E, I> MarshalArgument for NewObjectId<E, I> {
 #[sealed::sealed]
 impl<E: ObjectIdBounds, I> ParseArgument for NewObjectId<E, I> {
     fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
-        <ObjectId<E> as ParseArgument>::parse(body).map(NewObjectId::new)
+        ObjectId::<E>::parse(body).map(NewObjectId::new)
     }
 }
 
@@ -206,9 +208,9 @@ impl<E> MarshalArgument for OpaqueNewObjectId<E> {
 #[sealed::sealed]
 impl<E: ObjectIdBounds> ParseArgument for OpaqueNewObjectId<E> {
     fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
-        let interface_name = <String as ParseArgument>::parse(body)?;
-        let interface_version = <u32 as ParseArgument>::parse(body)?;
-        let inner = <ObjectId<E> as ParseArgument>::parse(body)?;
+        let interface_name = String::parse(body)?;
+        let interface_version = u32::parse(body)?;
+        let inner = ObjectId::<E>::parse(body)?;
 
         Ok(Self { interface_name, interface_version, inner })
     }
@@ -232,7 +234,10 @@ impl ParseArgument for OwnedFd {
 
 #[cfg(test)]
 mod tests {
-    use std::os::fd::{AsRawFd, FromRawFd, IntoRawFd};
+    use std::{
+        assert_matches,
+        os::fd::{AsRawFd, FromRawFd, IntoRawFd},
+    };
 
     use super::*;
 
@@ -278,6 +283,20 @@ mod tests {
         ];
 
         assert_eq!(&expected, &body.bytes[..])
+    }
+
+    #[test]
+    fn string_len_overflow_err() {
+        let mut bytes = BytesMut::from_iter([
+            5, 0, 0, 0, // length
+            b'a', 0, 0, 0,
+        ]);
+        let mut fd_buffer = VecDeque::new();
+        let mut body = ArgumentBody { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
+
+        let err = String::parse(&mut body).unwrap_err();
+
+        assert_matches!(err, ArgumentDecodeError::NotEnoughBytesLeft);
     }
 
     #[test]
