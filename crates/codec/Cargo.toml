@@ -9,6 +9,7 @@ async-wayland-ancillary.workspace = true
 
 bytes.workspace = true
 futures-core.workspace = true
+impl-tools.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tokio-util = { workspace = true, features = ["codec"] }
