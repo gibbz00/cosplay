@@ -229,3 +229,139 @@ impl ParseArgument for OwnedFd {
         body.fd_buffer.pop_front().ok_or(ArgumentDecodeError::MissingFd)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::os::fd::{AsRawFd, FromRawFd, IntoRawFd};
+
+    use super::*;
+
+    #[test]
+    fn u32_encoding() {
+        assert_bijective_encoding(123u32);
+    }
+
+    #[test]
+    fn i32_encoding() {
+        assert_bijective_encoding(41i32);
+        assert_bijective_encoding(-41i32);
+    }
+
+    #[test]
+    fn fixed_encoding() {
+        let fixed = Fixed { integer: i24::i24!(123), decimal: 4 };
+        assert_bijective_encoding(fixed);
+    }
+
+    #[test]
+    fn string_encoding() {
+        assert_bijective_encoding("Löwe 老虎 Léopard".to_string());
+    }
+
+    #[test]
+    fn optional_string_encoding() {
+        assert_bijective_encoding(Some("🦀".to_string()));
+        assert_bijective_encoding(Option::<String>::None);
+    }
+
+    #[test]
+    fn string_padding() {
+        let mut bytes = BytesMut::new();
+        let mut fd_buffer = VecDeque::new();
+        let mut body = ArgumentBody { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
+
+        "a".to_string().marshal(&mut body);
+
+        let expected = [
+            2, 0, 0, 0, // length
+            b'a', b'\0', 0, 0, // string + padding
+        ];
+
+        assert_eq!(&expected, &body.bytes[..])
+    }
+
+    #[test]
+    fn optional_string_none_bytes() {
+        let mut bytes = BytesMut::new();
+        let mut fd_buffer = VecDeque::new();
+        let mut body = ArgumentBody { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
+
+        Option::<String>::None.marshal(&mut body);
+
+        assert_eq!(&[0, 0, 0, 0], &body.bytes[..])
+    }
+
+    #[test]
+    fn object_id_encoding() {
+        assert_bijective_encoding(mock_id());
+    }
+
+    #[test]
+    fn optional_object_id_encoding() {
+        assert_bijective_encoding(Some(mock_id()));
+        assert_bijective_encoding(Option::<String>::None);
+    }
+
+    #[test]
+    fn new_object_id_encoding() {
+        let new_id = NewObjectId::<Client, ()>::new(mock_id());
+        assert_bijective_encoding(new_id);
+    }
+
+    #[test]
+    fn opaque_new_object_id_encoding() {
+        let new_id = OpaqueNewObjectId::<Client> {
+            interface_name: "wl_xxx".to_string(),
+            interface_version: 1,
+            inner: mock_id(),
+        };
+        assert_bijective_encoding(new_id);
+    }
+
+    #[test]
+    fn fd_fifo_encoding() {
+        let mut bytes = BytesMut::new();
+        let mut fd_buffer = VecDeque::new();
+        let mut body = ArgumentBody { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
+
+        // SAFETY: fds not used for any syscalls
+        let (fd_0, fd_1) = unsafe { (OwnedFd::from_raw_fd(1), OwnedFd::from_raw_fd(2)) };
+
+        let raw_0 = fd_0.as_raw_fd();
+        let raw_1 = fd_1.as_raw_fd();
+
+        fd_0.marshal(&mut body);
+        fd_1.marshal(&mut body);
+
+        let returned_fd_0 = <OwnedFd as ParseArgument>::parse(&mut body).unwrap();
+        let returned_fd_1 = <OwnedFd as ParseArgument>::parse(&mut body).unwrap();
+
+        assert_eq!([raw_0, raw_1], [returned_fd_0.as_raw_fd(), returned_fd_1.as_raw_fd()]);
+
+        // To avoid close on drop.
+        let _ = returned_fd_0.into_raw_fd();
+        let _ = returned_fd_1.into_raw_fd();
+    }
+
+    fn mock_id() -> ObjectId<Client> {
+        ObjectId::<Client>::from_raw(1).unwrap().unwrap()
+    }
+
+    fn assert_bijective_encoding<T>(value: T)
+    where
+        T: MarshalArgument + ParseArgument + std::fmt::Debug + PartialEq + Clone,
+    {
+        let mut bytes = BytesMut::new();
+        let mut fd_buffer = VecDeque::new();
+
+        let mut body = ArgumentBody { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
+
+        value.clone().marshal(&mut body);
+
+        let output_value = ParseArgument::parse(&mut body).unwrap();
+
+        assert_eq!(value, output_value);
+
+        assert!(body.bytes.is_empty(), "remaining bytes found in buffer")
+    }
+}
