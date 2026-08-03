@@ -4,7 +4,7 @@ use crate::*;
 
 #[impl_tools::autoimpl(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct ObjectId<E> {
-    pub(super) inner: u32,
+    pub(crate) inner: u32,
     pub(super) entity_marker: PhantomData<E>,
 }
 

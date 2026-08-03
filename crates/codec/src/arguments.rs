@@ -1,12 +1,22 @@
 use std::{collections::VecDeque, os::fd::OwnedFd};
 
-use bytes::{Buf, BytesMut};
+use bytes::{Buf, BufMut, BytesMut};
 
 use crate::*;
 
 pub struct ArgumentBody<'a> {
     bytes: &'a mut BytesMut,
     fd_buffer: &'a mut VecDeque<OwnedFd>,
+}
+
+#[sealed::sealed]
+pub trait MarshalArgument: Sized {
+    fn marshal(self, body: &mut ArgumentBody<'_>);
+}
+
+#[sealed::sealed]
+pub trait ParseArgument: Sized {
+    fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError>;
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -26,8 +36,10 @@ pub enum ArgumentDecodeError {
 }
 
 #[sealed::sealed]
-pub trait ParseArgument: Sized {
-    fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError>;
+impl MarshalArgument for u32 {
+    fn marshal(self, body: &mut ArgumentBody<'_>) {
+        body.bytes.put_u32_ne(self);
+    }
 }
 
 #[sealed::sealed]
@@ -38,9 +50,27 @@ impl ParseArgument for u32 {
 }
 
 #[sealed::sealed]
+impl MarshalArgument for i32 {
+    fn marshal(self, body: &mut ArgumentBody<'_>) {
+        body.bytes.put_i32_ne(self);
+    }
+}
+
+#[sealed::sealed]
 impl ParseArgument for i32 {
     fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
         body.bytes.try_get_i32_ne().map_err(|_| ArgumentDecodeError::NotEnoughBytesLeft)
+    }
+}
+
+#[sealed::sealed]
+impl MarshalArgument for Fixed {
+    fn marshal(self, body: &mut ArgumentBody<'_>) {
+        let Fixed { integer, decimal } = self;
+
+        let integer_bytes = integer.to_be_bytes();
+
+        u32::from_be_bytes([integer_bytes[0], integer_bytes[1], integer_bytes[2], decimal]).marshal(body);
     }
 }
 
@@ -59,9 +89,37 @@ impl ParseArgument for Fixed {
 }
 
 #[sealed::sealed]
+impl MarshalArgument for String {
+    fn marshal(self, body: &mut ArgumentBody<'_>) {
+        // +1 for null terminator
+        let length = self.len() + 1;
+
+        // FIXME: handle potential usize to u32 overflow, ~4.2 GB string is not
+        // entirely unfeasable to create.
+        body.bytes.put_u32_ne(length as u32);
+
+        body.bytes.put_slice(self.as_bytes());
+        body.bytes.put_u8(b'\0');
+
+        let padding = length % std::mem::size_of::<u32>();
+        body.bytes.put_bytes(0, padding);
+    }
+}
+
+#[sealed::sealed]
 impl ParseArgument for String {
     fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
         <Option<String> as ParseArgument>::parse(body)?.ok_or(ArgumentDecodeError::MissingString)
+    }
+}
+
+#[sealed::sealed]
+impl MarshalArgument for Option<String> {
+    fn marshal(self, body: &mut ArgumentBody<'_>) {
+        match self {
+            Some(str) => str.marshal(body),
+            None => 0u32.marshal(body),
+        }
     }
 }
 
@@ -92,10 +150,9 @@ impl ParseArgument for Option<String> {
 }
 
 #[sealed::sealed]
-impl<E: ObjectIdBounds> ParseArgument for Option<ObjectId<E>> {
-    fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
-        let raw = ParseArgument::parse(body)?;
-        ObjectId::from_raw(raw).map_err(Into::into)
+impl<E> MarshalArgument for ObjectId<E> {
+    fn marshal(self, body: &mut ArgumentBody<'_>) {
+        self.inner.marshal(body);
     }
 }
 
@@ -107,9 +164,42 @@ impl<E: ObjectIdBounds> ParseArgument for ObjectId<E> {
 }
 
 #[sealed::sealed]
+impl<E> MarshalArgument for Option<ObjectId<E>> {
+    fn marshal(self, body: &mut ArgumentBody<'_>) {
+        self.map(|id| id.inner).unwrap_or(0).marshal(body);
+    }
+}
+
+#[sealed::sealed]
+impl<E: ObjectIdBounds> ParseArgument for Option<ObjectId<E>> {
+    fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
+        let raw = ParseArgument::parse(body)?;
+        ObjectId::from_raw(raw).map_err(Into::into)
+    }
+}
+
+#[sealed::sealed]
+impl<E, I> MarshalArgument for NewObjectId<E, I> {
+    fn marshal(self, body: &mut ArgumentBody<'_>) {
+        self.inner.marshal(body);
+    }
+}
+
+#[sealed::sealed]
 impl<E: ObjectIdBounds, I> ParseArgument for NewObjectId<E, I> {
     fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
         <ObjectId<E> as ParseArgument>::parse(body).map(NewObjectId::new)
+    }
+}
+
+#[sealed::sealed]
+impl<E> MarshalArgument for OpaqueNewObjectId<E> {
+    fn marshal(self, body: &mut ArgumentBody<'_>) {
+        let OpaqueNewObjectId { interface_name, interface_version, inner } = self;
+
+        interface_name.marshal(body);
+        interface_version.marshal(body);
+        inner.marshal(body);
     }
 }
 
@@ -125,9 +215,17 @@ impl<E: ObjectIdBounds> ParseArgument for OpaqueNewObjectId<E> {
 }
 
 #[sealed::sealed]
+impl MarshalArgument for OwnedFd {
+    fn marshal(self, body: &mut ArgumentBody<'_>) {
+        // `push_back` as per `AncillaryBuffer::file_descriptors` instructions.
+        body.fd_buffer.push_back(self);
+    }
+}
+
+#[sealed::sealed]
 impl ParseArgument for OwnedFd {
     fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
-        // `pop_front` as per `AncillaryRead::buffer` instructions.
+        // `pop_front` as per `AncillaryBuffer::file_descriptors` instructions.
         body.fd_buffer.pop_front().ok_or(ArgumentDecodeError::MissingFd)
     }
 }

@@ -7,7 +7,7 @@ use crate::*;
 /// Wraps an [`ObjectId<E>`] and an interface marker `I`.
 #[impl_tools::autoimpl(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct NewObjectId<E, I> {
-    inner: ObjectId<E>,
+    pub(crate) inner: ObjectId<E>,
     interface_marker: PhantomData<I>,
 }
 
