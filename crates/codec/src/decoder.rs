@@ -1,8 +1,31 @@
-use bytes::Buf;
+use bytes::{Buf, BufMut, BytesMut};
 
 use crate::*;
 
 const HEADER_LENGTH: usize = 8;
+
+#[derive(Default)]
+pub struct OpaqueMessageEncoder {
+    __priv: (),
+}
+
+impl tokio_util::codec::Encoder<&OpaqueMessage> for OpaqueMessageEncoder {
+    type Error = std::io::Error;
+
+    fn encode(&mut self, message: &OpaqueMessage, dst: &mut BytesMut) -> Result<(), Self::Error> {
+        let OpaqueMessage { object_id, op_code, body } = message;
+
+        dst.put_u32_ne(*object_id);
+
+        let total_length = body.len() + HEADER_LENGTH;
+
+        dst.put_u32_ne(((total_length as u32) << 16) + *op_code as u32);
+
+        dst.extend_from_slice(body);
+
+        Ok(())
+    }
+}
 
 #[derive(Default)]
 pub struct OpaqueMessageDecoder {
@@ -32,7 +55,7 @@ impl tokio_util::codec::Decoder for OpaqueMessageDecoder {
     type Error = OpaqueMessageDecodeError;
     type Item = OpaqueMessage;
 
-    fn decode(&mut self, src: &mut bytes::BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         let stage = std::mem::take(&mut self.stage);
 
         match stage {
@@ -75,33 +98,21 @@ impl tokio_util::codec::Decoder for OpaqueMessageDecoder {
 mod tests {
     use std::assert_matches;
 
-    use bytes::{BufMut, BytesMut};
-    use tokio_util::codec::Decoder;
+    use tokio_util::codec::{Decoder, Encoder};
 
     use super::*;
 
-    /// Populates dst and returns the expected result from decoding dst.
-    fn mock(dst: &mut BytesMut, object_id: u32, op_code: u16, body: &[u8]) -> OpaqueMessage {
-        dst.put_u32_ne(object_id);
-
-        let total_length = body.len() + HEADER_LENGTH;
-
-        dst.put_u32_ne(((total_length as u32) << 16) + op_code as u32);
-
-        dst.extend_from_slice(body);
-
-        OpaqueMessage { object_id, op_code, body: BytesMut::from_iter(body) }
-    }
-
     #[test]
-    fn decode_single_frame() {
+    fn encode_decode_single_frame() {
         let mut buffer = BytesMut::new();
 
-        let expected = mock(&mut buffer, 123, 456, b"hello");
+        let message = OpaqueMessage { object_id: 123, op_code: 456, body: BytesMut::from_iter(b"hello") };
+
+        OpaqueMessageEncoder::default().encode(&message, &mut buffer).unwrap();
 
         let actual = OpaqueMessageDecoder::default().decode(&mut buffer).unwrap().unwrap();
 
-        assert_eq!(expected, actual);
+        assert_eq!(message, actual);
     }
 
     #[test]
@@ -114,7 +125,7 @@ mod tests {
     }
 
     #[test]
-    fn size_error() {
+    fn decode_size_error() {
         let mut buffer = BytesMut::new();
 
         // object id
@@ -131,18 +142,22 @@ mod tests {
     }
 
     #[test]
-    fn decode_multiple_frames() {
+    fn encode_decode_multiple_frames() {
         let mut buffer = BytesMut::new();
 
-        let expected_0 = mock(&mut buffer, 123, 456, b"hello");
-        let expected_1 = mock(&mut buffer, 789, 111, b"codec");
+        let message_0 = OpaqueMessage { object_id: 123, op_code: 456, body: BytesMut::from_iter(b"hello") };
+        let message_1 = OpaqueMessage { object_id: 789, op_code: 111, body: BytesMut::from_iter(b"codec") };
+
+        let mut encoder = OpaqueMessageEncoder::default();
+        encoder.encode(&message_0, &mut buffer).unwrap();
+        encoder.encode(&message_1, &mut buffer).unwrap();
 
         let mut decoder = OpaqueMessageDecoder::default();
 
         let actual_0 = decoder.decode(&mut buffer).unwrap().unwrap();
-        assert_eq!(expected_0, actual_0);
+        assert_eq!(message_0, actual_0);
 
         let actual_1 = decoder.decode(&mut buffer).unwrap().unwrap();
-        assert_eq!(expected_1, actual_1);
+        assert_eq!(message_1, actual_1);
     }
 }

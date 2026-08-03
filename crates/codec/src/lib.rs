@@ -4,4 +4,4 @@ mod opaque;
 pub(crate) use opaque::OpaqueMessage;
 
 mod decoder;
-pub use decoder::OpaqueMessageDecoder;
+pub use decoder::{OpaqueMessageDecoder, OpaqueMessageEncoder};
