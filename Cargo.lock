@@ -26,6 +26,7 @@ version = "0.1.0"
 name = "async-wayland-net"
 version = "0.1.0"
 dependencies = [
+ "async-wayland-ancillary",
  "rustix",
  "serial_test",
  "thiserror",

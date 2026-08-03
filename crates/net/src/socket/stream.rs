@@ -105,6 +105,12 @@ impl<const S: usize> tokio::io::AsyncWrite for UnixStream<S> {
     }
 }
 
+impl<const S: usize> async_wayland_ancillary::AncillaryRead for UnixStream<S> {
+    fn buffer(&mut self) -> &mut VecDeque<OwnedFd> {
+        &mut self.inbound_fds
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::os::fd::AsRawFd;
