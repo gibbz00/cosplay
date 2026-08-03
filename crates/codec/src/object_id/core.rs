@@ -16,34 +16,12 @@ pub enum ObjectIdDecodeError {
     RawLessThanMin(u32, u32),
 }
 
-impl<E> ObjectId<E> {
-    pub(crate) const fn inner(&self) -> u32 {
-        self.inner
-    }
-}
-
 impl<E: ObjectIdBounds> ObjectId<E> {
-    /// Parse a raw u32 into an optional `ObjectId`.
-    ///
-    /// Zero is used to represent a null or non-existent object, so `raw == 0` returns
-    /// `Ok(None)`.
-    pub(crate) const fn from_raw_optional(raw: u32) -> Result<Option<Self>, ObjectIdDecodeError> {
+    pub(crate) const fn from_raw(raw: u32) -> Result<Option<Self>, ObjectIdDecodeError> {
         if raw == 0 {
             return Ok(None);
         }
 
-        match Self::from_raw_expected(raw) {
-            Ok(id) => Ok(Some(id)),
-            Err(err) => Err(err),
-        }
-    }
-
-    /// Parse a raw u32 into an `ObjectId`.
-    ///
-    /// A raw value outside the bounds for the given entity results in an error being returned.
-    ///
-    /// Use [ObjectId::from_raw_optional] for optional values.
-    pub(crate) const fn from_raw_expected(raw: u32) -> Result<Self, ObjectIdDecodeError> {
         let start = *E::RANGE.start();
         if raw < start {
             return Err(ObjectIdDecodeError::RawLessThanMin(raw, start));
@@ -54,7 +32,7 @@ impl<E: ObjectIdBounds> ObjectId<E> {
             return Err(ObjectIdDecodeError::RawGreaterThanMax(raw, end));
         }
 
-        Ok(Self { inner: raw, entity_marker: PhantomData })
+        Ok(Some(Self { inner: raw, entity_marker: PhantomData }))
     }
 }
 
@@ -64,36 +42,36 @@ mod tests {
 
     #[test]
     fn from_client_raw_ok() {
-        let actual = ObjectId::<Client>::from_raw_expected(2).unwrap();
+        let actual = ObjectId::<Client>::from_raw(2).unwrap().unwrap();
         assert_eq!(2, actual.inner);
     }
 
     #[test]
     fn from_server_raw_ok() {
-        let actual = ObjectId::<Server>::from_raw_expected(0xFF000003).unwrap();
+        let actual = ObjectId::<Server>::from_raw(0xFF000003).unwrap().unwrap();
         assert_eq!(0xFF000003, actual.inner);
     }
 
     #[test]
     fn from_client_raw_greater_than_error() {
-        let actual_error = ObjectId::<Client>::from_raw_expected(0xFFFF0000).unwrap_err();
+        let actual_error = ObjectId::<Client>::from_raw(0xFFFF0000).unwrap_err();
         let expected_error = ObjectIdDecodeError::RawGreaterThanMax(0xFFFF0000, *Client::RANGE.end());
         assert_eq!(expected_error, actual_error);
     }
 
     #[test]
     fn from_server_raw_less_than_error() {
-        let actual_error = ObjectId::<Server>::from_raw_expected(3).unwrap_err();
+        let actual_error = ObjectId::<Server>::from_raw(3).unwrap_err();
         let expected_error = ObjectIdDecodeError::RawLessThanMin(3, *Server::RANGE.start());
         assert_eq!(expected_error, actual_error);
     }
 
     #[test]
     fn optional_from_raw() {
-        let actual = ObjectId::<Client>::from_raw_optional(0).unwrap();
+        let actual = ObjectId::<Client>::from_raw(0).unwrap();
         assert!(actual.is_none());
 
-        let actual = ObjectId::<Client>::from_raw_optional(1).unwrap().unwrap();
-        assert_eq!(1, actual.inner());
+        let actual = ObjectId::<Client>::from_raw(1).unwrap().unwrap();
+        assert_eq!(1, actual.inner);
     }
 }

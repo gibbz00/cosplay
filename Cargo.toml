@@ -14,8 +14,10 @@ async-wayland-ancillary = { path = "./crates/ancillary" }
 
 bytes = "1"
 futures-core = "0.3"
+i24 = "2"
 impl-tools = "0.13"
 rustix = "1"
+sealed = "0.7"
 thiserror = "2"
 tokio = "1"
 tokio-util = "0.7"

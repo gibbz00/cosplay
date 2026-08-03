@@ -8,5 +8,8 @@ mod arguments;
 mod object_id;
 pub(crate) use object_id::*;
 
+mod fixed;
+pub(crate) use fixed::Fixed;
+
 mod entity;
 pub(crate) use entity::{Client, Entity, Server};
