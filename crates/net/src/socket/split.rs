@@ -28,7 +28,7 @@ impl<const S: usize> tokio::io::AsyncRead for UnixStreamReadHalf<S> {
 pub struct UnixStreamWriteHalf<const S: usize> {
     pub(super) shutdown_on_drop: bool,
     pub(super) socket: Arc<UnixStreamSocket>,
-    pub(super) outbound_fds: Vec<OwnedFd>,
+    pub(super) outbound_fds: VecDeque<OwnedFd>,
 }
 
 impl<const S: usize> tokio::io::AsyncWrite for UnixStreamWriteHalf<S> {

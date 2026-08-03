@@ -24,7 +24,7 @@ pub type WaylandUnixStream = UnixStream<{ rustix::cmsg_space!(ScmRights(FD_LIMIT
 pub struct UnixStream<const S: usize> {
     socket: UnixStreamSocket,
     inbound_fds: VecDeque<OwnedFd>,
-    outbound_fds: Vec<OwnedFd>,
+    outbound_fds: VecDeque<OwnedFd>,
 }
 
 impl<const S: usize> UnixStream<S> {
@@ -49,7 +49,7 @@ impl<const S: usize> UnixStream<S> {
     }
 
     pub fn push_outbound(&mut self, fd: OwnedFd) {
-        self.outbound_fds.push(fd);
+        self.outbound_fds.push_back(fd);
     }
 
     pub fn into_split(self) -> (UnixStreamReadHalf<S>, UnixStreamWriteHalf<S>) {

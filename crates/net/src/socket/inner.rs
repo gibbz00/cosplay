@@ -66,7 +66,7 @@ impl UnixStreamSocket {
         &self,
         cx: &mut Context<'_>,
         bufs: &[IoSlice<'_>],
-        fd_buffer: &mut Vec<OwnedFd>,
+        fd_buffer: &mut VecDeque<OwnedFd>,
     ) -> Poll<std::io::Result<usize>> {
         let outbound_fds = fd_buffer.iter().map(OwnedFd::as_fd).collect::<Vec<_>>();
 

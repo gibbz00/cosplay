@@ -6,7 +6,6 @@ use std::{collections::VecDeque, os::fd::OwnedFd};
 pub trait AncillaryRead {
     /// Retrieve any passed file descriptors *after* a data read has been performed.
     ///
-    /// Users call pop_front to get the the file descriptors in the order they arrive.
-    /// Likewise, implementors call push_back for each new file descriptor received.
+    /// Call pop_front to remove file descriptors and push_back to append file descriptors.
     fn buffer(&mut self) -> &mut VecDeque<OwnedFd>;
 }
