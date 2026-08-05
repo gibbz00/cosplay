@@ -1,6 +1,3 @@
-// TEMP:
-#![allow(missing_docs)]
-
 use std::{collections::VecDeque, os::fd::OwnedFd};
 
 use bytes::BytesMut;

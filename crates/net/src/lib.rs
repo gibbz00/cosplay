@@ -1,7 +1,13 @@
 //! # `async-wayland-net` - Async socket and networking primitives.
 
-pub mod socket;
-pub(crate) use socket::*;
+mod socket;
+pub(crate) use socket::UnixStreamSocket;
+
+mod stream;
+pub use stream::UnixStream;
+
+mod split;
+pub use split::{UnixStreamReadHalf, UnixStreamWriteHalf};
 
 /// Type alias for [`UnixStream`] with the the ancillary buffer size preconfigured.
 ///
