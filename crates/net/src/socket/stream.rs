@@ -12,15 +12,14 @@ use tokio::io::unix::AsyncFd;
 
 use crate::*;
 
-/// From the Wayland reference implementation (`MAX_FDS_OUT`).
-const FD_LIMIT: usize = 28;
-
 /// A Unix socket stream with support for passing file descriptors via `SCM_RIGHTS` ancillary
 /// messages.
 ///
-/// Implements [`AsyncRead`] and [`AsyncWrite`], with vectored write support.
-pub type WaylandUnixStream = UnixStream<{ rustix::cmsg_space!(ScmRights(FD_LIMIT)) }>;
-
+/// Implements [`AsyncRead`] and [`AsyncWrite`], with vectored write support, in addition to
+/// [`AncillaryBuffer`].
+///
+/// Generic parameter S denotes the stack allocated ancillary buffer size.
+/// Normally set to `cmsg_space!(fd_limit * size_of(fd))`.
 pub struct UnixStream<const S: usize> {
     socket: UnixStreamSocket,
     inbound_fds: VecDeque<OwnedFd>,

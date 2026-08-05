@@ -6,29 +6,30 @@ use crate::*;
 
 const WORD_SIZE: usize = std::mem::size_of::<u32>();
 
-pub struct ArgumentBody<'a> {
-    bytes: &'a mut BytesMut,
-    fd_buffer: &'a mut VecDeque<OwnedFd>,
+/// A bag for placing and removing arguments from.
+pub struct ArgumentBag<'a> {
+    pub(crate) bytes: &'a mut BytesMut,
+    pub(crate) fd_buffer: &'a mut VecDeque<OwnedFd>,
 }
 
 /// Convert primitive arguments to raw message bytes.
 ///
 /// Trait is sealed so that and can not be implemented on third-party types. Lowering to primitive
-/// arguments is instead done in a layer above.
+/// arguments is instead done in [`EncodeMessage`].
 #[sealed::sealed]
 pub trait MarshalArgument: Sized {
     #[allow(missing_docs)]
-    fn marshal(self, body: &mut ArgumentBody<'_>);
+    fn marshal(self, bag: &mut ArgumentBag<'_>);
 }
 
 /// Convert raw message bytes to primitive arguments.
 ///
 /// Trait is sealed so that and can not be implemented on third-party types. Parsing to higher-level
-/// types (enums, bitflags etc.) is instead done in a layer above.
+/// types (enums, bitflags etc.) is instead done in [`DecodeMessage`].
 #[sealed::sealed]
 pub trait ParseArgument: Sized {
     #[allow(missing_docs)]
-    fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError>;
+    fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError>;
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -49,47 +50,47 @@ pub enum ArgumentDecodeError {
 
 #[sealed::sealed]
 impl MarshalArgument for u32 {
-    fn marshal(self, body: &mut ArgumentBody<'_>) {
-        body.bytes.put_u32_ne(self);
+    fn marshal(self, bag: &mut ArgumentBag<'_>) {
+        bag.bytes.put_u32_ne(self);
     }
 }
 
 #[sealed::sealed]
 impl ParseArgument for u32 {
-    fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
-        body.bytes.try_get_u32_ne().map_err(|_| ArgumentDecodeError::NotEnoughBytesLeft)
+    fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
+        bag.bytes.try_get_u32_ne().map_err(|_| ArgumentDecodeError::NotEnoughBytesLeft)
     }
 }
 
 #[sealed::sealed]
 impl MarshalArgument for i32 {
-    fn marshal(self, body: &mut ArgumentBody<'_>) {
-        body.bytes.put_i32_ne(self);
+    fn marshal(self, bag: &mut ArgumentBag<'_>) {
+        bag.bytes.put_i32_ne(self);
     }
 }
 
 #[sealed::sealed]
 impl ParseArgument for i32 {
-    fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
-        body.bytes.try_get_i32_ne().map_err(|_| ArgumentDecodeError::NotEnoughBytesLeft)
+    fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
+        bag.bytes.try_get_i32_ne().map_err(|_| ArgumentDecodeError::NotEnoughBytesLeft)
     }
 }
 
 #[sealed::sealed]
 impl MarshalArgument for Fixed {
-    fn marshal(self, body: &mut ArgumentBody<'_>) {
+    fn marshal(self, bag: &mut ArgumentBag<'_>) {
         let Fixed { integer, decimal } = self;
 
         let integer_bytes = integer.to_be_bytes();
 
-        u32::from_be_bytes([integer_bytes[0], integer_bytes[1], integer_bytes[2], decimal]).marshal(body);
+        u32::from_be_bytes([integer_bytes[0], integer_bytes[1], integer_bytes[2], decimal]).marshal(bag);
     }
 }
 
 #[sealed::sealed]
 impl ParseArgument for Fixed {
-    fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
-        let inner = u32::parse(body)?.to_be_bytes();
+    fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
+        let inner = u32::parse(bag)?.to_be_bytes();
 
         let fixed = Fixed {
             integer: i24::I24::from_be_bytes([inner[0], inner[1], inner[2]]),
@@ -102,64 +103,64 @@ impl ParseArgument for Fixed {
 
 #[sealed::sealed]
 impl<E> MarshalArgument for ObjectId<E> {
-    fn marshal(self, body: &mut ArgumentBody<'_>) {
-        self.inner.marshal(body);
+    fn marshal(self, bag: &mut ArgumentBag<'_>) {
+        self.inner.marshal(bag);
     }
 }
 
 #[sealed::sealed]
 impl<E: ObjectIdBounds> ParseArgument for ObjectId<E> {
-    fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
-        Option::<ObjectId<E>>::parse(body)?.ok_or(ArgumentDecodeError::MissingObjectId)
+    fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
+        Option::<ObjectId<E>>::parse(bag)?.ok_or(ArgumentDecodeError::MissingObjectId)
     }
 }
 
 #[sealed::sealed]
 impl<E> MarshalArgument for Option<ObjectId<E>> {
-    fn marshal(self, body: &mut ArgumentBody<'_>) {
-        self.map(|id| id.inner).unwrap_or(0).marshal(body);
+    fn marshal(self, bag: &mut ArgumentBag<'_>) {
+        self.map(|id| id.inner).unwrap_or(0).marshal(bag);
     }
 }
 
 #[sealed::sealed]
 impl<E: ObjectIdBounds> ParseArgument for Option<ObjectId<E>> {
-    fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
-        let raw = ParseArgument::parse(body)?;
+    fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
+        let raw = ParseArgument::parse(bag)?;
         ObjectId::from_raw(raw).map_err(Into::into)
     }
 }
 
 #[sealed::sealed]
 impl<E, I> MarshalArgument for NewObjectId<E, I> {
-    fn marshal(self, body: &mut ArgumentBody<'_>) {
-        self.inner.marshal(body);
+    fn marshal(self, bag: &mut ArgumentBag<'_>) {
+        self.inner.marshal(bag);
     }
 }
 
 #[sealed::sealed]
 impl<E: ObjectIdBounds, I> ParseArgument for NewObjectId<E, I> {
-    fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
-        ObjectId::<E>::parse(body).map(NewObjectId::new)
+    fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
+        ObjectId::<E>::parse(bag).map(NewObjectId::new)
     }
 }
 
 #[sealed::sealed]
 impl<E> MarshalArgument for OpaqueNewObjectId<E> {
-    fn marshal(self, body: &mut ArgumentBody<'_>) {
+    fn marshal(self, bag: &mut ArgumentBag<'_>) {
         let OpaqueNewObjectId { interface_name, interface_version, inner } = self;
 
-        interface_name.marshal(body);
-        interface_version.marshal(body);
-        inner.marshal(body);
+        interface_name.marshal(bag);
+        interface_version.marshal(bag);
+        inner.marshal(bag);
     }
 }
 
 #[sealed::sealed]
 impl<E: ObjectIdBounds> ParseArgument for OpaqueNewObjectId<E> {
-    fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
-        let interface_name = String::parse(body)?;
-        let interface_version = u32::parse(body)?;
-        let inner = ObjectId::<E>::parse(body)?;
+    fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
+        let interface_name = String::parse(bag)?;
+        let interface_version = u32::parse(bag)?;
+        let inner = ObjectId::<E>::parse(bag)?;
 
         Ok(Self { interface_name, interface_version, inner })
     }
@@ -167,51 +168,51 @@ impl<E: ObjectIdBounds> ParseArgument for OpaqueNewObjectId<E> {
 
 #[sealed::sealed]
 impl MarshalArgument for OwnedFd {
-    fn marshal(self, body: &mut ArgumentBody<'_>) {
+    fn marshal(self, bag: &mut ArgumentBag<'_>) {
         // `push_back` as per `AncillaryBuffer::file_descriptors` instructions.
-        body.fd_buffer.push_back(self);
+        bag.fd_buffer.push_back(self);
     }
 }
 
 #[sealed::sealed]
 impl ParseArgument for OwnedFd {
-    fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
+    fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
         // `pop_front` as per `AncillaryBuffer::file_descriptors` instructions.
-        body.fd_buffer.pop_front().ok_or(ArgumentDecodeError::MissingFd)
+        bag.fd_buffer.pop_front().ok_or(ArgumentDecodeError::MissingFd)
     }
 }
 
 #[sealed::sealed]
 impl MarshalArgument for Vec<u8> {
-    fn marshal(self, body: &mut ArgumentBody<'_>) {
+    fn marshal(self, bag: &mut ArgumentBag<'_>) {
         let length = self.len();
 
         // FIXME: Handle potential overflow, ~4.2 GB
         // is not entirely unfeasable to create.
-        body.bytes.put_u32_ne(length as u32);
-        body.bytes.extend_from_slice(&self);
-        body.bytes.put_bytes(0, padding(length));
+        bag.bytes.put_u32_ne(length as u32);
+        bag.bytes.extend_from_slice(&self);
+        bag.bytes.put_bytes(0, padding(length));
     }
 }
 
 #[sealed::sealed]
 impl ParseArgument for Vec<u8> {
-    fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
-        let length = body.bytes.get_u32_ne() as usize;
-        parse_vec_impl(length, body)
+    fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
+        let length = bag.bytes.get_u32_ne() as usize;
+        parse_vec_impl(length, bag)
     }
 }
 
-fn parse_vec_impl(length: usize, body: &mut ArgumentBody<'_>) -> Result<Vec<u8>, ArgumentDecodeError> {
+fn parse_vec_impl(length: usize, bag: &mut ArgumentBag<'_>) -> Result<Vec<u8>, ArgumentDecodeError> {
     let padding = padding(length);
 
-    if body.bytes.len() < length + padding {
+    if bag.bytes.len() < length + padding {
         return Err(ArgumentDecodeError::NotEnoughBytesLeft);
     }
 
-    let vec = body.bytes.split_to(length).to_vec();
+    let vec = bag.bytes.split_to(length).to_vec();
 
-    body.bytes.advance(padding);
+    bag.bytes.advance(padding);
 
     Ok(vec)
 }
@@ -228,39 +229,39 @@ const fn padding(length: usize) -> usize {
 
 #[sealed::sealed]
 impl MarshalArgument for String {
-    fn marshal(self, body: &mut ArgumentBody<'_>) {
+    fn marshal(self, bag: &mut ArgumentBag<'_>) {
         let mut vec = Vec::from(self);
         vec.push(b'\0');
-        vec.marshal(body);
+        vec.marshal(bag);
     }
 }
 
 #[sealed::sealed]
 impl ParseArgument for String {
-    fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
-        Option::<String>::parse(body)?.ok_or(ArgumentDecodeError::MissingString)
+    fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
+        Option::<String>::parse(bag)?.ok_or(ArgumentDecodeError::MissingString)
     }
 }
 
 #[sealed::sealed]
 impl MarshalArgument for Option<String> {
-    fn marshal(self, body: &mut ArgumentBody<'_>) {
+    fn marshal(self, bag: &mut ArgumentBag<'_>) {
         match self {
-            Some(str) => str.marshal(body),
-            None => 0u32.marshal(body),
+            Some(str) => str.marshal(bag),
+            None => 0u32.marshal(bag),
         }
     }
 }
 
 #[sealed::sealed]
 impl ParseArgument for Option<String> {
-    fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError> {
-        let length = u32::parse(body)? as usize;
+    fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
+        let length = u32::parse(bag)? as usize;
 
         match length == 0 {
             true => Ok(None),
             false => {
-                let mut vec = parse_vec_impl(length, body)?;
+                let mut vec = parse_vec_impl(length, bag)?;
 
                 // For null-byte.
                 vec.pop();
@@ -328,7 +329,7 @@ mod tests {
     fn fd_fifo_encoding() {
         let mut bytes = BytesMut::new();
         let mut fd_buffer = VecDeque::new();
-        let mut body = ArgumentBody { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
+        let mut bag = ArgumentBag { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
 
         // SAFETY: fds not used for any syscalls
         let (fd_0, fd_1) = unsafe { (OwnedFd::from_raw_fd(1), OwnedFd::from_raw_fd(2)) };
@@ -336,11 +337,11 @@ mod tests {
         let raw_0 = fd_0.as_raw_fd();
         let raw_1 = fd_1.as_raw_fd();
 
-        fd_0.marshal(&mut body);
-        fd_1.marshal(&mut body);
+        fd_0.marshal(&mut bag);
+        fd_1.marshal(&mut bag);
 
-        let returned_fd_0 = <OwnedFd as ParseArgument>::parse(&mut body).unwrap();
-        let returned_fd_1 = <OwnedFd as ParseArgument>::parse(&mut body).unwrap();
+        let returned_fd_0 = <OwnedFd as ParseArgument>::parse(&mut bag).unwrap();
+        let returned_fd_1 = <OwnedFd as ParseArgument>::parse(&mut bag).unwrap();
 
         assert_eq!([raw_0, raw_1], [returned_fd_0.as_raw_fd(), returned_fd_1.as_raw_fd()]);
 
@@ -359,19 +360,19 @@ mod tests {
     fn vec_padding() {
         let mut bytes = BytesMut::new();
         let mut fd_buffer = VecDeque::new();
-        let mut body = ArgumentBody { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
+        let mut bag = ArgumentBag { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
 
         let vec = vec![9];
 
         assert_ne!(WORD_SIZE, vec.len());
 
-        vec.marshal(&mut body);
+        vec.marshal(&mut bag);
 
         let expected = &[
             1, 0, 0, 0, // length
             9, 0, 0, 0, // value + padding
         ];
-        assert_eq!(expected, &body.bytes[..]);
+        assert_eq!(expected, &bag.bytes[..]);
     }
 
     #[test]
@@ -389,16 +390,16 @@ mod tests {
     fn string_padding() {
         let mut bytes = BytesMut::new();
         let mut fd_buffer = VecDeque::new();
-        let mut body = ArgumentBody { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
+        let mut bag = ArgumentBag { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
 
-        "ab".to_string().marshal(&mut body);
+        "ab".to_string().marshal(&mut bag);
 
         let expected = [
             3, 0, 0, 0, // length
             b'a', b'b', b'\0', 0, // string + padding
         ];
 
-        assert_eq!(&expected, &body.bytes[..])
+        assert_eq!(&expected, &bag.bytes[..])
     }
 
     #[test]
@@ -408,9 +409,9 @@ mod tests {
             b'a', 0, 0, 0,
         ]);
         let mut fd_buffer = VecDeque::new();
-        let mut body = ArgumentBody { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
+        let mut bag = ArgumentBag { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
 
-        let err = String::parse(&mut body).unwrap_err();
+        let err = String::parse(&mut bag).unwrap_err();
 
         assert_matches!(err, ArgumentDecodeError::NotEnoughBytesLeft);
     }
@@ -419,11 +420,11 @@ mod tests {
     fn optional_string_none_bytes() {
         let mut bytes = BytesMut::new();
         let mut fd_buffer = VecDeque::new();
-        let mut body = ArgumentBody { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
+        let mut bag = ArgumentBag { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
 
-        Option::<String>::None.marshal(&mut body);
+        Option::<String>::None.marshal(&mut bag);
 
-        assert_eq!(&[0, 0, 0, 0], &body.bytes[..])
+        assert_eq!(&[0, 0, 0, 0], &bag.bytes[..])
     }
 
     fn mock_id() -> ObjectId<Client> {
@@ -437,14 +438,14 @@ mod tests {
         let mut bytes = BytesMut::new();
         let mut fd_buffer = VecDeque::new();
 
-        let mut body = ArgumentBody { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
+        let mut bag = ArgumentBag { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
 
-        value.clone().marshal(&mut body);
+        value.clone().marshal(&mut bag);
 
-        let output_value = ParseArgument::parse(&mut body).unwrap();
+        let output_value = ParseArgument::parse(&mut bag).unwrap();
 
         assert_eq!(value, output_value);
 
-        assert!(body.bytes.is_empty(), "remaining bytes found in buffer")
+        assert!(bag.bytes.is_empty(), "remaining bytes found in buffer")
     }
 }

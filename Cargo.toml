@@ -13,7 +13,7 @@ crane.name = "async-wayland"
 async-wayland-ancillary = { path = "./crates/ancillary" }
 
 bytes = "1"
-futures-core = "0.3"
+futures-util = { version = "0.3", default-features = false }
 i24 = "2"
 impl-tools = "0.13"
 rustix = "1"

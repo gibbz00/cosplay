@@ -8,7 +8,7 @@ version.workspace = true
 async-wayland-ancillary.workspace = true
 
 bytes.workspace = true
-futures-core.workspace = true
+futures-util = { workspace = true, features = ["sink"] }
 i24.workspace = true
 impl-tools.workspace = true
 sealed.workspace = true
