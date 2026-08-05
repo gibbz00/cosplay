@@ -101,8 +101,7 @@ impl MarshalArgument for String {
         body.bytes.put_slice(self.as_bytes());
         body.bytes.put_u8(b'\0');
 
-        let padding = length % std::mem::size_of::<u32>();
-        body.bytes.put_bytes(0, padding);
+        body.bytes.put_bytes(0, padding(length));
     }
 }
 
@@ -131,7 +130,7 @@ impl ParseArgument for Option<String> {
         match length == 0 {
             true => Ok(None),
             false => {
-                let padding = length % std::mem::size_of::<u32>();
+                let padding = padding(length);
 
                 if body.bytes.len() < length + padding {
                     return Err(ArgumentDecodeError::NotEnoughBytesLeft);
@@ -232,6 +231,18 @@ impl ParseArgument for OwnedFd {
     }
 }
 
+const fn padding(length: usize) -> usize {
+    const WORD_SIZE: usize = std::mem::size_of::<u32>();
+
+    let padding = WORD_SIZE - (length % WORD_SIZE);
+
+    if padding == WORD_SIZE {
+        return 0;
+    }
+
+    padding
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
@@ -275,11 +286,11 @@ mod tests {
         let mut fd_buffer = VecDeque::new();
         let mut body = ArgumentBody { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
 
-        "a".to_string().marshal(&mut body);
+        "ab".to_string().marshal(&mut body);
 
         let expected = [
-            2, 0, 0, 0, // length
-            b'a', b'\0', 0, 0, // string + padding
+            3, 0, 0, 0, // length
+            b'a', b'b', b'\0', 0, // string + padding
         ];
 
         assert_eq!(&expected, &body.bytes[..])
