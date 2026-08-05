@@ -4,6 +4,7 @@ mod opaque;
 pub use opaque::{OpaqueMessage, OpaqueMessageDecoder, OpaqueMessageEncoder};
 
 mod arguments;
+pub use arguments::{MarshalArgument, ParseArgument};
 
 mod object_id;
 pub(crate) use object_id::*;
