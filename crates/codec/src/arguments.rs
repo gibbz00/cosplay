@@ -11,13 +11,23 @@ pub struct ArgumentBody<'a> {
     fd_buffer: &'a mut VecDeque<OwnedFd>,
 }
 
+/// Convert primitive arguments to raw message bytes.
+///
+/// Trait is sealed so that and can not be implemented on third-party types. Lowering to primitive
+/// arguments is instead done in a layer above.
 #[sealed::sealed]
 pub trait MarshalArgument: Sized {
+    #[allow(missing_docs)]
     fn marshal(self, body: &mut ArgumentBody<'_>);
 }
 
+/// Convert raw message bytes to primitive arguments.
+///
+/// Trait is sealed so that and can not be implemented on third-party types. Parsing to higher-level
+/// types (enums, bitflags etc.) is instead done in a layer above.
 #[sealed::sealed]
 pub trait ParseArgument: Sized {
+    #[allow(missing_docs)]
     fn parse(body: &mut ArgumentBody<'_>) -> Result<Self, ArgumentDecodeError>;
 }
 
