@@ -44,8 +44,15 @@ impl UnixStreamSocket {
             match recv_result {
                 Err(_would_block) => continue,
                 Ok(result) => {
-                    let result = result.map(|msg| {
+                    let result = result.and_then(|msg| {
                         buf.advance(msg.bytes);
+
+                        if msg.flags.contains(rustix::net::ReturnFlags::CTRUNC) {
+                            return Err(std::io::Error::new(
+                                std::io::ErrorKind::QuotaExceeded,
+                                "Ancillary data truncated: file descriptors were lost (`S` too small).",
+                            ));
+                        }
 
                         for message in ancillary.drain() {
                             if let rustix::net::RecvAncillaryMessage::ScmRights(fds) = message {
@@ -54,6 +61,8 @@ impl UnixStreamSocket {
                                 }
                             }
                         }
+
+                        Ok(())
                     });
 
                     return Poll::Ready(result);
@@ -76,8 +85,11 @@ impl UnixStreamSocket {
             let mut cmsg_space = [MaybeUninit::uninit(); S];
             let mut ancillary = rustix::net::SendAncillaryBuffer::new(&mut cmsg_space);
 
-            if !outbound_fds.is_empty() {
-                ancillary.push(rustix::net::SendAncillaryMessage::ScmRights(&outbound_fds));
+            if !outbound_fds.is_empty() && !ancillary.push(rustix::net::SendAncillaryMessage::ScmRights(&outbound_fds)) {
+                return Poll::Ready(Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "Queued file descriptors do not fit in the ancillary buffer (`S` too small).",
+                )));
             }
 
             let send_result = guard.try_io(|inner| {

@@ -20,6 +20,13 @@ use crate::*;
 ///
 /// Generic parameter S denotes the stack allocated ancillary buffer size.
 /// Normally set to `cmsg_space!(fd_limit * size_of(fd))`.
+///
+/// # Error Handling
+///
+/// If a message carries more descriptors than fit, sends fail with
+/// [`InvalidInput`](io::ErrorKind::InvalidInput) and reads fail with
+/// [`QuotaExceeded`](io::ErrorKind::QuotaExceeded) (the kernel has already
+/// closed the descriptors that did not fit, so the stream is desynchronized).
 pub struct UnixStream<const S: usize> {
     socket: UnixStreamSocket,
     inbound_fds: VecDeque<OwnedFd>,
@@ -114,24 +121,10 @@ impl<const S: usize> async_wayland_ancillary::AncillaryBuffer for UnixStream<S> 
 mod tests {
     use std::os::fd::AsRawFd;
 
+    use rustix::cmsg_space;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     use super::*;
-
-    fn mock_pair() -> (WaylandUnixStream, WaylandUnixStream) {
-        let (left, right) = rustix::net::socketpair(
-            rustix::net::AddressFamily::UNIX,
-            rustix::net::SocketType::STREAM,
-            rustix::net::SocketFlags::NONBLOCK | rustix::net::SocketFlags::CLOEXEC,
-            None,
-        )
-        .unwrap();
-
-        (
-            WaylandUnixStream::new_impl(left).unwrap(),
-            WaylandUnixStream::new_impl(right).unwrap(),
-        )
-    }
 
     #[tokio::test]
     async fn send_receive_bytes() {
@@ -176,14 +169,14 @@ mod tests {
 
     #[tokio::test]
     async fn preserve_fd_order() {
-        let (first, second) = mock_pair();
+        let (first, second) = mock_pair_fds();
 
-        let sent_order = [first.socket.inner.as_raw_fd(), second.socket.inner.as_raw_fd()];
+        let sent_order = [first.as_raw_fd(), second.as_raw_fd()];
 
         let (mut reader, mut writer) = mock_pair();
 
-        writer.push_outbound(first.socket.inner.into_inner());
-        writer.push_outbound(second.socket.inner.into_inner());
+        writer.push_outbound(first);
+        writer.push_outbound(second);
         writer.write_u8(1).await.unwrap();
 
         reader.read_u8().await.unwrap();
@@ -193,5 +186,56 @@ mod tests {
         let received_order = [received_first.as_raw_fd(), received_second.as_raw_fd()];
 
         assert_eq!(sent_order, received_order);
+    }
+
+    #[tokio::test]
+    async fn send_fd_buffer_full_error() {
+        let (first, second) = mock_pair_fds();
+
+        let (mut _reader, mut writer) = mock_pair_impl::<0>();
+
+        writer.push_outbound(first);
+        writer.push_outbound(second);
+
+        let error = writer.write_u8(1).await.unwrap_err();
+
+        assert_eq!(std::io::ErrorKind::InvalidInput, error.kind());
+    }
+
+    #[tokio::test]
+    async fn receive_fd_buffer_full_error() {
+        let (first, second) = mock_pair_fds();
+
+        let (writer_fd, reader_fd) = mock_pair_fds();
+
+        let mut writer = UnixStream::<{ cmsg_space!(ScmRights(2)) }>::new_impl(writer_fd).unwrap();
+        let mut reader = UnixStream::<0>::new_impl(reader_fd).unwrap();
+
+        writer.push_outbound(first);
+        writer.push_outbound(second);
+        writer.write_u8(1).await.unwrap();
+
+        let read_error = reader.read_u8().await.unwrap_err();
+
+        assert_eq!(std::io::ErrorKind::QuotaExceeded, read_error.kind());
+    }
+
+    fn mock_pair() -> (WaylandUnixStream, WaylandUnixStream) {
+        mock_pair_impl()
+    }
+
+    fn mock_pair_impl<const S: usize>() -> (UnixStream<S>, UnixStream<S>) {
+        let (left, right) = mock_pair_fds();
+        (UnixStream::new_impl(left).unwrap(), UnixStream::new_impl(right).unwrap())
+    }
+
+    fn mock_pair_fds() -> (OwnedFd, OwnedFd) {
+        rustix::net::socketpair(
+            rustix::net::AddressFamily::UNIX,
+            rustix::net::SocketType::STREAM,
+            rustix::net::SocketFlags::NONBLOCK | rustix::net::SocketFlags::CLOEXEC,
+            None,
+        )
+        .unwrap()
     }
 }
