@@ -1,4 +1,10 @@
 //! # `async-wayland-net` - Async socket and networking primitives.
+//!
+//! ### Attribution
+//!
+//! Many parts in this crate originate from the [anchovy] crate.
+//!
+//! [anchovy]: https://github.com/tailwags/anchovy
 
 mod socket;
 pub(crate) use socket::UnixStreamSocket;
