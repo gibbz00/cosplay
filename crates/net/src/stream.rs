@@ -171,7 +171,9 @@ mod tests {
     async fn preserve_fd_order() {
         let (first, second) = mock_pair_fds();
 
-        let sent_order = [first.as_raw_fd(), second.as_raw_fd()];
+        // NB: Assert order preservation by fd number increment since Kernel may sometimes
+        // return new FD value when passed through a unix socket. Ex. [16, 17] -> [23, 24]
+        let fd_increment = second.as_raw_fd() - first.as_raw_fd();
 
         let (mut reader, mut writer) = mock_pair();
 
@@ -183,9 +185,9 @@ mod tests {
         let received_first = reader.pop_inbound().unwrap();
         let received_second = reader.pop_inbound().unwrap();
 
-        let received_order = [received_first.as_raw_fd(), received_second.as_raw_fd()];
+        let received_increment = received_second.as_raw_fd() - received_first.as_raw_fd();
 
-        assert_eq!(sent_order, received_order);
+        assert_eq!(fd_increment, received_increment);
     }
 
     #[tokio::test]
