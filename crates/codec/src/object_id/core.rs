@@ -2,6 +2,9 @@ use std::marker::PhantomData;
 
 use crate::*;
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub struct OpaqueObjectId(pub(crate) u32);
+
 #[impl_tools::autoimpl(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct ObjectId<E> {
     pub(crate) inner: u32,

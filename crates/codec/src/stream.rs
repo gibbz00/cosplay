@@ -8,15 +8,15 @@ pub struct WaylandMessageSink<W> {
 }
 
 impl<W: tokio::io::AsyncWrite + AncillaryBuffer + Unpin> WaylandMessageSink<W> {
-    pub async fn send_concrete<M: Message + EncodeMessage>(&mut self, object_id: u32, message: M) -> std::io::Result<()> {
+    pub async fn send_concrete<M: Message + EncodeMessage>(&mut self, object_id: OpaqueObjectId, message: M) -> std::io::Result<()> {
         let opaque_message = OpaqueMessage::from_concrete(message);
         self.send_opaque(object_id, opaque_message).await
     }
 
-    pub async fn send_opaque(&mut self, object_id: u32, opaque_message: OpaqueMessage) -> std::io::Result<()> {
+    pub async fn send_opaque(&mut self, object_id: OpaqueObjectId, opaque_message: OpaqueMessage) -> std::io::Result<()> {
         let OpaqueMessage { op_code, argument_buffer, fd_buffer } = opaque_message;
 
-        let frame = OpaqueFrame { object_id, op_code, argument_buffer };
+        let frame = OpaqueFrame { object_id: object_id.0, op_code, argument_buffer };
 
         // Overwrite makes sure any previous file descriptors
         // aren't included the new message to send.

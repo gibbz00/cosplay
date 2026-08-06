@@ -102,6 +102,20 @@ impl ParseArgument for Fixed {
 }
 
 #[sealed::sealed]
+impl MarshalArgument for OpaqueObjectId {
+    fn marshal(self, bag: &mut ArgumentBag<'_>) {
+        self.0.marshal(bag);
+    }
+}
+
+#[sealed::sealed]
+impl ParseArgument for OpaqueObjectId {
+    fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
+        u32::parse(bag).map(Self)
+    }
+}
+
+#[sealed::sealed]
 impl<E> MarshalArgument for ObjectId<E> {
     fn marshal(self, bag: &mut ArgumentBag<'_>) {
         self.inner.marshal(bag);
@@ -296,6 +310,11 @@ mod tests {
     fn fixed_encoding() {
         let fixed = Fixed { integer: i24::i24!(123), decimal: 4 };
         assert_bijective_encoding(fixed);
+    }
+
+    #[test]
+    fn opaque_object_id_encoding() {
+        assert_bijective_encoding(OpaqueObjectId(123456));
     }
 
     #[test]
