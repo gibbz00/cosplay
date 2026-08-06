@@ -1,14 +1,5 @@
-mod bounds;
-pub(crate) use bounds::ObjectIdBounds;
-
-mod factory;
-pub(crate) use factory::ObjectIdFactory;
+mod bounded;
+pub(crate) use bounded::{ObjectIdBounds, ObjectIdDecodeError, ObjectIdFactory, verify_raw};
 
 mod core;
-pub(crate) use core::{ObjectId, ObjectIdDecodeError, OpaqueObjectId};
-
-mod new;
-pub(crate) use new::NewObjectId;
-
-mod opaque_new;
-pub(crate) use opaque_new::OpaqueNewObjectId;
+pub(crate) use core::{NewObjectId, ObjectId, OpaqueNewObjectId, OpaqueObjectId};

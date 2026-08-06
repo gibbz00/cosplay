@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, os::fd::OwnedFd};
+use std::{collections::VecDeque, marker::PhantomData, os::fd::OwnedFd};
 
 use bytes::{Buf, BufMut, BytesMut};
 
@@ -40,8 +40,6 @@ pub enum ArgumentDecodeError {
     FromUtf8(#[from] std::string::FromUtf8Error),
     #[error("Expected a string, received null.")]
     MissingString,
-    #[error("Failed to decode object_id: {0}")]
-    ObjectId(#[from] ObjectIdDecodeError),
     #[error("Expected an object id, received null.")]
     MissingObjectId,
     #[error("No file descriptor found.")]
@@ -116,50 +114,52 @@ impl ParseArgument for OpaqueObjectId {
 }
 
 #[sealed::sealed]
-impl<E> MarshalArgument for ObjectId<E> {
+impl<I> MarshalArgument for ObjectId<I> {
     fn marshal(self, bag: &mut ArgumentBag<'_>) {
         self.inner.marshal(bag);
     }
 }
 
 #[sealed::sealed]
-impl<E: ObjectIdBounds> ParseArgument for ObjectId<E> {
+impl<I> ParseArgument for ObjectId<I> {
     fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
-        Option::<ObjectId<E>>::parse(bag)?.ok_or(ArgumentDecodeError::MissingObjectId)
+        Option::<ObjectId<I>>::parse(bag)?.ok_or(ArgumentDecodeError::MissingObjectId)
     }
 }
 
 #[sealed::sealed]
-impl<E> MarshalArgument for Option<ObjectId<E>> {
+impl<I> MarshalArgument for Option<ObjectId<I>> {
     fn marshal(self, bag: &mut ArgumentBag<'_>) {
         self.map(|id| id.inner).unwrap_or(0).marshal(bag);
     }
 }
 
 #[sealed::sealed]
-impl<E: ObjectIdBounds> ParseArgument for Option<ObjectId<E>> {
+impl<I> ParseArgument for Option<ObjectId<I>> {
     fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
-        let raw = ParseArgument::parse(bag)?;
-        ObjectId::from_raw(raw).map_err(Into::into)
+        u32::parse(bag).map(|raw| match raw == 0 {
+            true => None,
+            false => Some(ObjectId { inner: raw, interface_marker: PhantomData }),
+        })
     }
 }
 
 #[sealed::sealed]
-impl<E, I> MarshalArgument for NewObjectId<E, I> {
+impl<I> MarshalArgument for NewObjectId<I> {
     fn marshal(self, bag: &mut ArgumentBag<'_>) {
-        self.inner.marshal(bag);
+        self.0.marshal(bag);
     }
 }
 
 #[sealed::sealed]
-impl<E: ObjectIdBounds, I> ParseArgument for NewObjectId<E, I> {
+impl<I> ParseArgument for NewObjectId<I> {
     fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
-        ObjectId::<E>::parse(bag).map(NewObjectId::new)
+        ObjectId::parse(bag).map(Self)
     }
 }
 
 #[sealed::sealed]
-impl<E> MarshalArgument for OpaqueNewObjectId<E> {
+impl MarshalArgument for OpaqueNewObjectId {
     fn marshal(self, bag: &mut ArgumentBag<'_>) {
         let OpaqueNewObjectId { interface_name, interface_version, inner } = self;
 
@@ -170,11 +170,11 @@ impl<E> MarshalArgument for OpaqueNewObjectId<E> {
 }
 
 #[sealed::sealed]
-impl<E: ObjectIdBounds> ParseArgument for OpaqueNewObjectId<E> {
+impl ParseArgument for OpaqueNewObjectId {
     fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
         let interface_name = String::parse(bag)?;
         let interface_version = u32::parse(bag)?;
-        let inner = ObjectId::<E>::parse(bag)?;
+        let inner = u32::parse(bag)?;
 
         Ok(Self { interface_name, interface_version, inner })
     }
@@ -330,17 +330,13 @@ mod tests {
 
     #[test]
     fn new_object_id_encoding() {
-        let new_id = NewObjectId::<Client, ()>::new(mock_id());
+        let new_id = NewObjectId::<()>(mock_id());
         assert_bijective_encoding(new_id);
     }
 
     #[test]
     fn opaque_new_object_id_encoding() {
-        let new_id = OpaqueNewObjectId::<Client> {
-            interface_name: "wl_xxx".to_string(),
-            interface_version: 1,
-            inner: mock_id(),
-        };
+        let new_id = OpaqueNewObjectId { interface_name: "wl_xxx".to_string(), interface_version: 1, inner: 1 };
         assert_bijective_encoding(new_id);
     }
 
@@ -446,8 +442,8 @@ mod tests {
         assert_eq!(&[0, 0, 0, 0], &bag.bytes[..])
     }
 
-    fn mock_id() -> ObjectId<Client> {
-        ObjectId::<Client>::from_raw(1).unwrap().unwrap()
+    fn mock_id() -> ObjectId<()> {
+        ObjectId { inner: 1, interface_marker: PhantomData }
     }
 
     fn assert_bijective_encoding<T>(value: T)
