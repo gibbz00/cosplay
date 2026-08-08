@@ -52,6 +52,7 @@ fn entry_value<'de, D: serde::de::Deserializer<'de>>(deserializer: D) -> Result<
     parse_result.map_err(serde::de::Error::custom)
 }
 
+#[derive(Debug, PartialEq)]
 pub struct EnumPath {
     interface: Option<Cname>,
     enumeration: CnameSuffix,

@@ -2,7 +2,7 @@ use std::num::NonZeroU32;
 
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Debug, PartialEq, Deserialize)]
 pub struct Version(NonZeroU32);
 
 impl Default for Version {

@@ -14,7 +14,7 @@ const INVALID_SUFFIX_MSG: &str = "Invalid suffix character. Only ASCII alphanumb
 
 /// The name must start with one of the ASCII characters a-z, A-Z, or underscore, and the
 /// following characters may additionally include numbers 0-9.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Cname(pub(crate) String);
 
 #[derive(Debug, thiserror::Error)]
@@ -53,7 +53,7 @@ impl<'de> serde::de::Deserialize<'de> for Cname {
 }
 
 /// The name must contain only the ASCII characters a-z, A-Z, 0-9, or underscore.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct CnameSuffix(pub(crate) String);
 
 #[derive(Debug, thiserror::Error)]

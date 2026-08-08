@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 use crate::*;
 
-#[derive(Deserialize)]
+#[derive(Debug, PartialEq, Deserialize)]
 pub struct Argument {
     #[serde(rename = "@name")]
     pub(crate) name: Cname,
@@ -14,7 +14,7 @@ pub struct Argument {
     pub(crate) description: Description,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, PartialEq, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ArgumentVariant {
     I32 { enumeration: Option<EnumPath> },
