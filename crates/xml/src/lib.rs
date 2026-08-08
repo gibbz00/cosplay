@@ -1,31 +1,31 @@
-//! # `async-wayland-scanner` - Generate codec implementations from wayland XML specifications.
+//! # `async-wayland-xml` - Items for deserializing Wayland XML protocol declarations.
 //!
-//! Type declarations for deserializing wayland XML protocol declarations.
+//! Intended to be usable by multiple implementations of wayland protocol code generators.
 //!
-//! Check out [Message_XML] for further information on the wayland XML document structure.
+//! Based on `serde` and `quick-xml`. Invoke the combination of both with [`Protocol::from_xml`].
 //!
-//! [Message_XML]: https://wayland.freedesktop.org/docs/book/Message_XML.html
+//! Most item and field documentation has been adapted from <https://wayland.freedesktop.org/docs/book/Message_XML.html>.
 
 mod protocol;
-pub(crate) use protocol::Protocol;
+pub use protocol::Protocol;
 
 mod interface;
-pub(crate) use interface::Interface;
+pub use interface::Interface;
 
 mod message;
-pub(crate) use message::Message;
+pub use message::Message;
+
+mod argument;
+pub use argument::{Argument, ArgumentVariant};
 
 mod enumeration;
-pub(crate) use enumeration::{Entry, Enum, EnumPath};
-
-mod arg;
-pub(crate) use arg::{Argument, ArgumentVariant};
+pub use enumeration::{Enum, EnumEntry, EnumPath};
 
 mod description;
-pub(crate) use description::Description;
+pub use description::Description;
 
 mod version;
-pub(crate) use version::Version;
+pub use version::Version;
 
 mod cname;
-pub(crate) use cname::{Cname, CnameSuffix};
+pub use cname::{Cname, CnameParseError, CnameSuffix, CnameSuffixParseError};

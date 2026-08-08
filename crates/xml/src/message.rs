@@ -2,19 +2,39 @@ use serde::{Deserialize, de::Unexpected};
 
 use crate::*;
 
+/// A message representing either and interface request ([`Interface::requests`]) or event
+/// ([`Interface::events`]).
+///
+/// Message opcodes are assigned in the order they appear the respective lists
+/// in [`Interface`], or in other words; the corresponding list index values.
+///
+/// Therefore the only backwards-compatible way to add requests to an interface is to add
+/// them to the end.
 #[derive(Debug, PartialEq, serde::Deserialize)]
 pub struct Message {
+    /// The name of the request or event.
     #[serde(rename = "@name")]
-    pub(crate) name: Cname,
+    pub name: Cname,
+    /// When this attribute is present, it shall destroy the protocol object it is sent on.
+    ///
+    /// Protocol IPC libraries may use this for bookkeeping protocol object lifetimes.
+    ///
+    /// Libwayland-client uses this information to ignore incoming events for destroyed protocol
+    /// objects. Such events may occur due to a natural race condition between the client destroying
+    /// a protocol object and the server sending events before processing the destroy request.
     #[serde(flatten, deserialize_with = "is_destructor")]
-    pub(crate) destructor: bool,
+    pub destructor: bool,
+    /// Defines at which [`Interface::version`] the message was added.
     #[serde(rename = "@since", default)]
-    pub(crate) since: Version,
+    pub since: Version,
+    /// Defines if and at which [`Interface::version`] the message was marked as deprecated.
     #[serde(rename = "@deprecated-since")]
-    pub(crate) deprecated_since: Option<Version>,
-    pub(crate) description: Option<Description>,
+    pub deprecated_since: Option<Version>,
+    /// Optional message description.
+    pub description: Option<Description>,
+    /// List of arguments passed over the wire for a given message.
     #[serde(rename = "arg", default)]
-    pub(crate) args: Vec<Argument>,
+    pub arguments: Vec<Argument>,
 }
 
 fn is_destructor<'de, D: serde::de::Deserializer<'de>>(deserializer: D) -> Result<bool, D::Error> {
@@ -47,7 +67,7 @@ mod tests {
             since: Version::default(),
             deprecated_since: None,
             description: None,
-            args: Vec::new(),
+            arguments: Vec::new(),
         }
     }
 

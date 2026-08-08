@@ -1,9 +1,12 @@
 use serde::Deserialize;
 
+/// Human-readable documentation for its parent element.
 #[derive(Debug, PartialEq, Deserialize)]
 pub struct Description {
+    /// A short description of the documented element.
     #[serde(rename = "@summary")]
     pub summary: Option<String>,
+    /// Description body which may contain formatted text, including paragraphs and bulleted lists.
     #[serde(rename = "$text")]
     pub text: Option<String>,
 }

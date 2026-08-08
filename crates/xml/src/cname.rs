@@ -12,13 +12,19 @@ const EMPTY_MSG: &str = "The name can not be empty.";
 const INVALID_FIRST_MSG: &str = "Invalid first character. Only a-z, A-Z, and underscores are allowed.";
 const INVALID_SUFFIX_MSG: &str = "Invalid suffix character. Only ASCII alphanumberics and underscores are allowed.";
 
-/// The name must start with one of the ASCII characters a-z, A-Z, or underscore, and the
+/// Name which must with one of the ASCII characters a-z, A-Z, or underscore, and the
 /// following characters may additionally include numbers 0-9.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Cname(pub(crate) String);
 
+impl AsRef<str> for Cname {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
-pub(crate) enum CnameParseError {
+pub enum CnameParseError {
     #[error("{EMPTY_MSG}")]
     Empty,
     #[error("{INVALID_FIRST_MSG}")]
@@ -28,7 +34,7 @@ pub(crate) enum CnameParseError {
 }
 
 impl Cname {
-    pub(crate) fn parse(string: String) -> Result<Self, CnameParseError> {
+    pub fn parse(string: String) -> Result<Self, CnameParseError> {
         let mut chars = string.chars();
 
         let first = chars.next().ok_or(CnameParseError::Empty)?;
@@ -52,12 +58,18 @@ impl<'de> serde::de::Deserialize<'de> for Cname {
     }
 }
 
-/// The name must contain only the ASCII characters a-z, A-Z, 0-9, or underscore.
-#[derive(Debug, PartialEq)]
+/// Name which may only contain the ASCII characters a-z, A-Z, 0-9, or underscore.
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct CnameSuffix(pub(crate) String);
 
+impl AsRef<str> for CnameSuffix {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
-pub(crate) enum CnameSuffixParseError {
+pub enum CnameSuffixParseError {
     #[error("{EMPTY_MSG}")]
     Empty,
     #[error("{INVALID_SUFFIX_MSG}")]
@@ -65,7 +77,7 @@ pub(crate) enum CnameSuffixParseError {
 }
 
 impl CnameSuffix {
-    pub(crate) fn parse(string: String) -> Result<Self, CnameSuffixParseError> {
+    pub fn parse(string: String) -> Result<Self, CnameSuffixParseError> {
         if string.is_empty() {
             return Err(CnameSuffixParseError::Empty);
         }

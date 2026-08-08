@@ -2,18 +2,26 @@ use serde::Deserialize;
 
 use crate::*;
 
+/// Argument declaration of [`Message::arguments`].
+#[allow(missing_docs)]
 #[derive(Debug, PartialEq, Deserialize)]
 pub struct Argument {
+    /// The name must be unique within all the arguments of the parent element.
     #[serde(rename = "@name")]
-    pub(crate) name: Cname,
+    pub name: Cname,
 
     #[serde(flatten, deserialize_with = "argument_type")]
-    pub(crate) variant: ArgumentVariant,
+    pub variant: ArgumentVariant,
 
     #[serde(flatten, deserialize_with = "Description::deserialize_flattened")]
-    pub(crate) description: Description,
+    pub description: Description,
 }
 
+/// Argument type as part of [`Argument`].
+///
+/// Describe both the marshalling to and from the byte-wire format, but also the higher level
+/// interpretations such as interface parameter and enum / bitflag interpretations.
+#[allow(missing_docs)]
 #[derive(Debug, PartialEq)]
 pub enum ArgumentVariant {
     I32 { enumeration: Option<EnumPath> },

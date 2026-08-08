@@ -2,40 +2,49 @@ use serde::Deserialize;
 
 use crate::*;
 
+/// Description for integers as (unit-only) enums or bitflags.
 #[derive(Debug, PartialEq, Deserialize)]
+#[allow(missing_docs)]
 pub struct Enum {
+    /// The name must be unique within all enumerations in the containing interface. The name is
+    /// then used as the namespace for all the contained [`Entry`] elements.
     #[serde(rename = "@name")]
-    pub(crate) name: CnameSuffix,
+    pub name: CnameSuffix,
     #[serde(rename = "@bitfield", default)]
-    pub(crate) bitfield: bool,
+    pub bitfield: bool,
     #[serde(rename = "@since", default)]
-    pub(crate) since: Version,
-    pub(crate) description: Option<Description>,
+    pub since: Version,
+    pub description: Option<Description>,
     #[serde(rename = "entry", default)]
-    pub(crate) entries: Vec<Entry>,
+    pub entries: Vec<EnumEntry>,
 }
 
+/// [`Enum`] variant name, description, and value.
 #[derive(Debug, PartialEq, Deserialize)]
-pub struct Entry {
+#[allow(missing_docs)]
+pub struct EnumEntry {
+    /// The name must be unique within all entry elements in the containing enum.
     #[serde(rename = "@name")]
-    pub(crate) name: CnameSuffix,
+    pub name: CnameSuffix,
+    /// The value can be given in decimal, hexadecimal, or octal representation.
+    ///
+    /// ### Extra - String Representation
+    ///
+    /// The upstream documentation does say how different representations are differentiated, but
+    /// `libwayland` [seems] to expect the string value to treatable as valid C, so it is assumed
+    /// that the representation based on how integer literals are written there.
+    ///
+    /// [seems]: https://gitlab.freedesktop.org/wayland/wayland/-/blob/main/src/scanner.c#L1431-1435
     #[serde(rename = "@value", deserialize_with = "entry_value")]
-    pub(crate) value: usize,
+    pub value: usize,
     #[serde(flatten, deserialize_with = "Description::deserialize_flattened")]
-    pub(crate) description: Description,
+    pub description: Description,
     #[serde(rename = "@since", default)]
-    pub(crate) since: Version,
+    pub since: Version,
     #[serde(rename = "@deprecated-since")]
-    pub(crate) deprecated_since: Option<Version>,
+    pub deprecated_since: Option<Version>,
 }
 
-/// The Message_XML documentation states that decimal, octal, and hex representations are possible,
-/// but doesn't say how :/
-///
-/// `libwayland` [seems] to expect the value string to as valid C. So we assume that the
-/// representation based on how integer literals are written there.
-///
-/// [seems]: https://gitlab.freedesktop.org/wayland/wayland/-/blob/main/src/scanner.c#L1431-1435
 fn entry_value<'de, D: serde::de::Deserializer<'de>>(deserializer: D) -> Result<usize, D::Error> {
     let string = String::deserialize(deserializer)?;
 
@@ -52,10 +61,15 @@ fn entry_value<'de, D: serde::de::Deserializer<'de>>(deserializer: D) -> Result<
     parse_result.map_err(serde::de::Error::custom)
 }
 
+/// Used by [`ArgumentVariant`]s to reference [`Enum`]s.
 #[derive(Debug, PartialEq)]
 pub struct EnumPath {
-    pub(crate) interface: Option<Cname>,
-    pub(crate) enumeration: CnameSuffix,
+    /// Used to refer to an enumeration from another [`Interface`]. Assumed otherwise to refer to an
+    /// enum within the same interface as the corresponding [`Message`] in which the
+    /// [`ArgumentVariant`] is used.
+    pub interface: Option<Cname>,
+    /// Name of the enum the path points to.
+    pub enumeration: CnameSuffix,
 }
 
 impl<'de> serde::de::Deserialize<'de> for EnumPath {
