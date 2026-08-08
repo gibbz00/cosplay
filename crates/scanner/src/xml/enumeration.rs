@@ -10,8 +10,8 @@ pub struct Enum {
     pub(crate) bitfield: bool,
     #[serde(rename = "@since", default)]
     pub(crate) since: Version,
-    pub(crate) description: Option<String>,
-    #[serde(rename = "entry")]
+    pub(crate) description: Option<Description>,
+    #[serde(rename = "entry", default)]
     pub(crate) entries: Vec<Entry>,
 }
 
@@ -78,5 +78,71 @@ impl<'de> serde::de::Deserialize<'de> for EnumPath {
         let enumeration = CnameSuffix::parse(enumeration_string).map_err(serde::de::Error::custom)?;
 
         Ok(EnumPath { interface, enumeration })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn value_repr() {
+        let xml = r#"
+            <enum name="foo">
+                <entry name="first" value="0" />
+                <entry name="second" value="100" />
+                <entry name="third" value="0100" />
+                <entry name="forth" value="0x100" />
+            </enum>
+        "#;
+
+        let actual = quick_xml::de::from_str::<Enum>(xml)
+            .unwrap()
+            .entries
+            .iter()
+            .map(|entry| entry.value)
+            .collect::<Vec<_>>();
+
+        let expected = [0usize, 100, 0o100, 0x100];
+
+        assert_eq!(expected.as_slice(), actual);
+    }
+
+    #[derive(Deserialize)]
+    struct Wrapper {
+        #[serde(rename = "@enum")]
+        path: EnumPath,
+    }
+
+    fn assert_enum_path(xml: &str, expected: EnumPath) {
+        let actual = quick_xml::de::from_str::<Wrapper>(xml).unwrap().path;
+        assert_eq!(expected, actual)
+    }
+
+    #[test]
+    fn local_enum_path() {
+        assert_enum_path(
+            "<wrapper enum=\"bar\" />",
+            EnumPath { interface: None, enumeration: CnameSuffix("bar".to_string()) },
+        );
+
+        assert_enum_path(
+            "<wrapper enum=\"foo.bar\" />",
+            EnumPath {
+                interface: Some(Cname("foo".to_string())),
+                enumeration: CnameSuffix("bar".to_string()),
+            },
+        );
+    }
+
+    #[test]
+    fn qualified_enum_path() {
+        assert_enum_path(
+            "<wrapper enum=\"foo.bar\" />",
+            EnumPath {
+                interface: Some(Cname("foo".to_string())),
+                enumeration: CnameSuffix("bar".to_string()),
+            },
+        );
     }
 }
