@@ -37,7 +37,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-wayland-scanner"
+name = "async-wayland-xml"
 version = "0.1.0"
 dependencies = [
  "quick-xml",

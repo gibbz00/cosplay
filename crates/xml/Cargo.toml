@@ -1,5 +1,5 @@
 [package]
-name = "async-wayland-scanner"
+name = "async-wayland-xml"
 
 edition.workspace = true
 version.workspace = true
