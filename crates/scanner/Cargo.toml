@@ -1,0 +1,10 @@
+[package]
+name = "async-wayland-scanner"
+
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+quick-xml = { workspace = true, features = ["overlapped-lists", "serialize"] }
+serde = { workspace = true, features = ["derive"] }
+thiserror.workspace = true
