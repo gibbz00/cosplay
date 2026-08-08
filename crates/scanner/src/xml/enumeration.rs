@@ -22,7 +22,7 @@ pub struct Entry {
     #[serde(rename = "@value", deserialize_with = "entry_value")]
     pub(crate) value: usize,
     #[serde(flatten, deserialize_with = "Description::deserialize_flattened")]
-    pub(crate) description: Option<Description>,
+    pub(crate) description: Description,
     #[serde(rename = "@since", default)]
     pub(crate) since: Version,
     #[serde(rename = "@deprecated-since")]

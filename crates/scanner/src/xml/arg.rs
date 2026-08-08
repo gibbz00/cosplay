@@ -11,7 +11,7 @@ pub struct Argument {
     pub(crate) variant: ArgumentVariant,
 
     #[serde(flatten, deserialize_with = "Description::deserialize_flattened")]
-    pub(crate) description: Option<Description>,
+    pub(crate) description: Description,
 }
 
 #[derive(Deserialize)]
