@@ -3,7 +3,7 @@ use std::num::NonZeroU32;
 use serde::Deserialize;
 
 #[derive(Debug, PartialEq, Deserialize)]
-pub struct Version(NonZeroU32);
+pub struct Version(pub(crate) NonZeroU32);
 
 impl Default for Version {
     fn default() -> Self {

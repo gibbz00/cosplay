@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(serde::Deserialize)]
+#[derive(Debug, PartialEq, serde::Deserialize)]
 pub struct Interface {
     #[serde(rename = "@name")]
     pub(crate) name: Cname,

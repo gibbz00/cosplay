@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 use crate::*;
 
-#[derive(Deserialize)]
+#[derive(Debug, PartialEq, Deserialize)]
 pub struct Enum {
     #[serde(rename = "@name")]
     pub(crate) name: CnameSuffix,
@@ -15,7 +15,7 @@ pub struct Enum {
     pub(crate) entries: Vec<Entry>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, PartialEq, Deserialize)]
 pub struct Entry {
     #[serde(rename = "@name")]
     pub(crate) name: CnameSuffix,
