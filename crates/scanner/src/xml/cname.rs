@@ -14,6 +14,7 @@ const INVALID_SUFFIX_MSG: &str = "Invalid suffix character. Only ASCII alphanumb
 
 /// The name must start with one of the ASCII characters a-z, A-Z, or underscore, and the
 /// following characters may additionally include numbers 0-9.
+#[derive(Debug)]
 pub struct Cname(pub(crate) String);
 
 #[derive(Debug, thiserror::Error)]
@@ -52,6 +53,7 @@ impl<'de> serde::de::Deserialize<'de> for Cname {
 }
 
 /// The name must contain only the ASCII characters a-z, A-Z, 0-9, or underscore.
+#[derive(Debug)]
 pub struct CnameSuffix(pub(crate) String);
 
 #[derive(Debug, thiserror::Error)]
@@ -59,7 +61,7 @@ pub(crate) enum CnameSuffixParseError {
     #[error("{EMPTY_MSG}")]
     Empty,
     #[error("{INVALID_SUFFIX_MSG}")]
-    InvalidSuffix,
+    InvalidChar,
 }
 
 impl CnameSuffix {
@@ -69,7 +71,7 @@ impl CnameSuffix {
         }
 
         for suffix_char in string.chars() {
-            valid_suffix_char(suffix_char).ok_or(CnameSuffixParseError::InvalidSuffix)?;
+            valid_suffix_char(suffix_char).ok_or(CnameSuffixParseError::InvalidChar)?;
         }
 
         Ok(CnameSuffix(string))
@@ -83,5 +85,85 @@ impl<'de> serde::de::Deserialize<'de> for CnameSuffix {
     {
         let string = String::deserialize(deserializer)?;
         Self::parse(string).map_err(serde::de::Error::custom)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::assert_matches;
+
+    use super::*;
+
+    #[test]
+    fn name_empty_error() {
+        let error = Cname::parse(String::new()).unwrap_err();
+        assert_matches!(error, CnameParseError::Empty);
+    }
+
+    #[test]
+    fn name_invalid_first_error() {
+        assert_error("0");
+        assert_error("🦀");
+
+        fn assert_error(str: &str) {
+            let error = Cname::parse(str.to_string()).unwrap_err();
+            assert_matches!(error, CnameParseError::InvalidFirst);
+        }
+    }
+
+    #[test]
+    fn name_invalid_suffix_error() {
+        assert_error("a.");
+        assert_error("a🦀");
+
+        fn assert_error(str: &str) {
+            let error = Cname::parse(str.to_string()).unwrap_err();
+            assert_matches!(error, CnameParseError::InvalidSuffix);
+        }
+    }
+
+    #[test]
+    fn name_ok() {
+        assert_ok("_a");
+        assert_ok("Ab");
+        assert_ok("b0");
+
+        fn assert_ok(str: &str) {
+            let string = str.to_string();
+            let cname = Cname::parse(string.clone()).unwrap();
+            assert_eq!(string, cname.0)
+        }
+    }
+
+    #[test]
+    fn suffix_name_empty_error() {
+        let error = CnameSuffix::parse(String::new()).unwrap_err();
+        assert_matches!(error, CnameSuffixParseError::Empty);
+    }
+
+    #[test]
+    fn suffix_name_invalid_char_error() {
+        assert_error(".");
+        assert_error("-");
+        assert_error("🦀");
+
+        fn assert_error(str: &str) {
+            let error = CnameSuffix::parse(str.to_string()).unwrap_err();
+            assert_matches!(error, CnameSuffixParseError::InvalidChar);
+        }
+    }
+
+    #[test]
+    fn suffix_name_ok() {
+        assert_ok("_a");
+        assert_ok("Ab");
+        assert_ok("b0");
+        assert_ok("0_");
+
+        fn assert_ok(str: &str) {
+            let string = str.to_string();
+            let suffix = CnameSuffix::parse(string.clone()).unwrap();
+            assert_eq!(string, suffix.0)
+        }
     }
 }
