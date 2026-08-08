@@ -14,8 +14,7 @@ pub struct Argument {
     pub(crate) description: Description,
 }
 
-#[derive(Debug, PartialEq, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, PartialEq)]
 pub enum ArgumentVariant {
     I32 { enumeration: Option<EnumPath> },
     U32 { enumeration: Option<EnumPath> },
@@ -33,8 +32,8 @@ struct VariantProxy {
     ty: Arg,
     #[serde(rename = "@interface")]
     interface: Option<String>,
-    #[serde(rename = "@allow-null")]
-    nullable: bool,
+    #[serde(rename = "@allow-null", default)]
+    nullable: Option<String>,
     #[serde(rename = "@enum")]
     enumeration: Option<EnumPath>,
 }
@@ -55,9 +54,15 @@ enum Arg {
 fn argument_type<'de, D: serde::de::Deserializer<'de>>(deserializer: D) -> Result<ArgumentVariant, D::Error> {
     let VariantProxy { ty, interface, nullable, enumeration } = VariantProxy::deserialize(deserializer)?;
 
+    let nullable = match nullable.as_deref().unwrap_or("false") {
+        "true" => true,
+        "false" => false,
+        other => return Err(serde::de::Error::invalid_value(serde::de::Unexpected::Str(other), &"true or false")),
+    };
+
     let ty = match (ty, interface, nullable, enumeration) {
-        (Arg::Int, None, false, enumeration) => ArgumentVariant::U32 { enumeration },
-        (Arg::Uint, None, false, enumeration) => ArgumentVariant::I32 { enumeration },
+        (Arg::Int, None, false, enumeration) => ArgumentVariant::I32 { enumeration },
+        (Arg::Uint, None, false, enumeration) => ArgumentVariant::U32 { enumeration },
         (Arg::String, None, nullable, None) => ArgumentVariant::String { nullable },
         (Arg::Object, concrete, nullable, None) => ArgumentVariant::ObjectId { concrete, nullable },
         (Arg::NewId, concrete, false, None) => ArgumentVariant::NewObjectId { concrete },
@@ -82,4 +87,102 @@ fn argument_type<'de, D: serde::de::Deserializer<'de>>(deserializer: D) -> Resul
     };
 
     Ok(ty)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn object_interface_ok() {
+        assert_arg_ok(
+            r#"type="object" interface="bar""#,
+            ArgumentVariant::ObjectId { concrete: Some("bar".to_string()), nullable: false },
+        );
+    }
+
+    #[test]
+    fn new_object_interface_ok() {
+        assert_arg_ok(
+            r#"type="new_id" interface="bar""#,
+            ArgumentVariant::NewObjectId { concrete: Some("bar".to_string()) },
+        );
+    }
+
+    #[test]
+    fn other_interface_err() {
+        assert_arg_err(r#"type="int" interface="bar""#);
+    }
+
+    #[test]
+    fn nullable_str_ok() {
+        assert_arg_ok(r#"type="string" allow-null="true""#, ArgumentVariant::String { nullable: true });
+        assert_arg_ok(r#"type="string" allow-null="false""#, ArgumentVariant::String { nullable: false });
+        assert_arg_ok(r#"type="string""#, ArgumentVariant::String { nullable: false });
+    }
+
+    #[test]
+    fn nullable_object_ok() {
+        assert_arg_ok(
+            r#"type="object" allow-null="true""#,
+            ArgumentVariant::ObjectId { concrete: None, nullable: true },
+        );
+    }
+
+    #[test]
+    fn other_nullable_err() {
+        assert_arg_err(r#"type="int" allow-null="true""#);
+    }
+
+    #[test]
+    fn uint_enumeration_ok() {
+        assert_arg_ok(
+            r#"type="uint" enum="bar""#,
+            ArgumentVariant::U32 {
+                enumeration: Some(EnumPath { interface: None, enumeration: CnameSuffix("bar".to_string()) }),
+            },
+        );
+    }
+
+    #[test]
+    fn int_enumeration_ok() {
+        assert_arg_ok(
+            r#"type="int" enum="baz""#,
+            ArgumentVariant::I32 {
+                enumeration: Some(EnumPath { interface: None, enumeration: CnameSuffix("baz".to_string()) }),
+            },
+        );
+    }
+
+    #[test]
+    fn other_enumeration_err() {
+        assert_arg_err(r#"type="string" enum="bar""#);
+    }
+
+    #[derive(Deserialize)]
+    struct Wrapper {
+        #[serde(rename = "arg")]
+        arg: Argument,
+    }
+
+    fn assert_arg_ok(attribute_str: &str, variant: ArgumentVariant) {
+        let actual = prepare_deserialize(attribute_str).unwrap().arg;
+
+        let expected = Argument {
+            name: Cname("foo".to_string()),
+            variant,
+            description: Description { summary: None, text: None },
+        };
+
+        assert_eq!(expected, actual);
+    }
+
+    fn assert_arg_err(attribute_str: &str) {
+        assert!(prepare_deserialize(attribute_str).is_err())
+    }
+
+    fn prepare_deserialize(attribute_str: &str) -> Result<Wrapper, quick_xml::de::DeError> {
+        let xml = format!("<box><arg name=\"foo\" {attribute_str}/></box>");
+        quick_xml::de::from_str(&xml)
+    }
 }

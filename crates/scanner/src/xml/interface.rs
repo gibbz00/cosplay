@@ -9,10 +9,10 @@ pub struct Interface {
     #[serde(rename = "@frozen", default)]
     pub(crate) frozen: bool,
     pub(crate) description: Option<Description>,
-    #[serde(rename = "request")]
+    #[serde(rename = "request", default)]
     pub(crate) requests: Vec<Message>,
-    #[serde(rename = "event")]
+    #[serde(rename = "event", default)]
     pub(crate) events: Vec<Message>,
-    #[serde(rename = "enum")]
+    #[serde(rename = "enum", default)]
     pub(crate) enums: Vec<Enum>,
 }

@@ -54,8 +54,8 @@ fn entry_value<'de, D: serde::de::Deserializer<'de>>(deserializer: D) -> Result<
 
 #[derive(Debug, PartialEq)]
 pub struct EnumPath {
-    interface: Option<Cname>,
-    enumeration: CnameSuffix,
+    pub(crate) interface: Option<Cname>,
+    pub(crate) enumeration: CnameSuffix,
 }
 
 impl<'de> serde::de::Deserialize<'de> for EnumPath {
