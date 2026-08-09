@@ -66,10 +66,10 @@ impl MessageItem {
         messages
             .into_iter()
             .enumerate()
-            .map(|(op_code, message)| MessageItem::quote(op_code, message))
+            .map(|(op_code, message)| MessageItem::quote(op_code as u16, message))
     }
 
-    pub fn quote(op_code: usize, message: async_wayland_xml::Message) -> proc_macro2::TokenStream {
+    pub fn quote(op_code: u16, message: async_wayland_xml::Message) -> proc_macro2::TokenStream {
         let Message { name, destructor, since, deprecated_since, description, arguments } = message;
 
         let doc = Documentation::quote_outer(description);
@@ -78,7 +78,7 @@ impl MessageItem {
 
         let argument_items = arguments.into_iter().map(ArgumentItem::new).collect::<Vec<_>>();
 
-        let item = match argument_items.is_empty() {
+        let struct_declaration = match argument_items.is_empty() {
             true => quote! {
                 #doc
                 pub struct #ident;
@@ -103,7 +103,11 @@ impl MessageItem {
         // TODO: implement message, encode decode
 
         quote! {
-            #item
+            #struct_declaration
+
+            impl ::async_wayland_codec::Message for #ident {
+                const OP_CODE: u16 = #op_code;
+            }
         }
     }
 }
