@@ -7,4 +7,12 @@ version.workspace = true
 [dependencies]
 async-wayland-xml.workspace = true
 
+# lib deps
+anyhow.workspace = true
+prettyplease.workspace = true
+proc-macro2.workspace = true
+quote.workspace = true
+syn.workspace = true
+
+# bin deps
 clap = { workspace = true, features = ["derive"] }

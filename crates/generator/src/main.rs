@@ -11,8 +11,16 @@ struct Args {
     path: PathBuf,
 }
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    println!("{}", args.path.display())
+    let xml = std::fs::read_to_string(&args.path)?;
+
+    let protocol = async_wayland_xml::Protocol::from_xml(&xml)?;
+
+    let src = async_wayland_generator::run(protocol)?;
+
+    println!("{src}");
+
+    Ok(())
 }
