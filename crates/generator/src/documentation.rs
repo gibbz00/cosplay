@@ -32,6 +32,8 @@ impl Documentation {
             }
         }
 
+        lines.pop_if(|last| last.trim() == "");
+
         match outer_attribute {
             true => quote! { #( #[doc = #lines] )* },
             false => quote! { #( #![doc = #lines] )* },
@@ -47,7 +49,7 @@ mod tests {
     fn mock_doc(outer_attribute: bool) -> proc_macro2::TokenStream {
         let description = Description {
             summary: Some("some title".to_string()),
-            text: Some("\n\tA body.".to_string()),
+            text: Some("\n\tA body.\n".to_string()),
         };
 
         Documentation::quote(description, outer_attribute)
