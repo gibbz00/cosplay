@@ -18,7 +18,7 @@ fn main() -> anyhow::Result<()> {
 
     let protocol = async_wayland_xml::Protocol::from_xml(&xml)?;
 
-    let src = async_wayland_generator::run(protocol)?;
+    let src = async_wayland_generator::Generator::run(protocol)?;
 
     println!("{src}");
 
