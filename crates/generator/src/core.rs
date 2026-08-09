@@ -13,7 +13,7 @@ impl Generator {
     pub fn run(protocol: Protocol) -> anyhow::Result<String> {
         let Protocol { description, interfaces, .. } = protocol;
 
-        let description_comment = Documentation::quote_outer(description);
+        let description_comment = Documentation::quote_inner(description);
 
         let interface_modules = interfaces.into_iter().map(InterfaceModule::quote);
 

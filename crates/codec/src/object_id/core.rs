@@ -1,13 +1,11 @@
 use std::marker::PhantomData;
 
-use crate::*;
-
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct OpaqueObjectId(pub(crate) u32);
 
 #[impl_tools::autoimpl(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct ObjectId<I> {
-    pub(crate) inner: u32,
+    pub(crate) inner: OpaqueObjectId,
     pub(crate) interface_marker: PhantomData<I>,
 }
 

@@ -15,9 +15,10 @@ pub use arguments::{ArgumentBag, ArgumentDecodeError, MarshalArgument, ParseArgu
 
 mod object_id;
 pub(crate) use object_id::*;
+pub use object_id::{NewObjectId, ObjectId, OpaqueNewObjectId, OpaqueObjectId};
 
 mod fixed;
-pub(crate) use fixed::Fixed;
+pub use fixed::Fixed;
 
 mod entity;
 pub(crate) use entity::{Client, Entity, Server};

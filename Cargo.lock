@@ -88,6 +88,7 @@ dependencies = [
  "anyhow",
  "async-wayland-xml",
  "clap",
+ "heck",
  "indoc",
  "prettyplease",
  "proc-macro2",

@@ -4,11 +4,15 @@ use quote::quote;
 pub struct Documentation;
 
 impl Documentation {
-    pub fn quote_outer(description: Option<Description>) -> Option<proc_macro2::TokenStream> {
+    pub fn quote_inner(description: Option<Description>) -> Option<proc_macro2::TokenStream> {
         description.map(|description| Self::quote(description, false))
     }
 
-    pub fn quote(description: Description, inner_attribute: bool) -> proc_macro2::TokenStream {
+    pub fn quote_outer(description: Option<Description>) -> Option<proc_macro2::TokenStream> {
+        description.map(|description| Self::quote(description, true))
+    }
+
+    pub fn quote(description: Description, outer_attribute: bool) -> proc_macro2::TokenStream {
         let Description { summary, text } = description;
 
         let mut lines = Vec::<String>::new();
@@ -28,7 +32,7 @@ impl Documentation {
             }
         }
 
-        match inner_attribute {
+        match outer_attribute {
             true => quote! { #( #[doc = #lines] )* },
             false => quote! { #( #![doc = #lines] )* },
         }
@@ -40,17 +44,17 @@ mod tests {
     use super::*;
     use crate::*;
 
-    fn mock_doc(inner_attribute: bool) -> proc_macro2::TokenStream {
+    fn mock_doc(outer_attribute: bool) -> proc_macro2::TokenStream {
         let description = Description {
             summary: Some("some title".to_string()),
             text: Some("\n\tA body.".to_string()),
         };
 
-        Documentation::quote(description, inner_attribute)
+        Documentation::quote(description, outer_attribute)
     }
 
     #[test]
-    fn inner() {
+    fn outer() {
         let doc = mock_doc(true);
 
         let actual = Formatter::format(quote! {
@@ -70,7 +74,7 @@ mod tests {
     }
 
     #[test]
-    fn outer() {
+    fn inner() {
         let doc = mock_doc(false);
 
         let actual = Formatter::format(quote! {

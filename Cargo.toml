@@ -17,6 +17,7 @@ anyhow = "1"
 bytes = "1"
 clap = "4"
 futures-util = { version = "0.3", default-features = false }
+heck = "0.5"
 i24 = "2"
 impl-tools = "0.13"
 indoc = "2"

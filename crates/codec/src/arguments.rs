@@ -100,6 +100,23 @@ impl ParseArgument for Fixed {
 }
 
 #[sealed::sealed]
+impl MarshalArgument for Option<OpaqueObjectId> {
+    fn marshal(self, bag: &mut ArgumentBag<'_>) {
+        self.map(|id| id.0).unwrap_or(0).marshal(bag);
+    }
+}
+
+#[sealed::sealed]
+impl ParseArgument for Option<OpaqueObjectId> {
+    fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
+        u32::parse(bag).map(|raw| match raw == 0 {
+            true => None,
+            false => Some(OpaqueObjectId(raw)),
+        })
+    }
+}
+
+#[sealed::sealed]
 impl MarshalArgument for OpaqueObjectId {
     fn marshal(self, bag: &mut ArgumentBag<'_>) {
         self.0.marshal(bag);
@@ -109,7 +126,7 @@ impl MarshalArgument for OpaqueObjectId {
 #[sealed::sealed]
 impl ParseArgument for OpaqueObjectId {
     fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
-        u32::parse(bag).map(Self)
+        Option::<OpaqueObjectId>::parse(bag)?.ok_or(ArgumentDecodeError::MissingObjectId)
     }
 }
 
@@ -123,24 +140,23 @@ impl<I> MarshalArgument for ObjectId<I> {
 #[sealed::sealed]
 impl<I> ParseArgument for ObjectId<I> {
     fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
-        Option::<ObjectId<I>>::parse(bag)?.ok_or(ArgumentDecodeError::MissingObjectId)
+        OpaqueObjectId::parse(bag).map(|inner| Self { inner, interface_marker: PhantomData })
     }
 }
 
 #[sealed::sealed]
 impl<I> MarshalArgument for Option<ObjectId<I>> {
     fn marshal(self, bag: &mut ArgumentBag<'_>) {
-        self.map(|id| id.inner).unwrap_or(0).marshal(bag);
+        self.map(|id| id.inner).marshal(bag);
     }
 }
 
 #[sealed::sealed]
 impl<I> ParseArgument for Option<ObjectId<I>> {
     fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
-        u32::parse(bag).map(|raw| match raw == 0 {
-            true => None,
-            false => Some(ObjectId { inner: raw, interface_marker: PhantomData }),
-        })
+        let opaque = Option::<OpaqueObjectId>::parse(bag)?;
+        let concrete = opaque.map(|inner| ObjectId { inner, interface_marker: PhantomData });
+        Ok(concrete)
     }
 }
 
@@ -318,6 +334,12 @@ mod tests {
     }
 
     #[test]
+    fn optional_opaque_object_id_encoding() {
+        assert_bijective_encoding(Some(OpaqueObjectId(123456)));
+        assert_bijective_encoding(Option::<OpaqueObjectId>::None);
+    }
+
+    #[test]
     fn object_id_encoding() {
         assert_bijective_encoding(mock_id());
     }
@@ -443,7 +465,7 @@ mod tests {
     }
 
     fn mock_id() -> ObjectId<()> {
-        ObjectId { inner: 1, interface_marker: PhantomData }
+        ObjectId { inner: OpaqueObjectId(1), interface_marker: PhantomData }
     }
 
     fn assert_bijective_encoding<T>(value: T)
