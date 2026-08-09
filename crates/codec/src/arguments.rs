@@ -310,6 +310,7 @@ mod tests {
     };
 
     use super::*;
+    use crate::WaylandMessageStreamError::Opaque;
 
     #[test]
     fn u32_encoding() {
@@ -337,6 +338,19 @@ mod tests {
     fn optional_opaque_object_id_encoding() {
         assert_bijective_encoding(Some(OpaqueObjectId(123456)));
         assert_bijective_encoding(Option::<OpaqueObjectId>::None);
+    }
+
+    #[test]
+    fn expected_opaque_object_id_err() {
+        let mut bytes = BytesMut::new();
+        let mut fd_buffer = VecDeque::new();
+        let mut bag = ArgumentBag { bytes: &mut bytes, fd_buffer: &mut fd_buffer };
+
+        0.marshal(&mut bag);
+
+        let error = OpaqueObjectId::parse(&mut bag).unwrap_err();
+
+        assert_matches!(error, ArgumentDecodeError::MissingObjectId);
     }
 
     #[test]
