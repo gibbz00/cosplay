@@ -13,7 +13,7 @@ impl InterfaceModule {
 
         let item_name = IdentifierItem::type_name(name);
 
-        let description_comment = Documentation::quote_inner(description);
+        let doc = Documentation::quote_outer(description);
 
         let requests = MessageItem::quote_list(requests);
 
@@ -21,8 +21,7 @@ impl InterfaceModule {
 
         quote! {
             pub mod #module_name {
-                #description_comment
-
+                #doc
                 pub struct #item_name;
 
                 #(#requests)*
