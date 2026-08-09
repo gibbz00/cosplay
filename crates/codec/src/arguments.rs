@@ -310,7 +310,6 @@ mod tests {
     };
 
     use super::*;
-    use crate::WaylandMessageStreamError::Opaque;
 
     #[test]
     fn u32_encoding() {
