@@ -12,8 +12,9 @@ const EMPTY_MSG: &str = "The name can not be empty.";
 const INVALID_FIRST_MSG: &str = "Invalid first character. Only a-z, A-Z, and underscores are allowed.";
 const INVALID_SUFFIX_MSG: &str = "Invalid suffix character. Only ASCII alphanumberics and underscores are allowed.";
 
-/// Name which must with one of the ASCII characters a-z, A-Z, or underscore, and the
-/// following characters may additionally include numbers 0-9.
+/// Name which must start with one of the ASCII characters a-z, A-Z, or
+/// underscore, and where the following characters may additionally include
+/// numbers 0-9.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Cname(pub(crate) String);
 
@@ -24,6 +25,7 @@ impl AsRef<str> for Cname {
 }
 
 #[derive(Debug, thiserror::Error)]
+#[allow(missing_docs)]
 pub enum CnameParseError {
     #[error("{EMPTY_MSG}")]
     Empty,
@@ -34,6 +36,7 @@ pub enum CnameParseError {
 }
 
 impl Cname {
+    /// Create a new `Cname` from a String.
     pub fn parse(string: String) -> Result<Self, CnameParseError> {
         let mut chars = string.chars();
 
@@ -69,6 +72,7 @@ impl AsRef<str> for CnameSuffix {
 }
 
 #[derive(Debug, thiserror::Error)]
+#[allow(missing_docs)]
 pub enum CnameSuffixParseError {
     #[error("{EMPTY_MSG}")]
     Empty,
@@ -77,6 +81,7 @@ pub enum CnameSuffixParseError {
 }
 
 impl CnameSuffix {
+    /// Create a new `CnameSuffix` from a String.
     pub fn parse(string: String) -> Result<Self, CnameSuffixParseError> {
         if string.is_empty() {
             return Err(CnameSuffixParseError::Empty);
