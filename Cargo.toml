@@ -19,6 +19,7 @@ clap = "4"
 futures-util = { version = "0.3", default-features = false }
 i24 = "2"
 impl-tools = "0.13"
+indoc = "2"
 prettyplease = "0.3"
 proc-macro2 = "1"
 quick-xml = "0.41"

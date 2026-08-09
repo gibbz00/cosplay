@@ -7,6 +7,9 @@ use quote::quote;
 mod documentation;
 pub(crate) use documentation::Documentation;
 
+mod formatting;
+pub(crate) use formatting::Formatter;
+
 /// Convert a wayland protocol into Rust source code implementing `async-wayland-codec` traits.
 pub fn run(protocol: Protocol) -> anyhow::Result<String> {
     let Protocol { description, interfaces, .. } = protocol;
@@ -23,13 +26,7 @@ pub fn run(protocol: Protocol) -> anyhow::Result<String> {
         #(#interface_modules)*
     };
 
-    format_src(src)
-}
-
-fn format_src(src: proc_macro2::TokenStream) -> anyhow::Result<String> {
-    let file = syn::parse2::<syn::File>(src).context("Failed to parse token stream.")?;
-    let formatted = prettyplease::unparse(&file);
-    Ok(formatted)
+    Formatter::format(src).context("Failed to parse src tokens.")
 }
 
 fn prepare_interface(interface: Interface) -> proc_macro2::TokenStream {

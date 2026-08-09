@@ -16,3 +16,7 @@ syn.workspace = true
 
 # bin deps
 clap = { workspace = true, features = ["derive"] }
+
+
+[dev-dependencies]
+indoc.workspace = true
