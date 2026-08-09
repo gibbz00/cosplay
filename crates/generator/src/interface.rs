@@ -9,7 +9,9 @@ impl InterfaceModule {
     pub fn quote(interface: Interface) -> proc_macro2::TokenStream {
         let Interface { name, version, frozen, description, requests, events, enums } = interface;
 
-        let name = IdentifierItem::module_name(name);
+        let module_name = IdentifierItem::module_name(&name);
+
+        let item_name = IdentifierItem::type_name(name);
 
         let description_comment = Documentation::quote_inner(description);
 
@@ -18,8 +20,10 @@ impl InterfaceModule {
         let events = MessageItem::quote_list(events);
 
         quote! {
-            pub mod #name {
+            pub mod #module_name {
                 #description_comment
+
+                pub struct #item_name;
 
                 #(#requests)*
 
