@@ -11,6 +11,7 @@ crane.name = "async-wayland"
 
 [workspace.dependencies]
 async-wayland-ancillary = { path = "./crates/ancillary" }
+async-wayland-xml = { path = "./crates/xml" }
 
 bytes = "1"
 futures-util = { version = "0.3", default-features = false }

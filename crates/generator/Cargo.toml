@@ -1,0 +1,8 @@
+[package]
+name = "async-wayland-generator"
+
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+async-wayland-xml.workspace = true

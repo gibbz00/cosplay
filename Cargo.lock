@@ -26,6 +26,13 @@ name = "async-wayland-core"
 version = "0.1.0"
 
 [[package]]
+name = "async-wayland-generator"
+version = "0.1.0"
+dependencies = [
+ "async-wayland-xml",
+]
+
+[[package]]
 name = "async-wayland-net"
 version = "0.1.0"
 dependencies = [
