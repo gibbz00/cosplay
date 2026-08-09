@@ -87,7 +87,7 @@ impl MessageItem {
                 let fields = argument_items.iter().map(|ArgumentItem { field_name, rust_type, doc_comment }| {
                     quote! {
                         #doc_comment
-                        #field_name: #rust_type,
+                        pub #field_name: #rust_type,
                     }
                 });
 
@@ -100,13 +100,61 @@ impl MessageItem {
             }
         };
 
-        // TODO: implement message, encode decode
+        let encode_impl = Self::encode_impl(&ident, &argument_items);
+
+        let decode_impl = Self::decode_impl(&ident, &argument_items);
 
         quote! {
             #struct_declaration
 
             impl ::async_wayland_codec::Message for #ident {
                 const OP_CODE: u16 = #op_code;
+            }
+
+            #encode_impl
+
+            #decode_impl
+        }
+    }
+
+    fn encode_impl(ident: &proc_macro2::Ident, arguments: &[ArgumentItem]) -> proc_macro2::TokenStream {
+        let fields = arguments.iter().map(|item| {
+            let field_name = &item.field_name;
+            quote! { self.#field_name.marshal(bag); }
+        });
+
+        quote! {
+            impl ::async_wayland::EncodeMessage for #ident {
+                fn encode(self, bag: &mut ::async_wayland::ArgumentBag<'_>) {
+                    use ::async_wayland::MarshalArgument as _;
+                    #(#fields)*
+                }
+            }
+        }
+    }
+
+    fn decode_impl(ident: &proc_macro2::Ident, arguments: &[ArgumentItem]) -> proc_macro2::TokenStream {
+        let body = match arguments.is_empty() {
+            true => quote! { Self },
+            false => {
+                let fields = arguments.iter().map(|item| {
+                    let field_name = &item.field_name;
+                    quote! { #field_name: ::async_wayland::ParseArgument::parse(bag)?, }
+                });
+
+                quote! {
+                    Self {
+                        #(#fields)*
+                    }
+                }
+            }
+        };
+
+        quote! {
+            impl ::async_wayland::DecodeMessage for #ident {
+                fn decode(bag: &mut ::async_wayland::ArgumentBag<'_>) -> Result<Self, ::async_wayland::DecodeMessageError> {
+                    Ok(#body)
+                }
             }
         }
     }
