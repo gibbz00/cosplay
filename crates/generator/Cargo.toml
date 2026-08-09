@@ -6,3 +6,5 @@ version.workspace = true
 
 [dependencies]
 async-wayland-xml.workspace = true
+
+clap = { workspace = true, features = ["derive"] }

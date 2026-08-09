@@ -14,6 +14,7 @@ async-wayland-ancillary = { path = "./crates/ancillary" }
 async-wayland-xml = { path = "./crates/xml" }
 
 bytes = "1"
+clap = "4"
 futures-util = { version = "0.3", default-features = false }
 i24 = "2"
 impl-tools = "0.13"
