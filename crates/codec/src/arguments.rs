@@ -25,7 +25,7 @@ pub trait MarshalArgument: Sized {
 /// Convert raw message bytes to primitive arguments.
 ///
 /// Trait is sealed so that and can not be implemented on third-party types. Parsing to higher-level
-/// types (enums, bitflags etc.) is instead done in [`DecodeMessage`].
+/// types (enums, bitflags etc.) is instead done in [`DecodeMessage`] with [`Enumeration`].
 #[sealed::sealed]
 pub trait ParseArgument: Sized {
     #[allow(missing_docs)]
@@ -299,6 +299,26 @@ impl ParseArgument for Option<String> {
                 String::from_utf8(vec).map(Some).map_err(Into::into)
             }
         }
+    }
+}
+
+#[sealed::sealed]
+impl<T: Enumeration> MarshalArgument for T
+where
+    T::Repr: MarshalArgument,
+{
+    fn marshal(self, bag: &mut ArgumentBag<'_>) {
+        self.to_repr().marshal(bag);
+    }
+}
+
+#[sealed::sealed]
+impl<T: Enumeration> ParseArgument for T
+where
+    T::Repr: ParseArgument,
+{
+    fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
+        ParseArgument::parse(bag).map(T::from_repr)
     }
 }
 
