@@ -28,6 +28,8 @@ pub struct EnumEntry {
     pub name: CnameSuffix,
     /// The value can be given in decimal, hexadecimal, or octal representation.
     ///
+    /// Stored as an i64 to accommodate for both u32 and i32 representations.
+    ///
     /// ### Extra - String Representation
     ///
     /// The upstream documentation does say how different representations are differentiated, but
@@ -36,7 +38,7 @@ pub struct EnumEntry {
     ///
     /// [seems]: https://gitlab.freedesktop.org/wayland/wayland/-/blob/main/src/scanner.c#L1431-1435
     #[serde(rename = "@value", deserialize_with = "entry_value")]
-    pub value: usize,
+    pub value: i64,
     #[serde(flatten, deserialize_with = "Description::deserialize_flattened")]
     pub description: Description,
     #[serde(rename = "@since", default)]
@@ -45,20 +47,35 @@ pub struct EnumEntry {
     pub deprecated_since: Option<Version>,
 }
 
-fn entry_value<'de, D: serde::de::Deserializer<'de>>(deserializer: D) -> Result<usize, D::Error> {
+fn entry_value<'de, D: serde::de::Deserializer<'de>>(deserializer: D) -> Result<i64, D::Error> {
     let string = String::deserialize(deserializer)?;
 
-    let parse_result = if let Some(hex_str) = string.strip_prefix("0x") {
-        usize::from_str_radix(hex_str, 16)
-    } else if string.len() > 1
-        && let Some(octal_str) = string.strip_prefix('0')
-    {
-        usize::from_str_radix(octal_str, 8)
-    } else {
-        string.parse()
+    let negative = string.starts_with('-');
+
+    let num_str = match negative {
+        true => &string[1..],
+        false => &string,
     };
 
-    parse_result.map_err(serde::de::Error::custom)
+    // NB: avoid deserializing directly to isize to error on invalid input such as "0x-10".
+    let parse_result = if let Some(hex_str) = num_str.strip_prefix("0x") {
+        i64::from_str_radix(hex_str, 16)
+    } else if num_str.len() > 1
+        && let Some(octal_str) = num_str.strip_prefix('0')
+    {
+        i64::from_str_radix(octal_str, 8)
+    } else {
+        num_str.parse()
+    };
+
+    let num = parse_result.map_err(serde::de::Error::custom)?;
+
+    let signed_num = match negative {
+        true => -num,
+        false => num,
+    };
+
+    Ok(signed_num)
 }
 
 /// Used by [`ArgumentVariant`]s to reference [`Enum`]s.
@@ -110,16 +127,38 @@ mod tests {
             </enum>
         "#;
 
-        let actual = quick_xml::de::from_str::<Enum>(xml)
+        let actual = deserialize_values(xml);
+
+        let expected = [0, 100, 0o100, 0x100];
+
+        assert_eq!(expected.as_slice(), actual);
+    }
+
+    #[test]
+    fn negative_value_repr() {
+        let xml = r#"
+            <enum name="foo">
+                <entry name="first" value="-0" />
+                <entry name="second" value="-100" />
+                <entry name="third" value="-0100" />
+                <entry name="forth" value="-0x100" />
+            </enum>
+        "#;
+
+        let actual = deserialize_values(xml);
+
+        let expected = [-0, -100, -0o100, -0x100];
+
+        assert_eq!(expected.as_slice(), actual);
+    }
+
+    fn deserialize_values(xml: &str) -> Vec<i64> {
+        quick_xml::de::from_str::<Enum>(xml)
             .unwrap()
             .entries
             .iter()
             .map(|entry| entry.value)
-            .collect::<Vec<_>>();
-
-        let expected = [0usize, 100, 0o100, 0x100];
-
-        assert_eq!(expected.as_slice(), actual);
+            .collect()
     }
 
     #[derive(Deserialize)]
