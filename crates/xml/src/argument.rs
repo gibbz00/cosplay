@@ -28,8 +28,8 @@ pub enum ArgumentVariant {
     U32 { enumeration: Option<EnumPath> },
     Fixed,
     String { nullable: bool },
-    ObjectId { concrete: Option<String>, nullable: bool },
-    NewObjectId { concrete: Option<String> },
+    ObjectId { concrete: Option<Cname>, nullable: bool },
+    NewObjectId { concrete: Option<Cname> },
     Array,
     Fd,
 }
@@ -39,7 +39,7 @@ struct VariantProxy {
     #[serde(rename = "@type")]
     ty: Arg,
     #[serde(rename = "@interface")]
-    interface: Option<String>,
+    interface: Option<Cname>,
     #[serde(rename = "@allow-null", default)]
     nullable: Option<String>,
     #[serde(rename = "@enum")]
@@ -105,7 +105,7 @@ mod tests {
     fn object_interface_ok() {
         assert_arg_ok(
             r#"type="object" interface="bar""#,
-            ArgumentVariant::ObjectId { concrete: Some("bar".to_string()), nullable: false },
+            ArgumentVariant::ObjectId { concrete: Some(Cname("bar".to_string())), nullable: false },
         );
     }
 
@@ -113,7 +113,7 @@ mod tests {
     fn new_object_interface_ok() {
         assert_arg_ok(
             r#"type="new_id" interface="bar""#,
-            ArgumentVariant::NewObjectId { concrete: Some("bar".to_string()) },
+            ArgumentVariant::NewObjectId { concrete: Some(Cname("bar".to_string())) },
         );
     }
 

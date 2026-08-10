@@ -16,9 +16,9 @@ impl ArgumentItem {
         let Argument { name, variant, description } = argument;
 
         Self {
-            field_name: IdentifierItem::field_name(name),
+            field_name: IdentifierItem::field_name(&name),
             rust_type: Self::variant_type(variant),
-            doc_comment: Documentation::quote_outer(Some(description)),
+            doc_comment: Documentation::quote_outer(Some(&description)),
         }
     }
 
@@ -31,22 +31,22 @@ impl ArgumentItem {
                 None => quote! { i32 },
             },
             ArgumentVariant::U32 { enumeration } => match enumeration {
-                None => quote! { u32 },
                 Some(path) => IdentifierItem::enum_path(path),
+                None => quote! { u32 },
             },
             ArgumentVariant::Fixed => quote! { ::async_wayland_codec::Fixed },
             ArgumentVariant::String { nullable } => maybe_optional(quote! { ::std::string::String }, nullable),
             ArgumentVariant::ObjectId { concrete, nullable } => match concrete {
                 None => maybe_optional(quote! { ::async_wayland_codec::OpaqueObjectId }, nullable),
                 Some(interface_name) => {
-                    let path = IdentifierItem::qualified_interface(interface_name);
+                    let path = IdentifierItem::qualified_interface(&interface_name);
                     maybe_optional(quote! { ::async_wayland_codec::ObjectId<#path> }, nullable)
                 }
             },
             ArgumentVariant::NewObjectId { concrete } => match concrete {
                 None => quote! { ::async_wayland_codec::OpaqueNewObjectId },
                 Some(interface_name) => {
-                    let path = IdentifierItem::qualified_interface(interface_name);
+                    let path = IdentifierItem::qualified_interface(&interface_name);
                     quote! { ::async_wayland_codec::NewObjectId<#path> }
                 }
             },
@@ -66,15 +66,15 @@ impl MessageItem {
         messages
             .into_iter()
             .enumerate()
-            .map(|(op_code, message)| MessageItem::quote(op_code as u16, message))
+            .map(|(op_code, message)| Self::quote(op_code as u16, message))
     }
 
-    pub fn quote(op_code: u16, message: async_wayland_xml::Message) -> proc_macro2::TokenStream {
+    fn quote(op_code: u16, message: async_wayland_xml::Message) -> proc_macro2::TokenStream {
         let Message { name, destructor, since, deprecated_since, description, arguments } = message;
 
-        let doc = Documentation::quote_outer(description);
+        let doc = Documentation::quote_outer(description.as_ref());
 
-        let ident = IdentifierItem::type_name(name);
+        let ident = IdentifierItem::type_name(&name);
 
         let argument_items = arguments.into_iter().map(ArgumentItem::new).collect::<Vec<_>>();
 
@@ -124,9 +124,9 @@ impl MessageItem {
         });
 
         quote! {
-            impl ::async_wayland::EncodeMessage for #ident {
-                fn encode(self, bag: &mut ::async_wayland::ArgumentBag<'_>) {
-                    use ::async_wayland::MarshalArgument as _;
+            impl ::async_wayland_codec::EncodeMessage for #ident {
+                fn encode(self, bag: &mut ::async_wayland_codec::ArgumentBag<'_>) {
+                    use ::async_wayland_codec::MarshalArgument as _;
                     #(#fields)*
                 }
             }
@@ -139,7 +139,7 @@ impl MessageItem {
             false => {
                 let fields = arguments.iter().map(|item| {
                     let field_name = &item.field_name;
-                    quote! { #field_name: ::async_wayland::ParseArgument::parse(bag)?, }
+                    quote! { #field_name: ::async_wayland_codec::ParseArgument::parse(bag)?, }
                 });
 
                 quote! {
@@ -151,8 +151,8 @@ impl MessageItem {
         };
 
         quote! {
-            impl ::async_wayland::DecodeMessage for #ident {
-                fn decode(bag: &mut ::async_wayland::ArgumentBag<'_>) -> Result<Self, ::async_wayland::DecodeMessageError> {
+            impl ::async_wayland_codec::DecodeMessage for #ident {
+                fn decode(bag: &mut ::async_wayland_codec::ArgumentBag<'_>) -> Result<Self, ::async_wayland_codec::DecodeMessageError> {
                     Ok(#body)
                 }
             }

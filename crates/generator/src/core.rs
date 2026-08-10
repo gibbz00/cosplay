@@ -1,5 +1,5 @@
 use anyhow::Context;
-use async_wayland_xml::Protocol;
+use async_wayland_xml::{Protocol, utils::EnumReprMap};
 use quote::quote;
 
 use crate::*;
@@ -11,11 +11,13 @@ impl Generator {
     /// Convert a wayland protocol into Rust source code implementing `async-wayland-codec`
     /// traits.
     pub fn run(protocol: Protocol) -> anyhow::Result<String> {
+        let repr_map = EnumReprMap::new(&protocol).context("Failed to build enum representation map.")?;
+
         let Protocol { description, interfaces, .. } = protocol;
 
-        let description_comment = Documentation::quote_inner(description);
+        let description_comment = Documentation::quote_inner(description.as_ref());
 
-        let interface_modules = interfaces.into_iter().map(InterfaceModule::quote);
+        let interface_modules = interfaces.into_iter().map(|interface| InterfaceModule::quote(interface, &repr_map));
 
         let src = quote! {
             #description_comment

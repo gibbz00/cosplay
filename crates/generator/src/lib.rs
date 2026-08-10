@@ -9,6 +9,9 @@ pub(crate) use interface::InterfaceModule;
 mod message;
 pub(crate) use message::MessageItem;
 
+mod enumeration;
+pub(crate) use enumeration::EnumItem;
+
 mod documentation;
 pub(crate) use documentation::Documentation;
 

@@ -4,15 +4,15 @@ use quote::quote;
 pub struct Documentation;
 
 impl Documentation {
-    pub fn quote_inner(description: Option<Description>) -> Option<proc_macro2::TokenStream> {
+    pub fn quote_inner(description: Option<&Description>) -> Option<proc_macro2::TokenStream> {
         description.map(|description| Self::quote(description, false))
     }
 
-    pub fn quote_outer(description: Option<Description>) -> Option<proc_macro2::TokenStream> {
+    pub fn quote_outer(description: Option<&Description>) -> Option<proc_macro2::TokenStream> {
         description.map(|description| Self::quote(description, true))
     }
 
-    pub fn quote(description: Description, outer_attribute: bool) -> proc_macro2::TokenStream {
+    pub fn quote(description: &Description, outer_attribute: bool) -> proc_macro2::TokenStream {
         let Description { summary, text } = description;
 
         let mut lines = Vec::<String>::new();
@@ -52,7 +52,7 @@ mod tests {
             text: Some("\n\tA body.\n".to_string()),
         };
 
-        Documentation::quote(description, outer_attribute)
+        Documentation::quote(&description, outer_attribute)
     }
 
     #[test]

@@ -5,3 +5,4 @@ edition.workspace = true
 version.workspace = true
 
 [dependencies]
+async-wayland-codec.workspace = true

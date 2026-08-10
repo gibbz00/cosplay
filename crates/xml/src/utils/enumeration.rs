@@ -22,15 +22,6 @@ pub enum EnumRepr {
     I32,
 }
 
-impl AsRef<str> for EnumRepr {
-    fn as_ref(&self) -> &str {
-        match self {
-            EnumRepr::U32 => "u32",
-            EnumRepr::I32 => "i32",
-        }
-    }
-}
-
 impl EnumReprMap {
     /// Traverse a protocol and store all enum type mentioned in interface requests and events.
     ///
