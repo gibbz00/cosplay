@@ -62,7 +62,7 @@ fn entry_value<'de, D: serde::de::Deserializer<'de>>(deserializer: D) -> Result<
 }
 
 /// Used by [`ArgumentVariant`]s to reference [`Enum`]s.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct EnumPath {
     /// Used to refer to an enumeration from another [`Interface`]. Assumed otherwise to refer to an
     /// enum within the same interface as the corresponding [`Message`] in which the

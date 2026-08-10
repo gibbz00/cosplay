@@ -24,6 +24,12 @@ impl AsRef<str> for Cname {
     }
 }
 
+impl std::fmt::Display for Cname {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 #[allow(missing_docs)]
 pub enum CnameParseError {
@@ -68,6 +74,12 @@ pub struct CnameSuffix(pub(crate) String);
 impl AsRef<str> for CnameSuffix {
     fn as_ref(&self) -> &str {
         &self.0
+    }
+}
+
+impl std::fmt::Display for CnameSuffix {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 

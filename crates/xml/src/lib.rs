@@ -41,3 +41,5 @@ pub use version::Version;
 
 mod cname;
 pub use cname::{Cname, CnameParseError, CnameSuffix, CnameSuffixParseError};
+
+pub mod utils;
