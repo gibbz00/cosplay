@@ -71,13 +71,12 @@ impl MessageItem {
     fn encode_impl(ident: &proc_macro2::Ident, arguments: &[ArgumentItem]) -> proc_macro2::TokenStream {
         let fields = arguments.iter().map(|item| {
             let field_name = &item.field_name;
-            quote! { self.#field_name.marshal(bag); }
+            quote! { ::async_wayland_codec::MarshalArgument::marshal(self.#field_name, _bag); }
         });
 
         quote! {
             impl ::async_wayland_codec::EncodeMessage for #ident {
-                fn encode(self, bag: &mut ::async_wayland_codec::ArgumentBag<'_>) {
-                    use ::async_wayland_codec::MarshalArgument as _;
+                fn encode(self, _bag: &mut ::async_wayland_codec::ArgumentBag<'_>) {
                     #(#fields)*
                 }
             }
@@ -90,7 +89,7 @@ impl MessageItem {
             false => {
                 let fields = arguments.iter().map(|item| {
                     let field_name = &item.field_name;
-                    quote! { #field_name: ::async_wayland_codec::ParseArgument::parse(bag)?, }
+                    quote! { #field_name: ::async_wayland_codec::ParseArgument::parse(_bag)?, }
                 });
 
                 quote! {
@@ -103,7 +102,7 @@ impl MessageItem {
 
         quote! {
             impl ::async_wayland_codec::DecodeMessage for #ident {
-                fn decode(bag: &mut ::async_wayland_codec::ArgumentBag<'_>) -> Result<Self, ::async_wayland_codec::DecodeMessageError> {
+                fn decode(_bag: &mut ::async_wayland_codec::ArgumentBag<'_>) -> Result<Self, ::async_wayland_codec::DecodeMessageError> {
                     Ok(#body)
                 }
             }

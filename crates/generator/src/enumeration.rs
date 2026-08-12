@@ -64,6 +64,7 @@ impl EnumItem {
             #doc
             pub enum #enum_ident {
                 #(#enum_fields)*
+                /// Fallback variant undocumented entry values.
                 Other(#repr_ident)
             }
 
