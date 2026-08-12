@@ -2,6 +2,8 @@ use async_wayland_xml::{Cname, CnameSuffix, EnumPath};
 use heck::{ToSnakeCase, ToUpperCamelCase};
 use quote::quote;
 
+use crate::*;
+
 pub struct IdentifierItem;
 
 impl IdentifierItem {
@@ -36,10 +38,12 @@ impl IdentifierItem {
         quote! { crate::#module_name::#type_name }
     }
 
-    pub fn enum_path(path: EnumPath) -> proc_macro2::TokenStream {
+    pub fn enum_path(path: EnumPath, name_mappings: &NameMappings) -> proc_macro2::TokenStream {
         let EnumPath { interface, enumeration } = path;
 
-        let name = Self::sanitized_type_name(&enumeration);
+        let mapped_name = name_mappings.get(&enumeration, ItemType::Enum).unwrap_or(&enumeration);
+
+        let name = Self::sanitized_type_name(mapped_name);
 
         match interface {
             Some(interface_name) => {

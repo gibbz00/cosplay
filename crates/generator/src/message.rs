@@ -5,78 +5,31 @@ use crate::*;
 
 pub struct MessageItem;
 
-struct ArgumentItem {
-    field_name: proc_macro2::Ident,
-    rust_type: proc_macro2::TokenStream,
-    doc_comment: Option<proc_macro2::TokenStream>,
-}
-
-impl ArgumentItem {
-    fn new(argument: Argument) -> Self {
-        let Argument { name, variant, description } = argument;
-
-        Self {
-            field_name: IdentifierItem::field_name(&name),
-            rust_type: Self::variant_type(variant),
-            doc_comment: Documentation::quote_outer(Some(&description)),
-        }
-    }
-
-    fn variant_type(variant: ArgumentVariant) -> proc_macro2::TokenStream {
-        return match variant {
-            ArgumentVariant::Array => quote! { ::std::vec::Vec<u8> },
-            ArgumentVariant::Fd => quote! { ::std::os::fd::OwnedFd },
-            ArgumentVariant::I32 { enumeration } => match enumeration {
-                Some(path) => IdentifierItem::enum_path(path),
-                None => quote! { i32 },
-            },
-            ArgumentVariant::U32 { enumeration } => match enumeration {
-                Some(path) => IdentifierItem::enum_path(path),
-                None => quote! { u32 },
-            },
-            ArgumentVariant::Fixed => quote! { ::async_wayland_codec::Fixed },
-            ArgumentVariant::String { nullable } => maybe_optional(quote! { ::std::string::String }, nullable),
-            ArgumentVariant::ObjectId { concrete, nullable } => match concrete {
-                None => maybe_optional(quote! { ::async_wayland_codec::OpaqueObjectId }, nullable),
-                Some(interface_name) => {
-                    let path = IdentifierItem::qualified_interface(&interface_name);
-                    maybe_optional(quote! { ::async_wayland_codec::ObjectId<#path> }, nullable)
-                }
-            },
-            ArgumentVariant::NewObjectId { concrete } => match concrete {
-                None => quote! { ::async_wayland_codec::OpaqueNewObjectId },
-                Some(interface_name) => {
-                    let path = IdentifierItem::qualified_interface(&interface_name);
-                    quote! { ::async_wayland_codec::NewObjectId<#path> }
-                }
-            },
-        };
-
-        fn maybe_optional(path: proc_macro2::TokenStream, nullable: bool) -> proc_macro2::TokenStream {
-            match nullable {
-                true => quote! { ::std::option::Option<#path> },
-                false => path,
-            }
-        }
-    }
+#[derive(Clone, Copy)]
+pub struct MessageContext<'a> {
+    pub name_mappings: &'a NameMappings,
 }
 
 impl MessageItem {
-    pub fn quote_list(messages: Vec<Message>) -> impl Iterator<Item = proc_macro2::TokenStream> {
+    pub fn quote_list(messages: Vec<Message>, ctx: MessageContext) -> Vec<proc_macro2::TokenStream> {
         messages
             .into_iter()
             .enumerate()
-            .map(|(op_code, message)| Self::quote(op_code as u16, message))
+            .map(|(op_code, message)| Self::quote(op_code as u16, message, ctx))
+            .collect()
     }
 
-    fn quote(op_code: u16, message: async_wayland_xml::Message) -> proc_macro2::TokenStream {
+    fn quote(op_code: u16, message: async_wayland_xml::Message, ctx: MessageContext) -> proc_macro2::TokenStream {
         let Message { name, destructor, since, deprecated_since, description, arguments } = message;
 
         let doc = Documentation::quote_outer(description.as_ref());
 
         let ident = IdentifierItem::type_name(&name);
 
-        let argument_items = arguments.into_iter().map(ArgumentItem::new).collect::<Vec<_>>();
+        let argument_items = arguments
+            .into_iter()
+            .map(|var| ArgumentItem::new(var, ctx.name_mappings))
+            .collect::<Vec<_>>();
 
         let struct_declaration = match argument_items.is_empty() {
             true => quote! {
@@ -155,6 +108,62 @@ impl MessageItem {
                 fn decode(bag: &mut ::async_wayland_codec::ArgumentBag<'_>) -> Result<Self, ::async_wayland_codec::DecodeMessageError> {
                     Ok(#body)
                 }
+            }
+        }
+    }
+}
+
+struct ArgumentItem {
+    field_name: proc_macro2::Ident,
+    rust_type: proc_macro2::TokenStream,
+    doc_comment: Option<proc_macro2::TokenStream>,
+}
+
+impl ArgumentItem {
+    fn new(argument: Argument, name_mappings: &NameMappings) -> Self {
+        let Argument { name, variant, description } = argument;
+
+        Self {
+            field_name: IdentifierItem::field_name(&name),
+            rust_type: Self::variant_type(variant, name_mappings),
+            doc_comment: Documentation::quote_outer(Some(&description)),
+        }
+    }
+
+    fn variant_type(variant: ArgumentVariant, name_mappings: &NameMappings) -> proc_macro2::TokenStream {
+        return match variant {
+            ArgumentVariant::Array => quote! { ::std::vec::Vec<u8> },
+            ArgumentVariant::Fd => quote! { ::std::os::fd::OwnedFd },
+            ArgumentVariant::I32 { enumeration } => match enumeration {
+                Some(path) => IdentifierItem::enum_path(path, name_mappings),
+                None => quote! { i32 },
+            },
+            ArgumentVariant::U32 { enumeration } => match enumeration {
+                Some(path) => IdentifierItem::enum_path(path, name_mappings),
+                None => quote! { u32 },
+            },
+            ArgumentVariant::Fixed => quote! { ::async_wayland_codec::Fixed },
+            ArgumentVariant::String { nullable } => maybe_optional(quote! { ::std::string::String }, nullable),
+            ArgumentVariant::ObjectId { concrete, nullable } => match concrete {
+                None => maybe_optional(quote! { ::async_wayland_codec::OpaqueObjectId }, nullable),
+                Some(interface_name) => {
+                    let path = IdentifierItem::qualified_interface(&interface_name);
+                    maybe_optional(quote! { ::async_wayland_codec::ObjectId<#path> }, nullable)
+                }
+            },
+            ArgumentVariant::NewObjectId { concrete } => match concrete {
+                None => quote! { ::async_wayland_codec::OpaqueNewObjectId },
+                Some(interface_name) => {
+                    let path = IdentifierItem::qualified_interface(&interface_name);
+                    quote! { ::async_wayland_codec::NewObjectId<#path> }
+                }
+            },
+        };
+
+        fn maybe_optional(path: proc_macro2::TokenStream, nullable: bool) -> proc_macro2::TokenStream {
+            match nullable {
+                true => quote! { ::std::option::Option<#path> },
+                false => path,
             }
         }
     }

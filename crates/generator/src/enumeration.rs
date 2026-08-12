@@ -4,29 +4,35 @@ use async_wayland_xml::{
 };
 use quote::quote;
 
-use crate::{Documentation, IdentifierItem};
+use crate::*;
 
 pub struct EnumItem;
 
+#[derive(Clone, Copy)]
+pub struct EnumContext<'a> {
+    pub interface_name: &'a Cname,
+    pub repr_map: &'a EnumReprMap,
+    pub name_mappings: &'a NameMappings,
+}
+
 impl EnumItem {
-    pub fn quote_list(interface_name: &Cname, enums: Vec<Enum>, repr_map: &EnumReprMap) -> impl Iterator<Item = proc_macro2::TokenStream> {
-        enums
-            .into_iter()
-            .map(|enumeration| Self::quote(interface_name, enumeration, repr_map))
+    pub fn quote_list(enums: Vec<Enum>, ctx: EnumContext) -> Vec<proc_macro2::TokenStream> {
+        enums.into_iter().map(|enumeration| Self::quote(enumeration, ctx)).collect()
     }
 
-    fn quote(interface_name: &Cname, enumeration: Enum, repr_map: &EnumReprMap) -> proc_macro2::TokenStream {
+    fn quote(enumeration: Enum, ctx: EnumContext) -> proc_macro2::TokenStream {
         // FIXME: switch on bitfield
         let Enum { name, bitfield, since, description, entries } = enumeration;
 
         let doc = Documentation::quote_outer(description.as_ref());
 
-        let Some(repr) = repr_map.get(interface_name, &name) else {
+        let Some(repr) = ctx.repr_map.get(ctx.interface_name, &name) else {
             // Enum part of another interface or protocol.
             return Default::default();
         };
 
-        let enum_ident = IdentifierItem::sanitized_type_name(&name);
+        let translated_name = ctx.name_mappings.get(&name, ItemType::Enum).unwrap_or(&name);
+        let enum_ident = IdentifierItem::sanitized_type_name(translated_name);
 
         let enum_fields = entries.iter().map(|entry| {
             let field_ident = IdentifierItem::sanitized_type_name(&entry.name);

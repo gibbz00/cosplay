@@ -4,13 +4,13 @@ mod core;
 pub use core::Generator;
 
 mod interface;
-pub(crate) use interface::InterfaceModule;
+pub(crate) use interface::{InterfaceContext, InterfaceModule};
 
 mod message;
-pub(crate) use message::MessageItem;
+pub(crate) use message::{MessageContext, MessageItem};
 
 mod enumeration;
-pub(crate) use enumeration::EnumItem;
+pub(crate) use enumeration::{EnumContext, EnumItem};
 
 mod documentation;
 pub(crate) use documentation::Documentation;
@@ -20,3 +20,6 @@ pub(crate) use formatting::Formatter;
 
 mod identifier;
 pub(crate) use identifier::IdentifierItem;
+
+pub mod config;
+pub(crate) use config::{GeneratorConfig, ItemType, NameMappings};

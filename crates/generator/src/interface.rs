@@ -5,8 +5,14 @@ use crate::*;
 
 pub struct InterfaceModule;
 
+#[derive(Clone, Copy)]
+pub struct InterfaceContext<'a> {
+    pub repr_map: &'a EnumReprMap,
+    pub name_mappings: &'a NameMappings,
+}
+
 impl InterfaceModule {
-    pub fn quote(interface: Interface, repr_map: &EnumReprMap) -> proc_macro2::TokenStream {
+    pub fn quote(interface: Interface, ctx: InterfaceContext) -> proc_macro2::TokenStream {
         let Interface { name, version, frozen, description, requests, events, enums } = interface;
 
         let module_name = IdentifierItem::module_name(&name);
@@ -15,11 +21,20 @@ impl InterfaceModule {
 
         let doc = Documentation::quote_outer(description.as_ref());
 
-        let requests = MessageItem::quote_list(requests).collect::<Vec<_>>();
+        let message_ctx = MessageContext { name_mappings: ctx.name_mappings };
 
-        let events = MessageItem::quote_list(events);
+        let requests = MessageItem::quote_list(requests, message_ctx);
 
-        let enums = EnumItem::quote_list(&name, enums, repr_map);
+        let events = MessageItem::quote_list(events, message_ctx);
+
+        let enums = EnumItem::quote_list(
+            enums,
+            EnumContext {
+                interface_name: &name,
+                repr_map: ctx.repr_map,
+                name_mappings: ctx.name_mappings,
+            },
+        );
 
         quote! {
             pub mod #module_name {
