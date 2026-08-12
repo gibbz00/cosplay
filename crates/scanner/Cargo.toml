@@ -1,0 +1,13 @@
+[package]
+name = "async-wayland-scanner"
+
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+async-wayland-generator = { workspace = true, features = ["serde"] }
+async-wayland-xml.workspace = true
+
+anyhow.workspace = true
+clap = { workspace = true, features = ["derive"] }
+toml = { workspace = true, features = ["parse", "serde"] }

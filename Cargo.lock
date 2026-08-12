@@ -88,10 +88,8 @@ dependencies = [
 name = "async-wayland-generator"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "async-wayland-generator",
  "async-wayland-xml",
- "clap",
  "heck",
  "indoc",
  "prettyplease",
@@ -99,6 +97,7 @@ dependencies = [
  "quote",
  "serde",
  "syn 3.0.3",
+ "thiserror",
  "toml",
 ]
 
@@ -111,6 +110,17 @@ dependencies = [
  "serial_test",
  "thiserror",
  "tokio",
+]
+
+[[package]]
+name = "async-wayland-scanner"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-wayland-generator",
+ "async-wayland-xml",
+ "clap",
+ "toml",
 ]
 
 [[package]]

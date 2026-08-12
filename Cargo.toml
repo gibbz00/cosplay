@@ -12,6 +12,7 @@ crane.name = "async-wayland"
 [workspace.dependencies]
 async-wayland-ancillary = { path = "./crates/ancillary" }
 async-wayland-codec = { path = "./crates/codec" }
+async-wayland-generator = { path = "./crates/generator" }
 async-wayland-xml = { path = "./crates/xml" }
 
 anyhow = "1"

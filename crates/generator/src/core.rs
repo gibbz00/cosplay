@@ -1,5 +1,7 @@
-use anyhow::Context;
-use async_wayland_xml::{Protocol, utils::EnumReprMap};
+use async_wayland_xml::{
+    Protocol,
+    utils::{EnumReprMap, EnumReprMapBuildError},
+};
 use quote::quote;
 
 use crate::*;
@@ -7,11 +9,17 @@ use crate::*;
 /// Use with [`Generator::run`].
 pub struct Generator;
 
+#[derive(Debug, thiserror::Error)]
+pub enum GeneratorError {
+    #[error("Failed to build enum representation map: {0}")]
+    EnumReprMap(#[from] EnumReprMapBuildError),
+}
+
 impl Generator {
     /// Convert a wayland protocol into Rust source code implementing `async-wayland-codec`
     /// traits.
-    pub fn run(protocol: Protocol, config: GeneratorConfig) -> anyhow::Result<String> {
-        let repr_map = EnumReprMap::new(&protocol).context("Failed to build enum representation map.")?;
+    pub fn run(protocol: Protocol, config: GeneratorConfig) -> Result<String, GeneratorError> {
+        let repr_map = EnumReprMap::new(&protocol)?;
 
         let Protocol { description, interfaces, .. } = protocol;
 
@@ -30,6 +38,8 @@ impl Generator {
             #(#interface_modules)*
         };
 
-        Formatter::format(src).context("Failed to parse src tokens.")
+        let string = Formatter::format(src).expect("Failed to parse src tokens.");
+
+        Ok(string)
     }
 }
