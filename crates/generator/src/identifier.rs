@@ -1,5 +1,5 @@
 use async_wayland_xml::{Cname, CnameSuffix, EnumPath};
-use heck::{ToSnakeCase, ToUpperCamelCase};
+use heck::{ToShoutySnakeCase, ToSnakeCase, ToUpperCamelCase};
 use quote::quote;
 
 use crate::*;
@@ -11,12 +11,20 @@ impl IdentifierItem {
         quote::format_ident!("{}", name.as_ref().to_upper_camel_case())
     }
 
-    /// Workaround for how wayland made the decision to allow enum names and
-    /// variants to begin with digits :/
     pub fn sanitized_type_name(name: &CnameSuffix) -> proc_macro2::Ident {
         let ident = name.as_ref().to_upper_camel_case();
+        Self::sanitized_ident(&ident)
+    }
 
-        match name.as_ref().chars().next().is_some_and(|char| char.is_ascii_digit()) {
+    pub fn sanitized_const_name(name: &CnameSuffix) -> proc_macro2::Ident {
+        let ident = name.as_ref().to_shouty_snake_case();
+        Self::sanitized_ident(&ident)
+    }
+
+    /// Workaround for how wayland made the decision to allow
+    /// enum names and variants to begin with digits :/
+    fn sanitized_ident(ident: &str) -> proc_macro2::Ident {
+        match ident.chars().next().is_some_and(|char| char.is_ascii_digit()) {
             true => quote::format_ident!("_{ident}"),
             false => quote::format_ident!("{ident}"),
         }

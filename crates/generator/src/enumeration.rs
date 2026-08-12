@@ -21,7 +21,6 @@ impl EnumItem {
     }
 
     fn quote(enumeration: Enum, ctx: EnumContext) -> proc_macro2::TokenStream {
-        // FIXME: switch on bitfield
         let Enum { name, bitfield, since, description, entries } = enumeration;
 
         let doc = Documentation::quote_outer(description.as_ref());
@@ -31,9 +30,26 @@ impl EnumItem {
             return Default::default();
         };
 
+        let repr_ident = match repr {
+            EnumRepr::U32 => quote! { u32 },
+            EnumRepr::I32 => quote! { i32 },
+        };
+
         let translated_name = ctx.name_mappings.get(ctx.interface_name, &name, ItemType::Enum).unwrap_or(&name);
         let enum_ident = IdentifierItem::sanitized_type_name(translated_name);
 
+        match bitfield {
+            true => Self::quote_bitfield(doc, &enum_ident, repr_ident, entries),
+            false => Self::quote_enum(doc, &enum_ident, repr_ident, entries),
+        }
+    }
+
+    fn quote_enum(
+        doc: Option<proc_macro2::TokenStream>,
+        enum_ident: &proc_macro2::Ident,
+        repr_ident: proc_macro2::TokenStream,
+        entries: Vec<EnumEntry>,
+    ) -> proc_macro2::TokenStream {
         let enum_fields = entries.iter().map(|entry| {
             let field_ident = IdentifierItem::sanitized_type_name(&entry.name);
 
@@ -45,7 +61,7 @@ impl EnumItem {
             }
         });
 
-        let pairs = Self::variant_value_pairs(&enum_ident, &entries);
+        let pairs = Self::variant_value_pairs(enum_ident, &entries);
 
         let from_repr_fields = pairs.iter().map(|(variant, value)| {
             quote! { #value => #variant, }
@@ -55,16 +71,12 @@ impl EnumItem {
             quote! { #variant => #value, }
         });
 
-        let repr_ident = match repr {
-            EnumRepr::U32 => quote! { u32 },
-            EnumRepr::I32 => quote! { i32 },
-        };
-
         quote! {
             #doc
+            #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
             pub enum #enum_ident {
                 #(#enum_fields)*
-                /// Fallback variant undocumented entry values.
+                /// Fallback variant for undocumented entry values.
                 Other(#repr_ident)
             }
 
@@ -83,6 +95,82 @@ impl EnumItem {
                         #(#to_repr_fields)*
                         #enum_ident::Other(other) => *other,
                     }
+                }
+            }
+        }
+    }
+
+    fn quote_bitfield(
+        doc: Option<proc_macro2::TokenStream>,
+        enum_ident: &proc_macro2::Ident,
+        repr_ident: proc_macro2::TokenStream,
+        entries: Vec<EnumEntry>,
+    ) -> proc_macro2::TokenStream {
+        let entry_consts = entries.iter().map(|entry| {
+            let doc = Documentation::quote_outer(Some(&entry.description));
+
+            let const_ident = IdentifierItem::sanitized_const_name(&entry.name);
+
+            let value = proc_macro2::Literal::i64_unsuffixed(entry.value);
+
+            quote! {
+                #doc
+                pub const #const_ident: #enum_ident = #enum_ident(#value);
+            }
+        });
+
+        quote! {
+            #doc
+            #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+            pub struct #enum_ident(#repr_ident);
+
+            impl #enum_ident {
+                #(#entry_consts)*
+
+                /// Create an empty instance with its internal value set to zero.
+                pub fn empty() -> Self {
+                    #enum_ident(0)
+                }
+
+                /// Get the internal bitfield value.
+                pub fn bits(&self) -> u32 {
+                    self.0
+                }
+            }
+
+            impl ::std::ops::BitOr for #enum_ident {
+                type Output = Self;
+
+                fn bitor(self, rhs: Self) -> Self {
+                    #enum_ident(self.0 | rhs.0)
+                }
+            }
+
+            impl ::std::ops::BitAnd for #enum_ident {
+                type Output = Self;
+
+                fn bitand(self, rhs: Self) -> Self {
+                    #enum_ident(self.0 & rhs.0)
+                }
+            }
+
+            impl ::std::ops::Sub for #enum_ident {
+                type Output = Self;
+
+                fn sub(self, rhs: Self) -> Self {
+                    #enum_ident(self.0 & !rhs.0)
+                }
+            }
+
+            impl ::async_wayland_codec::Enumeration for #enum_ident {
+                type Repr = #repr_ident;
+
+                fn from_repr(repr: Self::Repr) -> Self {
+                    Self(repr)
+                }
+
+                fn to_repr(&self) -> Self::Repr {
+                    self.0
                 }
             }
         }
