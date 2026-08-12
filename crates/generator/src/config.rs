@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use async_wayland_xml::CnameSuffix;
+use async_wayland_xml::{Cname, CnameSuffix};
 
 /// Configuration for modifying generator output.
 #[derive(Debug, Default)]
@@ -30,18 +30,31 @@ pub enum ItemType {
 /// added in name mapping to avoid creating an enum of the same name.
 #[derive(Debug, Default)]
 pub struct NameMappings {
-    inner: HashMap<(CnameSuffix, ItemType), CnameSuffix>,
+    inner: HashMap<NameMappingKey, CnameSuffix>,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+struct NameMappingKey {
+    interface_name: Cname,
+    current_name: CnameSuffix,
+    item_type: ItemType,
 }
 
 impl NameMappings {
     /// Insert a new translation entry. See the [`NameMappings`] documentation for more.
-    pub fn insert(&mut self, name: CnameSuffix, item: ItemType, new_name: CnameSuffix) {
-        self.inner.insert((name, item), new_name);
+    pub fn insert(&mut self, interface_name: Cname, current_name: CnameSuffix, item_type: ItemType, new_name: CnameSuffix) {
+        let key = NameMappingKey { interface_name, current_name, item_type };
+        self.inner.insert(key, new_name);
     }
 
-    pub(crate) fn get(&self, name: &CnameSuffix, item: ItemType) -> Option<&CnameSuffix> {
-        // IMPROVEMENT: Remove clone. (&a, &b) -> &(c, d) problem.
-        let key = (name.clone(), item);
+    pub(crate) fn get(&self, interface_name: &Cname, name: &CnameSuffix, item_type: ItemType) -> Option<&CnameSuffix> {
+        // IMPROVEMENT: Remove clones. (&a, &b) -> &(c, d) problem.
+        let key = NameMappingKey {
+            interface_name: interface_name.clone(),
+            current_name: name.clone(),
+            item_type,
+        };
+
         self.inner.get(&key)
     }
 }

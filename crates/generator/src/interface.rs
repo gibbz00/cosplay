@@ -21,7 +21,7 @@ impl InterfaceModule {
 
         let doc = Documentation::quote_outer(description.as_ref());
 
-        let message_ctx = MessageContext { name_mappings: ctx.name_mappings };
+        let message_ctx = MessageContext { interface_name: &name, name_mappings: ctx.name_mappings };
 
         let requests = MessageItem::quote_list(requests, message_ctx);
 

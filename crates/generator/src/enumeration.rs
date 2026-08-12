@@ -31,7 +31,7 @@ impl EnumItem {
             return Default::default();
         };
 
-        let translated_name = ctx.name_mappings.get(&name, ItemType::Enum).unwrap_or(&name);
+        let translated_name = ctx.name_mappings.get(ctx.interface_name, &name, ItemType::Enum).unwrap_or(&name);
         let enum_ident = IdentifierItem::sanitized_type_name(translated_name);
 
         let enum_fields = entries.iter().map(|entry| {

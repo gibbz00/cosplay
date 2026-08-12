@@ -38,10 +38,14 @@ impl IdentifierItem {
         quote! { crate::#module_name::#type_name }
     }
 
-    pub fn enum_path(path: EnumPath, name_mappings: &NameMappings) -> proc_macro2::TokenStream {
+    pub fn enum_path(parent_interface: &Cname, path: EnumPath, name_mappings: &NameMappings) -> proc_macro2::TokenStream {
         let EnumPath { interface, enumeration } = path;
 
-        let mapped_name = name_mappings.get(&enumeration, ItemType::Enum).unwrap_or(&enumeration);
+        let interface_name = interface.as_ref().unwrap_or(parent_interface);
+
+        let mapped_name = name_mappings
+            .get(interface_name, &enumeration, ItemType::Enum)
+            .unwrap_or(&enumeration);
 
         let name = Self::sanitized_type_name(mapped_name);
 
