@@ -1,4 +1,10 @@
 //! # `async-wayland-generator` - Generate `async-wayland-codec` trait implementations from XML protocol definitions.
+//!
+//! ## Features
+//!
+//! (None are enabled by default.)
+//!
+//! - `serde`: Implements `serde::de::Deserialize` for [`GeneratorConfig`].
 
 mod core;
 pub use core::Generator;
