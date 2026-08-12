@@ -21,7 +21,7 @@ impl EnumItem {
     }
 
     fn quote(enumeration: Enum, ctx: EnumContext) -> proc_macro2::TokenStream {
-        let Enum { name, bitfield, since, description, entries } = enumeration;
+        let Enum { name, bitfield, description, entries, .. } = enumeration;
 
         let doc = Documentation::quote_outer(description.as_ref());
 

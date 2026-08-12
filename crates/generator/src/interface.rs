@@ -13,7 +13,7 @@ pub struct InterfaceContext<'a> {
 
 impl InterfaceModule {
     pub fn quote(interface: Interface, ctx: InterfaceContext) -> proc_macro2::TokenStream {
-        let Interface { name, version, frozen, description, requests, events, enums } = interface;
+        let Interface { name, description, requests, events, enums, .. } = interface;
 
         let module_name = IdentifierItem::module_name(&name);
 

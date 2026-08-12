@@ -21,7 +21,7 @@ impl MessageItem {
     }
 
     fn quote(op_code: u16, message: async_wayland_xml::Message, ctx: MessageContext) -> proc_macro2::TokenStream {
-        let Message { name, destructor, since, deprecated_since, description, arguments } = message;
+        let Message { name, description, arguments, .. } = message;
 
         let doc = Documentation::quote_outer(description.as_ref());
 
