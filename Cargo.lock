@@ -95,6 +95,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-wayland-generator-tests"
+version = "0.1.0"
+dependencies = [
+ "async-wayland-codec",
+ "async-wayland-generator",
+ "async-wayland-xml",
+ "toml",
+]
+
+[[package]]
 name = "async-wayland-net"
 version = "0.1.0"
 dependencies = [

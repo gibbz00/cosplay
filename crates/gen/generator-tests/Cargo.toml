@@ -1,0 +1,14 @@
+[package]
+name = "async-wayland-generator-tests"
+
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+async-wayland-codec.workspace = true
+
+[build-dependencies]
+async-wayland-generator = { workspace = true, features = ["serde"] }
+async-wayland-xml.workspace = true
+
+toml = { workspace = true, features = ["parse", "serde"] }

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="example">
+  <interface name="rename" version="1">
+    <enum name="format">
+      <entry name="a" value="0"/>
+      <entry name="b" value="1"/>
+    </enum>
+
+    <event name="format">
+      <arg name="format" type="uint" enum="format"/>
+    </event>
+  </interface>
+</protocol>
