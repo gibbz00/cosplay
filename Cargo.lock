@@ -101,6 +101,7 @@ dependencies = [
  "async-wayland-codec",
  "async-wayland-generator",
  "async-wayland-xml",
+ "tokio",
  "toml",
 ]
 

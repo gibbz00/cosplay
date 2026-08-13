@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, marker::PhantomData, os::fd::OwnedFd};
+use std::{collections::VecDeque, os::fd::OwnedFd};
 
 use bytes::{Buf, BufMut, BytesMut};
 
@@ -32,7 +32,9 @@ pub trait ParseArgument: Sized {
     fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError>;
 }
 
+/// Returned from [`ParseArgument::parse`]
 #[derive(Debug, thiserror::Error)]
+#[allow(missing_docs)]
 pub enum ArgumentDecodeError {
     #[error("Not enough bytes left in argument buffer in order to decode the next argument.")]
     NotEnoughBytesLeft,
@@ -140,7 +142,7 @@ impl<I> MarshalArgument for ObjectId<I> {
 #[sealed::sealed]
 impl<I> ParseArgument for ObjectId<I> {
     fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
-        OpaqueObjectId::parse(bag).map(|inner| Self { inner, interface_marker: PhantomData })
+        OpaqueObjectId::parse(bag).map(Self::new)
     }
 }
 
@@ -154,9 +156,8 @@ impl<I> MarshalArgument for Option<ObjectId<I>> {
 #[sealed::sealed]
 impl<I> ParseArgument for Option<ObjectId<I>> {
     fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
-        let opaque = Option::<OpaqueObjectId>::parse(bag)?;
-        let concrete = opaque.map(|inner| ObjectId { inner, interface_marker: PhantomData });
-        Ok(concrete)
+        let id = Option::<OpaqueObjectId>::parse(bag)?.map(ObjectId::new);
+        Ok(id)
     }
 }
 
@@ -326,6 +327,7 @@ where
 mod tests {
     use std::{
         assert_matches,
+        marker::PhantomData,
         os::fd::{AsRawFd, FromRawFd, IntoRawFd},
     };
 

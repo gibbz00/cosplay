@@ -12,3 +12,6 @@ async-wayland-generator = { workspace = true, features = ["serde"] }
 async-wayland-xml.workspace = true
 
 toml = { workspace = true, features = ["parse", "serde"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["io-util", "macros", "rt-multi-thread"] }

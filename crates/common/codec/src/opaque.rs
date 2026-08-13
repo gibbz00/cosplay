@@ -38,6 +38,7 @@ pub struct OpaqueFrameDecoder {
 }
 
 #[derive(Debug, thiserror::Error)]
+#[allow(missing_docs)]
 pub enum OpaqueFrameDecodeError {
     #[error("Message size {0} is too short, expected at least {HEADER_LENGTH}.")]
     InvalidSize(usize),

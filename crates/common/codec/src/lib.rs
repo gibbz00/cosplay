@@ -1,12 +1,10 @@
-// TEMP:
-#![allow(missing_docs)]
-
 //! # `async-wayland-codec` - Opaque and typed wire format encoding.
 
 // Layer 1. Bytes <--> Opaque Frame
 
 mod opaque;
-pub use opaque::{OpaqueFrame, OpaqueFrameDecodeError, OpaqueFrameDecoder, OpaqueFrameEncoder};
+pub use opaque::OpaqueFrameDecodeError;
+pub(crate) use opaque::{OpaqueFrame, OpaqueFrameDecoder, OpaqueFrameEncoder};
 
 // Layer 2. Opaque Frame <--> Arguments
 
@@ -34,4 +32,4 @@ pub use message::{DecodeMessage, DecodeMessageError, EncodeMessage, Message, Opa
 // Combines layer 1 to 3 into one cohesive API.
 
 mod stream;
-pub use stream::{WaylandMessageSink, WaylandMessageStream, WaylandMessageStreamError};
+pub use stream::{WaylandMemoryBuffer, WaylandMessageSink, WaylandMessageStream, WaylandMessageStreamError};

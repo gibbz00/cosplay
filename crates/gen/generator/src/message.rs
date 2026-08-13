@@ -27,6 +27,8 @@ impl MessageItem {
 
         let ident = IdentifierItem::type_name(&name);
 
+        let interface_ident = IdentifierItem::type_name(ctx.interface_name);
+
         let argument_items = arguments.into_iter().map(|var| ArgumentItem::new(var, ctx)).collect::<Vec<_>>();
 
         let struct_declaration = match argument_items.is_empty() {
@@ -44,6 +46,7 @@ impl MessageItem {
 
                 quote! {
                     #doc
+                    #[derive(Debug)]
                     pub struct #ident {
                         #(#fields)*
                     }
@@ -59,6 +62,7 @@ impl MessageItem {
             #struct_declaration
 
             impl ::async_wayland_codec::Message for #ident {
+                type Interface = #interface_ident;
                 const OP_CODE: u16 = #op_code;
             }
 
