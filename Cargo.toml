@@ -13,6 +13,7 @@ crane.name = "cosplay"
 cosplay-ancillary = { path = "./crates/common/ancillary" }
 cosplay-codec = { path = "./crates/common/codec" }
 cosplay-generator = { path = "./crates/gen/generator" }
+cosplay-scanner = { path = "./crates/gen/scanner" }
 cosplay-xml = { path = "./crates/gen/xml" }
 
 anyhow = "1"

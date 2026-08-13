@@ -10,7 +10,6 @@ serde = ["dep:serde"]
 [dependencies]
 cosplay-xml.workspace = true
 
-# lib deps
 heck.workspace = true
 prettyplease.workspace = true
 proc-macro2.workspace = true

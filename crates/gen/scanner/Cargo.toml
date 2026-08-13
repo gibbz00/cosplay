@@ -9,5 +9,4 @@ cosplay-generator = { workspace = true, features = ["serde"] }
 cosplay-xml.workspace = true
 
 anyhow.workspace = true
-clap = { workspace = true, features = ["derive"] }
 toml = { workspace = true, features = ["parse", "serde"] }
