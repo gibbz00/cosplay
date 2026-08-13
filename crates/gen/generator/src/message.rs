@@ -23,7 +23,7 @@ impl MessageItem {
     fn quote(op_code: u16, message: async_wayland_xml::Message, ctx: MessageContext) -> proc_macro2::TokenStream {
         let Message { name, description, arguments, .. } = message;
 
-        let doc = Documentation::quote_outer(description.as_ref());
+        let doc = DocumentationItem::quote_outer(description.as_ref());
 
         let ident = IdentifierItem::type_name(&name);
 
@@ -123,7 +123,7 @@ impl ArgumentItem {
         Self {
             field_name: IdentifierItem::field_name(&name),
             rust_type: Self::variant_type(variant, ctx),
-            doc_comment: Documentation::quote_outer(Some(&description)),
+            doc_comment: DocumentationItem::quote_outer(Some(&description)),
         }
     }
 

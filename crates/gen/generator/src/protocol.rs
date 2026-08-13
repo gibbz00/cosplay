@@ -11,10 +11,10 @@ impl ProtocolItem {
 
         let Protocol { description, interfaces, .. } = protocol;
 
-        let description_comment = Documentation::quote_inner(description.as_ref());
+        let description_comment = DocumentationItem::quote_inner(description.as_ref());
 
         let interface_modules = interfaces.into_iter().map(|interface| {
-            InterfaceModule::quote(
+            InterfaceItem::quote(
                 interface,
                 InterfaceContext { repr_map: &repr_map, name_mappings: &config.name_mappings },
             )

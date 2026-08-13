@@ -13,7 +13,7 @@ mod protocol;
 pub(crate) use protocol::ProtocolItem;
 
 mod interface;
-pub(crate) use interface::{InterfaceContext, InterfaceModule};
+pub(crate) use interface::{InterfaceContext, InterfaceItem};
 
 mod message;
 pub(crate) use message::{MessageContext, MessageItem};
@@ -22,7 +22,7 @@ mod enumeration;
 pub(crate) use enumeration::{EnumContext, EnumItem};
 
 mod documentation;
-pub(crate) use documentation::Documentation;
+pub(crate) use documentation::DocumentationItem;
 
 mod identifier;
 pub(crate) use identifier::IdentifierItem;

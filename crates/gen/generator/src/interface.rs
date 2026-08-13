@@ -3,7 +3,7 @@ use quote::quote;
 
 use crate::*;
 
-pub struct InterfaceModule;
+pub struct InterfaceItem;
 
 #[derive(Clone, Copy)]
 pub struct InterfaceContext<'a> {
@@ -11,7 +11,7 @@ pub struct InterfaceContext<'a> {
     pub name_mappings: &'a NameMappings,
 }
 
-impl InterfaceModule {
+impl InterfaceItem {
     pub fn quote(interface: Interface, ctx: InterfaceContext) -> proc_macro2::TokenStream {
         let Interface { name, description, requests, events, enums, .. } = interface;
 
@@ -19,7 +19,7 @@ impl InterfaceModule {
 
         let item_name = IdentifierItem::type_name(&name);
 
-        let doc = Documentation::quote_outer(description.as_ref());
+        let doc = DocumentationItem::quote_outer(description.as_ref());
 
         let message_ctx = MessageContext { interface_name: &name, name_mappings: ctx.name_mappings };
 

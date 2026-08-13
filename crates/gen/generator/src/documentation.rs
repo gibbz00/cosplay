@@ -1,9 +1,9 @@
 use async_wayland_xml::Description;
 use quote::quote;
 
-pub struct Documentation;
+pub struct DocumentationItem;
 
-impl Documentation {
+impl DocumentationItem {
     pub fn quote_inner(description: Option<&Description>) -> Option<proc_macro2::TokenStream> {
         description.map(|description| Self::quote(description, false))
     }
@@ -52,7 +52,7 @@ mod tests {
             text: Some("\n\tA body.\n".to_string()),
         };
 
-        Documentation::quote(&description, outer_attribute)
+        DocumentationItem::quote(&description, outer_attribute)
     }
 
     #[test]

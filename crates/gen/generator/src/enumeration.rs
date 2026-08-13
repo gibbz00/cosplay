@@ -23,7 +23,7 @@ impl EnumItem {
     fn quote(enumeration: Enum, ctx: EnumContext) -> proc_macro2::TokenStream {
         let Enum { name, bitfield, description, entries, .. } = enumeration;
 
-        let doc = Documentation::quote_outer(description.as_ref());
+        let doc = DocumentationItem::quote_outer(description.as_ref());
 
         let Some(repr) = ctx.repr_map.get(ctx.interface_name, &name) else {
             // Enum part of another interface or protocol.
@@ -53,7 +53,7 @@ impl EnumItem {
         let enum_fields = entries.iter().map(|entry| {
             let field_ident = IdentifierItem::sanitized_type_name(&entry.name);
 
-            let doc = Documentation::quote_outer(Some(&entry.description));
+            let doc = DocumentationItem::quote_outer(Some(&entry.description));
 
             quote! {
                 #doc
@@ -107,7 +107,7 @@ impl EnumItem {
         entries: Vec<EnumEntry>,
     ) -> proc_macro2::TokenStream {
         let entry_consts = entries.iter().map(|entry| {
-            let doc = Documentation::quote_outer(Some(&entry.description));
+            let doc = DocumentationItem::quote_outer(Some(&entry.description));
 
             let const_ident = IdentifierItem::sanitized_const_name(&entry.name);
 
