@@ -4,7 +4,7 @@ include!(concat!(env!("OUT_DIR"), "/combined.rs"));
 
 #[cfg(test)]
 mod tests {
-    use async_wayland_codec::{Message, ObjectId, OpaqueObjectId, WaylandMemoryBuffer};
+    use async_wayland_codec::{DecodeMessage, EncodeMessage, Message, ObjectId, OpaqueObjectId, WaylandMemoryBuffer};
 
     #[test]
     fn rename() {
@@ -27,36 +27,32 @@ mod tests {
     async fn primitive_encoding() {
         use super::wl_encoding::*;
 
-        let object_id = ObjectId::<WlEncoding>::new(OpaqueObjectId(1));
         let text = "Some string 🦀".to_string();
 
-        let message = BasicMessage { text: text.clone() };
+        let received_message = roundtrip_message(BasicMessage { text: text.clone() }).await;
 
-        let mut sink = async_wayland_codec::WaylandMessageSink::new(WaylandMemoryBuffer::default());
-        sink.send_concrete(object_id, message).await.unwrap();
-
-        let mut stream = async_wayland_codec::WaylandMessageStream::new(sink.into_inner());
-        let (received_id, received_message) = stream.receive_concrete::<BasicMessage>().await.unwrap().unwrap();
-
-        assert_eq!(received_id, object_id);
         assert_eq!(text, received_message.text);
+    }
+
+    #[tokio::test]
+    async fn object_encoding() {
+        use super::{wl_a::*, wl_b::WlB};
+
+        let id = ObjectId::<WlB>::new(OpaqueObjectId(2));
+
+        let received_message = roundtrip_message(Request { id }).await;
+
+        assert_eq!(id, received_message.id);
     }
 
     #[tokio::test]
     async fn enum_encoding() {
         use super::{wl_enum::*, wl_other::*};
 
-        let object_id = ObjectId::<WlEnum>::new(OpaqueObjectId(1));
         let local = Local::_1Y;
         let remote = Remote::B;
 
-        let message = EnumMessage { local, remote };
-
-        let mut sink = async_wayland_codec::WaylandMessageSink::new(WaylandMemoryBuffer::default());
-        sink.send_concrete(object_id, message).await.unwrap();
-
-        let mut stream = async_wayland_codec::WaylandMessageStream::new(sink.into_inner());
-        let (_, received_message) = stream.receive_concrete::<EnumMessage>().await.unwrap().unwrap();
+        let received_message = roundtrip_message(EnumMessage { local, remote }).await;
 
         assert_eq!(local, received_message.local);
         assert_eq!(remote, received_message.remote);
@@ -76,19 +72,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn encoding_bitfield() {
+    async fn bitfield_encoding() {
         use super::wl_bitfields::*;
 
-        let object_id = ObjectId::<WlBitfields>::new(OpaqueObjectId(1));
         let direction = Direction::UP | Direction::DOWN;
 
-        let message = SomeRequest { direction };
-
-        let mut sink = async_wayland_codec::WaylandMessageSink::new(WaylandMemoryBuffer::default());
-        sink.send_concrete(object_id, message).await.unwrap();
-
-        let mut stream = async_wayland_codec::WaylandMessageStream::new(sink.into_inner());
-        let (_, received_message) = stream.receive_concrete::<SomeRequest>().await.unwrap().unwrap();
+        let received_message = roundtrip_message(SomeRequest { direction }).await;
 
         assert_eq!(direction, received_message.direction);
     }
@@ -100,5 +89,19 @@ mod tests {
         let value = Direction::UP | Direction::DOWN;
         assert_eq!(Direction::UP, value - Direction::DOWN);
         assert_eq!(Direction::DOWN, value & (Direction::DOWN | Direction::LEFT));
+    }
+
+    async fn roundtrip_message<M: Message + EncodeMessage + DecodeMessage>(message: M) -> M {
+        let object_id = ObjectId::new(OpaqueObjectId(1));
+
+        let mut sink = async_wayland_codec::WaylandMessageSink::new(WaylandMemoryBuffer::default());
+        sink.send_concrete(object_id, message).await.unwrap();
+
+        let mut stream = async_wayland_codec::WaylandMessageStream::new(sink.into_inner());
+        let (received_id, received_message) = stream.receive_concrete::<M>().await.unwrap().unwrap();
+
+        assert_eq!(received_id, object_id);
+
+        received_message
     }
 }

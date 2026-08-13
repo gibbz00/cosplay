@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="example">
+  <interface name="wl_a" version="1">
+    <request name="request">
+      <arg name="id" type="object" interface="wl_b"/>
+    </request>
+  </interface>
+
+  <interface name="wl_b" version="1">
+  </interface>
+</protocol>
