@@ -19,8 +19,12 @@ impl Generator {
     pub fn run(protocol: Protocol, config: GeneratorConfig) -> Result<String, GeneratorError> {
         let src = ProtocolItem::quote(protocol, config)?;
 
-        let string = Formatter::format(src).expect("Failed to parse src tokens.");
+        let string = Self::format(src).expect("Failed to parse src tokens.");
 
         Ok(string)
+    }
+
+    pub(crate) fn format(src: proc_macro2::TokenStream) -> syn::Result<String> {
+        syn::parse2::<syn::File>(src).map(|file| prettyplease::unparse(&file))
     }
 }

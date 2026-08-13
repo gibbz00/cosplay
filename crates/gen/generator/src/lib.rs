@@ -24,9 +24,6 @@ pub(crate) use enumeration::{EnumContext, EnumItem};
 mod documentation;
 pub(crate) use documentation::Documentation;
 
-mod formatting;
-pub(crate) use formatting::Formatter;
-
 mod identifier;
 pub(crate) use identifier::IdentifierItem;
 

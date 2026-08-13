@@ -59,7 +59,7 @@ mod tests {
     fn outer() {
         let doc = mock_doc(true);
 
-        let actual = Formatter::format(quote! {
+        let actual = Generator::format(quote! {
             #doc
             struct Foo;
         })
@@ -79,7 +79,7 @@ mod tests {
     fn inner() {
         let doc = mock_doc(false);
 
-        let actual = Formatter::format(quote! {
+        let actual = Generator::format(quote! {
             mod foo {
                 #doc
             }
