@@ -28,6 +28,16 @@ impl Protocol {
     pub fn from_xml(str: &str) -> Result<Protocol, quick_xml::de::DeError> {
         quick_xml::de::from_str(str)
     }
+
+    /// Construct a new `Protocol` with all fields but `name` set to their unset default.
+    pub fn new(name: Cname) -> Self {
+        Self {
+            name,
+            copyright: Default::default(),
+            description: Default::default(),
+            interfaces: Default::default(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -48,20 +58,8 @@ mod tests {
 
         let actual = quick_xml::de::from_str(xml).unwrap();
 
-        let expected = Protocol {
-            name: Cname("foo".to_string()),
-            copyright: None,
-            description: None,
-            interfaces: vec![Interface {
-                name: Cname("bar".to_string()),
-                version: Version(NonZeroU32::new(2).unwrap()),
-                frozen: false,
-                description: None,
-                requests: Default::default(),
-                events: Default::default(),
-                enums: Default::default(),
-            }],
-        };
+        let mut expected = Protocol::new(Cname("foo".to_string()));
+        expected.interfaces = vec![Interface::new(Cname("bar".to_string()), Version(NonZeroU32::new(2).unwrap()))];
 
         assert_eq!(expected, actual);
     }

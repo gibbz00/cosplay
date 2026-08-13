@@ -31,3 +31,19 @@ pub struct Interface {
     #[serde(rename = "enum", default)]
     pub enums: Vec<Enum>,
 }
+
+impl Interface {
+    /// Construct a new `Interface` with all fields but `name` and `version` set to their unset
+    /// default.
+    pub fn new(name: Cname, version: Version) -> Self {
+        Self {
+            name,
+            version,
+            frozen: Default::default(),
+            description: Default::default(),
+            requests: Default::default(),
+            events: Default::default(),
+            enums: Default::default(),
+        }
+    }
+}

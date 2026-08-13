@@ -174,34 +174,20 @@ mod tests {
         request_arguments: impl IntoIterator<Item = ArgumentVariant>,
         event_arguments: impl IntoIterator<Item = ArgumentVariant>,
     ) -> Protocol {
-        Protocol {
-            name: Cname("SomeProtocol".to_string()),
-            copyright: None,
-            description: None,
-            interfaces: vec![Interface {
-                name: mock_local_interface(),
-                version: Default::default(),
-                frozen: Default::default(),
-                description: Default::default(),
-                requests: vec![Message {
-                    name: Cname("SomeRequest".to_string()),
-                    destructor: Default::default(),
-                    since: Default::default(),
-                    deprecated_since: Default::default(),
-                    description: Default::default(),
-                    arguments: mock_arguments(request_arguments),
-                }],
-                events: vec![Message {
-                    name: Cname("SomeEvent".to_string()),
-                    destructor: Default::default(),
-                    since: Default::default(),
-                    deprecated_since: Default::default(),
-                    description: Default::default(),
-                    arguments: mock_arguments(event_arguments),
-                }],
-                enums: Default::default(),
-            }],
-        }
+        let mut request = Message::new(Cname("SomeRequest".to_string()));
+        request.arguments = mock_arguments(request_arguments);
+
+        let mut event = Message::new(Cname("SomeEvent".to_string()));
+        event.arguments = mock_arguments(event_arguments);
+
+        let mut interface = Interface::new(mock_local_interface(), Default::default());
+        interface.requests = vec![request];
+        interface.events = vec![event];
+
+        let mut protocol = Protocol::new(Cname("SomeProtocol".to_string()));
+        protocol.interfaces = vec![interface];
+
+        protocol
     }
 
     fn mock_arguments(variants: impl IntoIterator<Item = ArgumentVariant>) -> Vec<Argument> {

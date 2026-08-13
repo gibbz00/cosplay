@@ -37,6 +37,20 @@ pub struct Message {
     pub arguments: Vec<Argument>,
 }
 
+impl Message {
+    /// Construct a new `Message` with all fields but `name` set to their unset default.
+    pub fn new(name: Cname) -> Self {
+        Self {
+            name,
+            destructor: Default::default(),
+            since: Default::default(),
+            deprecated_since: Default::default(),
+            description: Default::default(),
+            arguments: Default::default(),
+        }
+    }
+}
+
 fn is_destructor<'de, D: serde::de::Deserializer<'de>>(deserializer: D) -> Result<bool, D::Error> {
     #[derive(Deserialize)]
     struct Proxy {
@@ -60,24 +74,13 @@ fn is_destructor<'de, D: serde::de::Deserializer<'de>>(deserializer: D) -> Resul
 mod tests {
     use super::*;
 
-    fn mock_defaults() -> Message {
-        Message {
-            name: Cname("req".to_string()),
-            destructor: false,
-            since: Version::default(),
-            deprecated_since: None,
-            description: None,
-            arguments: Vec::new(),
-        }
-    }
-
     #[test]
     fn defaults() {
         let xml = "<request name=\"req\" />";
 
         let actual = quick_xml::de::from_str(xml).unwrap();
 
-        let expected = mock_defaults();
+        let expected = Message::new(Cname("req".to_string()));
 
         assert_eq!(expected, actual);
     }
@@ -88,7 +91,8 @@ mod tests {
 
         let actual = quick_xml::de::from_str(xml).unwrap();
 
-        let expected = Message { destructor: true, ..mock_defaults() };
+        let mut expected = Message::new(Cname("req".to_string()));
+        expected.destructor = true;
 
         assert_eq!(expected, actual);
     }
