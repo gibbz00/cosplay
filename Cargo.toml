@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/*"]
+members = ["crates/common/*", "crates/gen/*"]
 resolver = "3"
 
 [workspace.package]
@@ -10,10 +10,10 @@ version = "0.1.0"
 crane.name = "async-wayland"
 
 [workspace.dependencies]
-async-wayland-ancillary = { path = "./crates/ancillary" }
-async-wayland-codec = { path = "./crates/codec" }
-async-wayland-generator = { path = "./crates/generator" }
-async-wayland-xml = { path = "./crates/xml" }
+async-wayland-ancillary = { path = "./crates/common/ancillary" }
+async-wayland-codec = { path = "./crates/common/codec" }
+async-wayland-generator = { path = "./crates/gen/generator" }
+async-wayland-xml = { path = "./crates/gen/xml" }
 
 anyhow = "1"
 bytes = "1"
