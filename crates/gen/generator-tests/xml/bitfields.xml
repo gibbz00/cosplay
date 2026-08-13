@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="example">
+  <interface name="wl_bitfields" version="1">
+    <request name="some_request">
+      <arg name="direction" type="uint" enum="direction" />
+    </request>
+
+    <enum name="direction" bitfield="true">
+      <entry name="up" value="0" />
+      <entry name="down" value="1" />
+      <entry name="left" value="2" />
+      <entry name="right" value="4" />
+    </enum>
+  </interface>
+</protocol>

@@ -24,7 +24,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn encoding() {
+    async fn primitive_encoding() {
         use super::wl_encoding::*;
 
         let object_id = ObjectId::<WlEncoding>::new(OpaqueObjectId(1));
@@ -43,7 +43,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn enumeration() {
+    async fn enum_encoding() {
         use super::{wl_enum::*, wl_other::*};
 
         let object_id = ObjectId::<WlEnum>::new(OpaqueObjectId(1));
@@ -60,5 +60,45 @@ mod tests {
 
         assert_eq!(local, received_message.local);
         assert_eq!(remote, received_message.remote);
+    }
+
+    #[test]
+    fn enum_fallback() {
+        use async_wayland_codec::Enumeration;
+
+        use super::wl_enum::*;
+
+        assert_eq!(Local::_1Y, Local::from_repr(0));
+        assert_eq!(0, Local::_1Y.to_repr());
+
+        assert_eq!(Local::Other(123), Local::from_repr(123));
+        assert_eq!(123, Local::Other(123).to_repr());
+    }
+
+    #[tokio::test]
+    async fn encoding_bitfield() {
+        use super::wl_bitfields::*;
+
+        let object_id = ObjectId::<WlBitfields>::new(OpaqueObjectId(1));
+        let direction = Direction::UP | Direction::DOWN;
+
+        let message = SomeRequest { direction };
+
+        let mut sink = async_wayland_codec::WaylandMessageSink::new(WaylandMemoryBuffer::default());
+        sink.send_concrete(object_id, message).await.unwrap();
+
+        let mut stream = async_wayland_codec::WaylandMessageStream::new(sink.into_inner());
+        let (_, received_message) = stream.receive_concrete::<SomeRequest>().await.unwrap().unwrap();
+
+        assert_eq!(direction, received_message.direction);
+    }
+
+    #[test]
+    fn bitfield_arithmetic() {
+        use super::wl_bitfields::*;
+
+        let value = Direction::UP | Direction::DOWN;
+        assert_eq!(Direction::UP, value - Direction::DOWN);
+        assert_eq!(Direction::DOWN, value & (Direction::DOWN | Direction::LEFT));
     }
 }
