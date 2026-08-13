@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="example">
+  <interface name="opcodes" version="1">
+    <request name="req_a" />
+    <enum name="placeholder" />
+    <event name="ev_c" />
+    <request name="req_b" />
+  </interface>
+</protocol>
