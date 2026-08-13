@@ -27,3 +27,34 @@ impl ProtocolItem {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use async_wayland_xml::{Cname, Interface};
+
+    use super::*;
+
+    #[test]
+    fn module_per_interface() {
+        let mut protocol = Protocol::new(Cname::parse("protocol".to_string()).unwrap());
+        protocol.interfaces = vec![
+            Interface::new(Cname::parse("wl_a".to_string()).unwrap(), Default::default()),
+            Interface::new(Cname::parse("wl_b".to_string()).unwrap(), Default::default()),
+        ];
+
+        let quote = ProtocolItem::quote(protocol, Default::default()).unwrap();
+
+        let actual = Generator::format(quote);
+
+        let expected = indoc::indoc! {"
+            pub mod wl_a {
+                pub struct WlA;
+            }
+            pub mod wl_b {
+                pub struct WlB;
+            }
+        "};
+
+        assert_eq!(expected, actual);
+    }
+}

@@ -62,8 +62,7 @@ mod tests {
         let actual = Generator::format(quote! {
             #doc
             struct Foo;
-        })
-        .unwrap();
+        });
 
         let expected = indoc::indoc! {"
             /// Some title.
@@ -83,8 +82,7 @@ mod tests {
             mod foo {
                 #doc
             }
-        })
-        .unwrap();
+        });
 
         let expected = indoc::indoc! {"
             mod foo {

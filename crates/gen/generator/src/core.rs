@@ -17,14 +17,12 @@ impl Generator {
     /// Convert a wayland protocol into Rust source code implementing `async-wayland-codec`
     /// traits.
     pub fn run(protocol: Protocol, config: GeneratorConfig) -> Result<String, GeneratorError> {
-        let src = ProtocolItem::quote(protocol, config)?;
-
-        let string = Self::format(src).expect("Failed to parse src tokens.");
-
-        Ok(string)
+        ProtocolItem::quote(protocol, config).map(Self::format)
     }
 
-    pub(crate) fn format(src: proc_macro2::TokenStream) -> syn::Result<String> {
-        syn::parse2::<syn::File>(src).map(|file| prettyplease::unparse(&file))
+    pub(crate) fn format(src: proc_macro2::TokenStream) -> String {
+        syn::parse2::<syn::File>(src)
+            .map(|file| prettyplease::unparse(&file))
+            .expect("Failed to parse src tokens.")
     }
 }
