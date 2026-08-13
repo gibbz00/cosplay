@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="example">
+  <interface name="wl_enum" version="1">
+    <request name="enum_message">
+      <arg name="local" type="uint" enum="local" />
+      <arg name="remote" type="int" enum="wl_other.remote" />
+    </request>
+
+    <enum name="local">
+      <entry name="1_y" value="0" />
+      <entry name="2_x" value="1" />
+    </enum>
+  </interface>
+
+  <interface name="wl_other" version="1">
+    <enum name="remote">
+      <entry name="a" value="0" />
+      <entry name="b" value="1" />
+    </enum>
+  </interface>
+</protocol>

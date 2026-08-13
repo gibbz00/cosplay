@@ -41,4 +41,24 @@ mod tests {
         assert_eq!(received_id, object_id);
         assert_eq!(text, received_message.text);
     }
+
+    #[tokio::test]
+    async fn enumeration() {
+        use super::{wl_enum::*, wl_other::*};
+
+        let object_id = ObjectId::<WlEnum>::new(OpaqueObjectId(1));
+        let local = Local::_1Y;
+        let remote = Remote::B;
+
+        let message = EnumMessage { local, remote };
+
+        let mut sink = async_wayland_codec::WaylandMessageSink::new(WaylandMemoryBuffer::default());
+        sink.send_concrete(object_id, message).await.unwrap();
+
+        let mut stream = async_wayland_codec::WaylandMessageStream::new(sink.into_inner());
+        let (_, received_message) = stream.receive_concrete::<EnumMessage>().await.unwrap().unwrap();
+
+        assert_eq!(local, received_message.local);
+        assert_eq!(remote, received_message.remote);
+    }
 }

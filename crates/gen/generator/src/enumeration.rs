@@ -26,7 +26,7 @@ impl EnumItem {
         let doc = DocumentationItem::quote_outer(description.as_ref());
 
         let Some(repr) = ctx.repr_map.get(ctx.interface_name, &name) else {
-            // Enum part of another interface or protocol.
+            // FIXME: error here?
             return Default::default();
         };
 
