@@ -1,0 +1,11 @@
+[package]
+name = "cosplay-protocols-wayland"
+
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+cosplay-codec.workspace = true
+
+[build-dependencies]
+cosplay-scanner.workspace = true

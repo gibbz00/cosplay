@@ -32,7 +32,16 @@
               config.devShells.rust
             ];
 
-            packages = with pkgs; [ ];
+            shellHook =
+              let
+                wayland-xml = pkgs.fetchurl {
+                  url = "https://gitlab.freedesktop.org/wayland/wayland/-/raw/main/protocol/wayland.xml";
+                  sha256 = "sha256-zIYJh+VPjYXJQOl/oScMabbkrTH7z1p/ABB84RV/Xgc=";
+                };
+              in
+              ''
+                ln -fs ${wayland-xml} "./crates/protocols/wayland/input/protocol.xml"
+              '';
           };
         };
     };

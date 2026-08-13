@@ -18,7 +18,9 @@ use anyhow::Context;
 /// * `cosplay_generator` for generating the `cosplay-codec` implementations.
 ///
 /// [GeneratorConfig]: [cosplay_generator::config::GeneratorConfig]
-pub fn run(xml_path: &Path, config_path: Option<&Path>) -> anyhow::Result<String> {
+pub fn run(xml_path: impl AsRef<Path>, config_path: Option<impl AsRef<Path>>) -> anyhow::Result<String> {
+    let xml_path = xml_path.as_ref();
+
     let protocol = {
         let xml = std::fs::read_to_string(xml_path).context(format!("Unable to read XML at {}.", xml_path.display()))?;
         cosplay_xml::Protocol::from_xml(&xml).context("Failed to deserialize XML.")?
@@ -26,7 +28,7 @@ pub fn run(xml_path: &Path, config_path: Option<&Path>) -> anyhow::Result<String
 
     let config = match config_path {
         Some(path) => {
-            let config_str = std::fs::read_to_string(path).context(format!("Unable to read config at {}.", path.display()))?;
+            let config_str = std::fs::read_to_string(&path).context(format!("Unable to read config at {}.", path.as_ref().display()))?;
             toml::from_str(&config_str).context("Failed to deserialize config.")?
         }
         None => Default::default(),

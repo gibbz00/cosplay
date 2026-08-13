@@ -1,0 +1,13 @@
+[name_mappings.wl_shm.enums]
+format = "pixel_format"
+
+[name_mappings.wl_shell_surface.enums]
+resize = "resize_edge"
+
+[name_mappings.wl_pointer.enums]
+axis = "axis_direction"
+axis_relative_direction = "axis_relative_direction_type"
+axis_source = "axis_source_type"
+
+[name_mappings.wl_output.enums]
+mode = "output_mode"

@@ -109,6 +109,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosplay-protocols-wayland"
+version = "0.1.0"
+dependencies = [
+ "cosplay-codec",
+ "cosplay-scanner",
+]
+
+[[package]]
 name = "cosplay-scanner"
 version = "0.1.0"
 dependencies = [
