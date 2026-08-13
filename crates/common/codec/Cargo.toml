@@ -1,11 +1,11 @@
 [package]
-name = "async-wayland-codec"
+name = "cosplay-codec"
 
 edition.workspace = true
 version.workspace = true
 
 [dependencies]
-async-wayland-ancillary.workspace = true
+cosplay-ancillary.workspace = true
 
 bytes.workspace = true
 futures-util = { workspace = true, features = ["sink"] }

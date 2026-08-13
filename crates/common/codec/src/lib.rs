@@ -1,4 +1,4 @@
-//! # `async-wayland-codec` - Opaque and typed wire format encoding.
+//! # `cosplay-codec` - Opaque and typed wire format encoding.
 
 // Layer 1. Bytes <--> Opaque Frame
 

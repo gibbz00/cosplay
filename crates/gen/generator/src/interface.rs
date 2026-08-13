@@ -1,4 +1,4 @@
-use async_wayland_xml::{Interface, utils::EnumReprMap};
+use cosplay_xml::{Interface, utils::EnumReprMap};
 use quote::quote;
 
 use crate::*;

@@ -4,7 +4,7 @@ include!(concat!(env!("OUT_DIR"), "/combined.rs"));
 
 #[cfg(test)]
 mod tests {
-    use async_wayland_codec::{DecodeMessage, EncodeMessage, Message, ObjectId, OpaqueObjectId, WaylandMemoryBuffer};
+    use cosplay_codec::{DecodeMessage, EncodeMessage, Message, ObjectId, OpaqueObjectId, WaylandMemoryBuffer};
 
     #[test]
     fn rename() {
@@ -60,7 +60,7 @@ mod tests {
 
     #[test]
     fn enum_fallback() {
-        use async_wayland_codec::Enumeration;
+        use cosplay_codec::Enumeration;
 
         use super::wl_enum::*;
 
@@ -94,10 +94,10 @@ mod tests {
     async fn roundtrip_message<M: Message + EncodeMessage + DecodeMessage>(message: M) -> M {
         let object_id = ObjectId::new(OpaqueObjectId(1));
 
-        let mut sink = async_wayland_codec::WaylandMessageSink::new(WaylandMemoryBuffer::default());
+        let mut sink = cosplay_codec::WaylandMessageSink::new(WaylandMemoryBuffer::default());
         sink.send_concrete(object_id, message).await.unwrap();
 
-        let mut stream = async_wayland_codec::WaylandMessageStream::new(sink.into_inner());
+        let mut stream = cosplay_codec::WaylandMessageStream::new(sink.into_inner());
         let (received_id, received_message) = stream.receive_concrete::<M>().await.unwrap().unwrap();
 
         assert_eq!(received_id, object_id);

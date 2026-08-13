@@ -1,4 +1,4 @@
-use async_wayland_xml::Description;
+use cosplay_xml::Description;
 use quote::quote;
 
 pub struct DocumentationItem;

@@ -1,5 +1,5 @@
 [package]
-name = "async-wayland-ancillary"
+name = "cosplay-ancillary"
 
 edition.workspace = true
 version.workspace = true

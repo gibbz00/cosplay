@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use async_wayland_xml::{Cname, CnameSuffix};
+use cosplay_xml::{Cname, CnameSuffix};
 
 /// Configuration for modifying generator output.
 #[derive(Debug, Default, PartialEq)]

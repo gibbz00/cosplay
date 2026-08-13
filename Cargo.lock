@@ -59,84 +59,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
-name = "async-wayland-ancillary"
-version = "0.1.0"
-
-[[package]]
-name = "async-wayland-codec"
-version = "0.1.0"
-dependencies = [
- "async-wayland-ancillary",
- "bytes",
- "futures-util",
- "i24",
- "impl-tools",
- "sealed",
- "thiserror",
- "tokio",
- "tokio-util",
-]
-
-[[package]]
-name = "async-wayland-generator"
-version = "0.1.0"
-dependencies = [
- "async-wayland-generator",
- "async-wayland-xml",
- "heck",
- "indoc",
- "prettyplease",
- "proc-macro2",
- "quote",
- "serde",
- "syn 3.0.3",
- "thiserror",
- "toml",
-]
-
-[[package]]
-name = "async-wayland-generator-tests"
-version = "0.1.0"
-dependencies = [
- "async-wayland-codec",
- "async-wayland-generator",
- "async-wayland-xml",
- "tokio",
- "toml",
-]
-
-[[package]]
-name = "async-wayland-net"
-version = "0.1.0"
-dependencies = [
- "async-wayland-ancillary",
- "rustix",
- "serial_test",
- "thiserror",
- "tokio",
-]
-
-[[package]]
-name = "async-wayland-scanner"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-wayland-generator",
- "async-wayland-xml",
- "clap",
- "toml",
-]
-
-[[package]]
-name = "async-wayland-xml"
-version = "0.1.0"
-dependencies = [
- "quick-xml",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "autocfg"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -225,6 +147,84 @@ name = "colorchoice"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
+
+[[package]]
+name = "cosplay-ancillary"
+version = "0.1.0"
+
+[[package]]
+name = "cosplay-codec"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "cosplay-ancillary",
+ "futures-util",
+ "i24",
+ "impl-tools",
+ "sealed",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
+name = "cosplay-generator"
+version = "0.1.0"
+dependencies = [
+ "cosplay-generator",
+ "cosplay-xml",
+ "heck",
+ "indoc",
+ "prettyplease",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "syn 3.0.3",
+ "thiserror",
+ "toml",
+]
+
+[[package]]
+name = "cosplay-generator-tests"
+version = "0.1.0"
+dependencies = [
+ "cosplay-codec",
+ "cosplay-generator",
+ "cosplay-xml",
+ "tokio",
+ "toml",
+]
+
+[[package]]
+name = "cosplay-net"
+version = "0.1.0"
+dependencies = [
+ "cosplay-ancillary",
+ "rustix",
+ "serial_test",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "cosplay-scanner"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "cosplay-generator",
+ "cosplay-xml",
+ "toml",
+]
+
+[[package]]
+name = "cosplay-xml"
+version = "0.1.0"
+dependencies = [
+ "quick-xml",
+ "serde",
+ "thiserror",
+]
 
 [[package]]
 name = "errno"

@@ -7,13 +7,13 @@ edition = "2024"
 version = "0.1.0"
 
 [workspace.metadata]
-crane.name = "async-wayland"
+crane.name = "cosplay"
 
 [workspace.dependencies]
-async-wayland-ancillary = { path = "./crates/common/ancillary" }
-async-wayland-codec = { path = "./crates/common/codec" }
-async-wayland-generator = { path = "./crates/gen/generator" }
-async-wayland-xml = { path = "./crates/gen/xml" }
+cosplay-ancillary = { path = "./crates/common/ancillary" }
+cosplay-codec = { path = "./crates/common/codec" }
+cosplay-generator = { path = "./crates/gen/generator" }
+cosplay-xml = { path = "./crates/gen/xml" }
 
 anyhow = "1"
 bytes = "1"

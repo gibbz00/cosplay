@@ -1,5 +1,5 @@
 [package]
-name = "async-wayland-xml"
+name = "cosplay-xml"
 
 edition.workspace = true
 version.workspace = true

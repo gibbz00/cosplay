@@ -25,7 +25,7 @@
           craneLibSrcPath = ./.;
 
           devShells.default = pkgs.mkShell {
-            name = "async-wayland";
+            name = "cosplay";
 
             inputsFrom = [
               config.devShells.pre-commit

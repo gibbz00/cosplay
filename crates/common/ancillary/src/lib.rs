@@ -1,4 +1,4 @@
-//! # `async-wayland-ancillary` - Ancillary data trait primitives complementing `AsyncRead` and `AsyncWrite`.
+//! # `cosplay-ancillary` - Ancillary data trait primitives complementing `AsyncRead` and `AsyncWrite`.
 
 use std::{collections::VecDeque, os::fd::OwnedFd};
 

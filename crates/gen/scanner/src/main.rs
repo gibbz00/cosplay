@@ -20,7 +20,7 @@ fn main() -> anyhow::Result<()> {
 
     let protocol = {
         let xml = std::fs::read_to_string(&args.path).context(format!("Unable to read XML at {}.", args.path.display()))?;
-        async_wayland_xml::Protocol::from_xml(&xml).context("Failed to deserialize XML.")?
+        cosplay_xml::Protocol::from_xml(&xml).context("Failed to deserialize XML.")?
     };
 
     let config = match args.config {
@@ -31,7 +31,7 @@ fn main() -> anyhow::Result<()> {
         }
     };
 
-    let src = async_wayland_generator::Generator::run(protocol, config)?;
+    let src = cosplay_generator::Generator::run(protocol, config)?;
 
     println!("{src}");
 

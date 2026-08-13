@@ -1,4 +1,4 @@
-//! # `async-wayland-net` - Async socket and networking primitives.
+//! # `cosplay-net` - Async socket and networking primitives.
 //!
 //! ### Attribution
 //!

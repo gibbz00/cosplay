@@ -1,6 +1,6 @@
 use std::{collections::VecDeque, os::fd::OwnedFd};
 
-use async_wayland_ancillary::AncillaryBuffer;
+use cosplay_ancillary::AncillaryBuffer;
 use futures_util::{SinkExt, StreamExt};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::{FramedRead, FramedWrite};

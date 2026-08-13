@@ -1,11 +1,11 @@
 [package]
-name = "async-wayland-net"
+name = "cosplay-net"
 
 edition.workspace = true
 version.workspace = true
 
 [dependencies]
-async-wayland-ancillary.workspace = true
+cosplay-ancillary.workspace = true
 
 rustix = { workspace = true, features = ["net"] }
 thiserror.workspace = true

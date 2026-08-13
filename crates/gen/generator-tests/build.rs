@@ -21,14 +21,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let xml = std::fs::read_to_string(&path)?;
 
-        let protocol = async_wayland_xml::Protocol::from_xml(&xml)?;
+        let protocol = cosplay_xml::Protocol::from_xml(&xml)?;
 
         let config = {
             let name = path.file_stem().expect("Path has no file name.");
             read_toml_config(name)?.unwrap_or_default()
         };
 
-        let rust = async_wayland_generator::Generator::run(protocol, config)?;
+        let rust = cosplay_generator::Generator::run(protocol, config)?;
 
         output_file.write_all(rust.as_bytes())?;
     }
@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn read_toml_config(
     name: &std::ffi::OsStr,
-) -> Result<Option<async_wayland_generator::config::GeneratorConfig>, Box<dyn std::error::Error>> {
+) -> Result<Option<cosplay_generator::config::GeneratorConfig>, Box<dyn std::error::Error>> {
     let name = name.to_str().expect("File name is valid unicode.");
 
     let toml_path = Path::new(TOML_DIR).join(format!("{name}.toml"));

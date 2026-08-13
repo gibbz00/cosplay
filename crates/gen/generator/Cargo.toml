@@ -1,5 +1,5 @@
 [package]
-name = "async-wayland-generator"
+name = "cosplay-generator"
 
 edition.workspace = true
 version.workspace = true
@@ -8,7 +8,7 @@ version.workspace = true
 serde = ["dep:serde"]
 
 [dependencies]
-async-wayland-xml.workspace = true
+cosplay-xml.workspace = true
 
 # lib deps
 heck.workspace = true
@@ -22,7 +22,7 @@ thiserror.workspace = true
 serde = { workspace = true, features = ["derive"], optional = true }
 
 [dev-dependencies]
-async-wayland-generator = { path = ".", features = ["serde"] }
+cosplay-generator = { path = ".", features = ["serde"] }
 
 indoc.workspace = true
 toml = { workspace = true, features = ["parse", "serde"] }

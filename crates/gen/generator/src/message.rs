@@ -1,4 +1,4 @@
-use async_wayland_xml::{Argument, ArgumentVariant, Cname, Message};
+use cosplay_xml::{Argument, ArgumentVariant, Cname, Message};
 use quote::quote;
 
 use crate::*;
@@ -20,7 +20,7 @@ impl MessageItem {
             .collect()
     }
 
-    fn quote(op_code: u16, message: async_wayland_xml::Message, ctx: MessageContext) -> proc_macro2::TokenStream {
+    fn quote(op_code: u16, message: cosplay_xml::Message, ctx: MessageContext) -> proc_macro2::TokenStream {
         let Message { name, description, arguments, .. } = message;
 
         let doc = DocumentationItem::quote_outer(description.as_ref());
@@ -61,7 +61,7 @@ impl MessageItem {
         quote! {
             #struct_declaration
 
-            impl ::async_wayland_codec::Message for #ident {
+            impl ::cosplay_codec::Message for #ident {
                 type Interface = #interface_ident;
                 const OP_CODE: u16 = #op_code;
             }
@@ -75,12 +75,12 @@ impl MessageItem {
     fn encode_impl(ident: &proc_macro2::Ident, arguments: &[ArgumentItem]) -> proc_macro2::TokenStream {
         let fields = arguments.iter().map(|item| {
             let field_name = &item.field_name;
-            quote! { ::async_wayland_codec::MarshalArgument::marshal(self.#field_name, _bag); }
+            quote! { ::cosplay_codec::MarshalArgument::marshal(self.#field_name, _bag); }
         });
 
         quote! {
-            impl ::async_wayland_codec::EncodeMessage for #ident {
-                fn encode(self, _bag: &mut ::async_wayland_codec::ArgumentBag<'_>) {
+            impl ::cosplay_codec::EncodeMessage for #ident {
+                fn encode(self, _bag: &mut ::cosplay_codec::ArgumentBag<'_>) {
                     #(#fields)*
                 }
             }
@@ -93,7 +93,7 @@ impl MessageItem {
             false => {
                 let fields = arguments.iter().map(|item| {
                     let field_name = &item.field_name;
-                    quote! { #field_name: ::async_wayland_codec::ParseArgument::parse(_bag)?, }
+                    quote! { #field_name: ::cosplay_codec::ParseArgument::parse(_bag)?, }
                 });
 
                 quote! {
@@ -105,8 +105,8 @@ impl MessageItem {
         };
 
         quote! {
-            impl ::async_wayland_codec::DecodeMessage for #ident {
-                fn decode(_bag: &mut ::async_wayland_codec::ArgumentBag<'_>) -> Result<Self, ::async_wayland_codec::DecodeMessageError> {
+            impl ::cosplay_codec::DecodeMessage for #ident {
+                fn decode(_bag: &mut ::cosplay_codec::ArgumentBag<'_>) -> Result<Self, ::cosplay_codec::DecodeMessageError> {
                     Ok(#body)
                 }
             }
@@ -143,20 +143,20 @@ impl ArgumentItem {
                 Some(path) => IdentifierItem::enum_path(ctx.interface_name, path, ctx.name_mappings),
                 None => quote! { u32 },
             },
-            ArgumentVariant::Fixed => quote! { ::async_wayland_codec::Fixed },
+            ArgumentVariant::Fixed => quote! { ::cosplay_codec::Fixed },
             ArgumentVariant::String { nullable } => maybe_optional(quote! { ::std::string::String }, nullable),
             ArgumentVariant::ObjectId { concrete, nullable } => match concrete {
-                None => maybe_optional(quote! { ::async_wayland_codec::OpaqueObjectId }, nullable),
+                None => maybe_optional(quote! { ::cosplay_codec::OpaqueObjectId }, nullable),
                 Some(interface_name) => {
                     let path = IdentifierItem::qualified_interface(&interface_name);
-                    maybe_optional(quote! { ::async_wayland_codec::ObjectId<#path> }, nullable)
+                    maybe_optional(quote! { ::cosplay_codec::ObjectId<#path> }, nullable)
                 }
             },
             ArgumentVariant::NewObjectId { concrete } => match concrete {
-                None => quote! { ::async_wayland_codec::OpaqueNewObjectId },
+                None => quote! { ::cosplay_codec::OpaqueNewObjectId },
                 Some(interface_name) => {
                     let path = IdentifierItem::qualified_interface(&interface_name);
-                    quote! { ::async_wayland_codec::NewObjectId<#path> }
+                    quote! { ::cosplay_codec::NewObjectId<#path> }
                 }
             },
         };

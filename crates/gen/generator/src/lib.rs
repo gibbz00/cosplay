@@ -1,4 +1,4 @@
-//! # `async-wayland-generator` - Generate `async-wayland-codec` trait implementations from XML protocol definitions.
+//! # `cosplay-generator` - Generate `cosplay-codec` trait implementations from XML protocol definitions.
 //!
 //! ## Features
 //!

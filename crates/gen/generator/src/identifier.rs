@@ -1,4 +1,4 @@
-use async_wayland_xml::{Cname, CnameSuffix, EnumPath};
+use cosplay_xml::{Cname, CnameSuffix, EnumPath};
 use heck::{ToShoutySnakeCase, ToSnakeCase, ToUpperCamelCase};
 use quote::quote;
 

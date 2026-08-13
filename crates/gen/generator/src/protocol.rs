@@ -1,4 +1,4 @@
-use async_wayland_xml::{Protocol, utils::EnumReprMap};
+use cosplay_xml::{Protocol, utils::EnumReprMap};
 use quote::quote;
 
 use crate::*;
@@ -30,7 +30,7 @@ impl ProtocolItem {
 
 #[cfg(test)]
 mod tests {
-    use async_wayland_xml::{Cname, Interface};
+    use cosplay_xml::{Cname, Interface};
 
     use super::*;
 

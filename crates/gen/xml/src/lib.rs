@@ -1,4 +1,4 @@
-//! # `async-wayland-xml` - Items for deserializing Wayland XML protocol declarations.
+//! # `cosplay-xml` - Items for deserializing Wayland XML protocol declarations.
 //!
 //! Intended to be usable by different implementations of wayland protocol code generators, with
 //! [`Protocol::from_xml`] being the starting point.

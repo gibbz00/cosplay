@@ -1,4 +1,4 @@
-use async_wayland_xml::{
+use cosplay_xml::{
     Cname, Enum, EnumEntry,
     utils::{EnumRepr, EnumReprMap},
 };
@@ -80,7 +80,7 @@ impl EnumItem {
                 Other(#repr_ident)
             }
 
-            impl ::async_wayland_codec::Enumeration for #enum_ident {
+            impl ::cosplay_codec::Enumeration for #enum_ident {
                 type Repr = #repr_ident;
 
                 fn from_repr(repr: Self::Repr) -> Self {
@@ -162,7 +162,7 @@ impl EnumItem {
                 }
             }
 
-            impl ::async_wayland_codec::Enumeration for #enum_ident {
+            impl ::cosplay_codec::Enumeration for #enum_ident {
                 type Repr = #repr_ident;
 
                 fn from_repr(repr: Self::Repr) -> Self {

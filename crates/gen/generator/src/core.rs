@@ -1,4 +1,4 @@
-use async_wayland_xml::{Protocol, utils::EnumReprMapBuildError};
+use cosplay_xml::{Protocol, utils::EnumReprMapBuildError};
 
 use crate::*;
 
@@ -14,7 +14,7 @@ pub enum GeneratorError {
 }
 
 impl Generator {
-    /// Convert a wayland protocol into Rust source code implementing `async-wayland-codec`
+    /// Convert a wayland protocol into Rust source code implementing `cosplay-codec`
     /// traits.
     pub fn run(protocol: Protocol, config: GeneratorConfig) -> Result<String, GeneratorError> {
         ProtocolItem::quote(protocol, config).map(Self::format)
