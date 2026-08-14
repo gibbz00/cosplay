@@ -35,7 +35,7 @@ pub struct UnixStream<const S: usize> {
 
 impl<const S: usize> UnixStream<S> {
     // FIXME: document: panic if called outside the tokio runtime
-    pub fn new(path: &Path) -> std::io::Result<Self> {
+    pub fn connect(path: &Path) -> std::io::Result<Self> {
         let addr = rustix::net::SocketAddrUnix::new(path)?;
 
         let fd = rustix::net::socket_with(
@@ -108,12 +108,6 @@ impl<const S: usize> tokio::io::AsyncWrite for UnixStream<S> {
 
     fn poll_shutdown(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
         self.socket.shutdown_write().into()
-    }
-}
-
-impl<const S: usize> cosplay_ancillary::AncillaryBuffer for UnixStream<S> {
-    fn file_descriptors(&mut self) -> &mut VecDeque<OwnedFd> {
-        &mut self.inbound_fds
     }
 }
 

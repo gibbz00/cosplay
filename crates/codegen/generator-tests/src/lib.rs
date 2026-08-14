@@ -38,7 +38,7 @@ mod tests {
     async fn object_encoding() {
         use super::{wl_a::*, wl_b::WlB};
 
-        let id = ObjectId::<WlB>::new(OpaqueObjectId(2));
+        let id = ObjectId::<WlB>::new(OpaqueObjectId::new(2));
 
         let received_message = roundtrip_message(Request { id }).await;
 
@@ -92,7 +92,7 @@ mod tests {
     }
 
     async fn roundtrip_message<M: Message + EncodeMessage + DecodeMessage>(message: M) -> M {
-        let object_id = ObjectId::new(OpaqueObjectId(1));
+        let object_id = ObjectId::new(OpaqueObjectId::new(1));
 
         let mut sink = WaylandMessageSink::new(WaylandMemoryBuffer::default());
         sink.send_concrete(object_id, message).await.unwrap();

@@ -9,7 +9,7 @@ use std::{
 
 use crate::*;
 
-/// Read half created from [`WaylandUnixStream::into_split`].
+/// Read half created from [`UnixStream::into_split`].
 pub struct UnixStreamReadHalf<const S: usize> {
     pub(super) socket: Arc<UnixStreamSocket>,
     pub(super) inbound_fds: VecDeque<OwnedFd>,
@@ -22,13 +22,25 @@ impl<const S: usize> tokio::io::AsyncRead for UnixStreamReadHalf<S> {
     }
 }
 
-/// Write half created from [`WaylandUnixStream::into_split`].
+impl<const S: usize> cosplay_ancillary::AncillaryBuffer for UnixStreamReadHalf<S> {
+    fn file_descriptors(&mut self) -> &mut VecDeque<OwnedFd> {
+        &mut self.inbound_fds
+    }
+}
+
+/// Write half created from [`UnixStream::into_split`].
 ///
 /// Dropping the write half will also shut down the write half of the stream.
 pub struct UnixStreamWriteHalf<const S: usize> {
     pub(super) shutdown_on_drop: bool,
     pub(super) socket: Arc<UnixStreamSocket>,
     pub(super) outbound_fds: VecDeque<OwnedFd>,
+}
+
+impl<const S: usize> cosplay_ancillary::AncillaryBuffer for UnixStreamWriteHalf<S> {
+    fn file_descriptors(&mut self) -> &mut VecDeque<OwnedFd> {
+        &mut self.outbound_fds
+    }
 }
 
 impl<const S: usize> tokio::io::AsyncWrite for UnixStreamWriteHalf<S> {

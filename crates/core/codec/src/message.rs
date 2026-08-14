@@ -47,6 +47,11 @@ pub struct OpaqueMessage {
 }
 
 impl OpaqueMessage {
+    /// Retrieve the message op code.
+    pub const fn op_code(&self) -> u16 {
+        self.op_code
+    }
+
     /// Create a new opaque message from a concrete [`Message`].
     pub fn from_concrete<M: Message + EncodeMessage>(message: M) -> Self {
         let mut bytes = BytesMut::new();

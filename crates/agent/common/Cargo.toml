@@ -1,0 +1,11 @@
+[package]
+name = "cosplay-agent"
+
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+cosplay-codec.workspace = true
+
+sealed.workspace = true
+thiserror.workspace = true

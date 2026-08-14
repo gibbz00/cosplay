@@ -12,14 +12,10 @@ mod arguments;
 pub use arguments::{ArgumentBag, ArgumentDecodeError, MarshalArgument, ParseArgument};
 
 mod object_id;
-pub(crate) use object_id::*;
 pub use object_id::{NewObjectId, ObjectId, OpaqueNewObjectId, OpaqueObjectId};
 
 mod fixed;
 pub use fixed::Fixed;
-
-mod entity;
-pub(crate) use entity::{Client, Entity, Server};
 
 // Layer 3. Arguments <--> Rust Structs
 

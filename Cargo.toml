@@ -1,5 +1,11 @@
 [workspace]
-members = ["crates/codegen/*", "crates/core/*", "crates/protocols/*"]
+members = [
+  "crates/agent/common",
+  "crates/codegen/*",
+  "crates/core/*",
+  "crates/protocols/*",
+  "examples/*",
+]
 resolver = "3"
 
 [workspace.package]
@@ -10,11 +16,19 @@ version = "0.1.0"
 crane.name = "cosplay"
 
 [workspace.dependencies]
+# Core
 cosplay-ancillary = { path = "./crates/core/ancillary" }
 cosplay-codec = { path = "./crates/core/codec" }
+cosplay-net = { path = "./crates/core/net" }
+# Codegen
 cosplay-generator = { path = "./crates/codegen/generator" }
 cosplay-scanner = { path = "./crates/codegen/scanner" }
 cosplay-xml = { path = "./crates/codegen/xml" }
+# Agent
+cosplay-agent = { path = "./crates/agent/common" }
+cosplay-client = { path = "./crates/agent/client" }
+# Protocols
+cosplay-protocols-wayland = { path = "./crates/protocols/wayland" }
 
 anyhow = "1"
 bytes = "1"
@@ -39,3 +53,7 @@ toml = { version = "1", default-features = false }
 
 # Testing
 serial_test = { version = "4", default-features = false }
+
+# Examples
+tracing = "0.1"
+tracing-subscriber = "0.3"
