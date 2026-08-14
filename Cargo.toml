@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/core/*", "crates/gen/*", "crates/protocols/*"]
+members = ["crates/codegen/*", "crates/core/*", "crates/protocols/*"]
 resolver = "3"
 
 [workspace.package]
@@ -12,9 +12,9 @@ crane.name = "cosplay"
 [workspace.dependencies]
 cosplay-ancillary = { path = "./crates/core/ancillary" }
 cosplay-codec = { path = "./crates/core/codec" }
-cosplay-generator = { path = "./crates/gen/generator" }
-cosplay-scanner = { path = "./crates/gen/scanner" }
-cosplay-xml = { path = "./crates/gen/xml" }
+cosplay-generator = { path = "./crates/codegen/generator" }
+cosplay-scanner = { path = "./crates/codegen/scanner" }
+cosplay-xml = { path = "./crates/codegen/xml" }
 
 anyhow = "1"
 bytes = "1"
