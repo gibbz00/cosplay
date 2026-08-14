@@ -11,7 +11,7 @@ mod tests {
         use super::rename::*;
         // NB: Pixelformat would normally be called Format without the rename,
         // which would then cause a compiler error.
-        let _ = Format { format: PixelFormat::A };
+        let _ = Format { format: PixelFormat::A.into() };
     }
 
     #[test]
@@ -49,8 +49,8 @@ mod tests {
     async fn enum_encoding() {
         use super::{wl_enum::*, wl_other::*};
 
-        let local = Local::_1Y;
-        let remote = Remote::B;
+        let local = Local::_1Y.into();
+        let remote = Remote::B.into();
 
         let received_message = roundtrip_message(EnumMessage { local, remote }).await;
 
@@ -75,7 +75,7 @@ mod tests {
     async fn bitfield_encoding() {
         use super::wl_bitfields::*;
 
-        let direction = Direction::UP | Direction::DOWN;
+        let direction = (Direction::UP | Direction::DOWN).into();
 
         let received_message = roundtrip_message(SomeRequest { direction }).await;
 

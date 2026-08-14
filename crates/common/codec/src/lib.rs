@@ -24,7 +24,8 @@ pub(crate) use entity::{Client, Entity, Server};
 // Layer 3. Arguments <--> Rust Structs
 
 mod enumeration;
-pub use enumeration::Enumeration;
+pub(crate) use enumeration::EnumRepr;
+pub use enumeration::{EnumArg, Enumeration};
 
 mod message;
 pub use message::{DecodeMessage, DecodeMessageError, EncodeMessage, Message, OpaqueMessage};

@@ -1,4 +1,4 @@
-use cosplay_xml::{Interface, utils::EnumReprMap};
+use cosplay_xml::Interface;
 use quote::quote;
 
 use crate::*;
@@ -7,7 +7,6 @@ pub struct InterfaceItem;
 
 #[derive(Clone, Copy)]
 pub struct InterfaceContext<'a> {
-    pub repr_map: &'a EnumReprMap,
     pub name_mappings: &'a NameMappings,
 }
 
@@ -27,14 +26,7 @@ impl InterfaceItem {
 
         let events = MessageItem::quote_list(events, message_ctx);
 
-        let enums = EnumItem::quote_list(
-            enums,
-            EnumContext {
-                interface_name: &name,
-                repr_map: ctx.repr_map,
-                name_mappings: ctx.name_mappings,
-            },
-        );
+        let enums = EnumItem::quote_list(enums, EnumContext { interface_name: &name, name_mappings: ctx.name_mappings });
 
         quote! {
             pub mod #module_name {

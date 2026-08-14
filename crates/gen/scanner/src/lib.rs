@@ -34,5 +34,7 @@ pub fn run(xml_path: impl AsRef<Path>, config_path: Option<impl AsRef<Path>>) ->
         None => Default::default(),
     };
 
-    cosplay_generator::Generator::run(protocol, config).context("Failed to generate source code.")
+    let src = cosplay_generator::Generator::run(protocol, config);
+
+    Ok(src)
 }

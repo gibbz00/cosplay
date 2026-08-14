@@ -7,7 +7,7 @@
 //! - `serde`: Implements `serde::de::Deserialize` for [`GeneratorConfig`].
 
 mod core;
-pub use core::{Generator, GeneratorError};
+pub use core::Generator;
 
 mod protocol;
 pub(crate) use protocol::ProtocolItem;

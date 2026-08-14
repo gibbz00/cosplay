@@ -304,22 +304,24 @@ impl ParseArgument for Option<String> {
 }
 
 #[sealed::sealed]
-impl<T: Enumeration> MarshalArgument for T
+impl<E, R> MarshalArgument for EnumArg<E, R>
 where
-    T::Repr: MarshalArgument,
+    E: Enumeration<R>,
+    R: EnumRepr + MarshalArgument,
 {
     fn marshal(self, bag: &mut ArgumentBag<'_>) {
-        self.to_repr().marshal(bag);
+        self.inner().to_repr().marshal(bag);
     }
 }
 
 #[sealed::sealed]
-impl<T: Enumeration> ParseArgument for T
+impl<E, R> ParseArgument for EnumArg<E, R>
 where
-    T::Repr: ParseArgument,
+    E: Enumeration<R>,
+    R: EnumRepr + ParseArgument,
 {
     fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
-        ParseArgument::parse(bag).map(T::from_repr)
+        ParseArgument::parse(bag).map(E::from_repr).map(Into::into)
     }
 }
 

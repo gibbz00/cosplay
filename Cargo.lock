@@ -84,7 +84,6 @@ dependencies = [
  "quote",
  "serde",
  "syn 3.0.3",
- "thiserror",
  "toml",
 ]
 

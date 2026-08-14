@@ -1,4 +1,4 @@
-use cosplay_xml::{Cname, CnameSuffix, EnumPath};
+use cosplay_xml::{Cname, CnameSuffix};
 use heck::{ToShoutySnakeCase, ToSnakeCase, ToUpperCamelCase};
 use quote::quote;
 
@@ -44,25 +44,5 @@ impl IdentifierItem {
         let type_name = Self::type_name(name);
 
         quote! { crate::#module_name::#type_name }
-    }
-
-    pub fn enum_path(parent_interface: &Cname, path: EnumPath, name_mappings: &NameMappings) -> proc_macro2::TokenStream {
-        let EnumPath { interface, enumeration } = path;
-
-        let interface_name = interface.as_ref().unwrap_or(parent_interface);
-
-        let mapped_name = name_mappings
-            .get(interface_name, &enumeration, ItemType::Enum)
-            .unwrap_or(&enumeration);
-
-        let name = Self::sanitized_type_name(mapped_name);
-
-        match interface {
-            Some(interface_name) => {
-                let module = Self::module_name(&interface_name);
-                quote! { crate::#module::#name }
-            }
-            None => quote! { #name },
-        }
     }
 }

@@ -1,4 +1,4 @@
-use cosplay_xml::{Argument, ArgumentVariant, Cname, Message};
+use cosplay_xml::{Argument, ArgumentVariant, Cname, EnumPath, Message};
 use quote::quote;
 
 use crate::*;
@@ -136,11 +136,11 @@ impl ArgumentItem {
             ArgumentVariant::Array => quote! { ::std::vec::Vec<u8> },
             ArgumentVariant::Fd => quote! { ::std::os::fd::OwnedFd },
             ArgumentVariant::I32 { enumeration } => match enumeration {
-                Some(path) => IdentifierItem::enum_path(ctx.interface_name, path, ctx.name_mappings),
+                Some(path) => Self::enum_path(ctx.interface_name, path, ctx.name_mappings, true),
                 None => quote! { i32 },
             },
             ArgumentVariant::U32 { enumeration } => match enumeration {
-                Some(path) => IdentifierItem::enum_path(ctx.interface_name, path, ctx.name_mappings),
+                Some(path) => Self::enum_path(ctx.interface_name, path, ctx.name_mappings, false),
                 None => quote! { u32 },
             },
             ArgumentVariant::Fixed => quote! { ::cosplay_codec::Fixed },
@@ -167,5 +167,32 @@ impl ArgumentItem {
                 false => path,
             }
         }
+    }
+
+    fn enum_path(parent_interface: &Cname, path: EnumPath, name_mappings: &NameMappings, signed: bool) -> proc_macro2::TokenStream {
+        let EnumPath { interface, enumeration } = path;
+
+        let interface_name = interface.as_ref().unwrap_or(parent_interface);
+
+        let mapped_name = name_mappings
+            .get(interface_name, &enumeration, ItemType::Enum)
+            .unwrap_or(&enumeration);
+
+        let name = IdentifierItem::sanitized_type_name(mapped_name);
+
+        let ident = match interface {
+            Some(interface_name) => {
+                let module = IdentifierItem::module_name(&interface_name);
+                quote! { crate::#module::#name }
+            }
+            None => quote! { #name },
+        };
+
+        let repr = match signed {
+            true => quote! { i32 },
+            false => quote! { u32 },
+        };
+
+        quote! { ::cosplay_codec::EnumArg<#ident, #repr> }
     }
 }

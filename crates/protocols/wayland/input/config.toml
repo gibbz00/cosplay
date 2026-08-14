@@ -1,3 +1,6 @@
+[name_mappings.wl_display.enums]
+error = "global_error"
+
 [name_mappings.wl_shm.enums]
 format = "pixel_format"
 
