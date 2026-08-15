@@ -33,14 +33,20 @@ impl<I> ObjectId<I> {
     pub const fn inner(&self) -> u32 {
         self.inner.inner()
     }
+
+    /// Create an opaque copy of self.
+    pub const fn as_opaque(&self) -> OpaqueObjectId {
+        self.inner
+    }
 }
 
 /// `new_id` without a defined interface. Notably used in `wl_registry::bind`.
 #[derive(Debug, PartialEq, Eq, Clone)]
+#[allow(missing_docs)]
 pub struct OpaqueNewObjectId {
-    pub(crate) interface_name: String,
-    pub(crate) interface_version: u32,
-    pub(crate) inner: u32,
+    pub interface_name: String,
+    pub interface_version: u32,
+    pub object_id: OpaqueObjectId,
 }
 
 /// `new_id` message argument. Wraps an [`ObjectId<I>`].
@@ -56,5 +62,10 @@ impl<I> NewObjectId<I> {
     /// Retrieve the raw object id identifier value.
     pub const fn inner(&self) -> u32 {
         self.0.inner()
+    }
+
+    /// Promote a new_id to a regular [`ObjectId`]
+    pub const fn promote(self) -> ObjectId<I> {
+        self.0
     }
 }

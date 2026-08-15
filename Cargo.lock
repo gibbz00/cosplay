@@ -212,6 +212,7 @@ dependencies = [
  "cosplay-codec",
  "cosplay-net",
  "cosplay-protocols-wayland",
+ "cosplay-protocols-xdg-shell",
  "tokio",
  "tracing",
  "tracing-subscriber",

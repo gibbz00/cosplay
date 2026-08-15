@@ -29,6 +29,7 @@ cosplay-agent = { path = "./crates/agent/common" }
 cosplay-client = { path = "./crates/agent/client" }
 # Protocols
 cosplay-protocols-wayland = { path = "./crates/protocols/wayland" }
+cosplay-protocols-xdg-shell = { path = "./crates/protocols/xdg-shell" }
 
 anyhow = "1"
 bytes = "1"

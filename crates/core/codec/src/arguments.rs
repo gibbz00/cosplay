@@ -178,11 +178,11 @@ impl<I> ParseArgument for NewObjectId<I> {
 #[sealed::sealed]
 impl MarshalArgument for OpaqueNewObjectId {
     fn marshal(self, bag: &mut ArgumentBag<'_>) {
-        let OpaqueNewObjectId { interface_name, interface_version, inner } = self;
+        let OpaqueNewObjectId { interface_name, interface_version, object_id } = self;
 
         interface_name.marshal(bag);
         interface_version.marshal(bag);
-        inner.marshal(bag);
+        object_id.marshal(bag);
     }
 }
 
@@ -191,9 +191,9 @@ impl ParseArgument for OpaqueNewObjectId {
     fn parse(bag: &mut ArgumentBag<'_>) -> Result<Self, ArgumentDecodeError> {
         let interface_name = String::parse(bag)?;
         let interface_version = u32::parse(bag)?;
-        let inner = u32::parse(bag)?;
+        let object_id = OpaqueObjectId::parse(bag)?;
 
-        Ok(Self { interface_name, interface_version, inner })
+        Ok(Self { interface_name, interface_version, object_id })
     }
 }
 
@@ -395,7 +395,11 @@ mod tests {
 
     #[test]
     fn opaque_new_object_id_encoding() {
-        let new_id = OpaqueNewObjectId { interface_name: "wl_xxx".to_string(), interface_version: 1, inner: 1 };
+        let new_id = OpaqueNewObjectId {
+            interface_name: "wl_xxx".to_string(),
+            interface_version: 1,
+            object_id: OpaqueObjectId::new(1),
+        };
         assert_bijective_encoding(new_id);
     }
 
