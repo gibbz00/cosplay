@@ -15,6 +15,13 @@ mod tests {
     }
 
     #[test]
+    fn interface_name() {
+        use super::wl_encoding::*;
+
+        assert_eq!("wl_encoding", <WlEncoding as cosplay_codec::Interface>::NAME);
+    }
+
+    #[test]
     fn opcodes() {
         use super::opcodes::*;
 

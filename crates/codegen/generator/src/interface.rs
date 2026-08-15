@@ -1,4 +1,4 @@
-use cosplay_xml::Interface;
+use cosplay_xml::{Cname, Interface};
 use quote::quote;
 
 use crate::*;
@@ -16,9 +16,11 @@ impl InterfaceItem {
 
         let module_name = IdentifierItem::module_name(&name);
 
-        let item_name = IdentifierItem::type_name(&name);
-
         let doc = DocumentationItem::quote_outer(description.as_ref());
+
+        let ident = IdentifierItem::type_name(&name);
+
+        let trait_impl = Self::trait_impl(&name, &ident);
 
         let message_ctx = MessageContext { interface_name: &name, name_mappings: ctx.name_mappings };
 
@@ -31,13 +33,24 @@ impl InterfaceItem {
         quote! {
             pub mod #module_name {
                 #doc
-                pub struct #item_name;
+                pub struct #ident;
+
+                #trait_impl
 
                 #(#requests)*
 
                 #(#events)*
 
                 #(#enums)*
+            }
+        }
+    }
+
+    fn trait_impl(name: &Cname, ident: &proc_macro2::Ident) -> proc_macro2::TokenStream {
+        let name = name.as_ref();
+        quote! {
+            impl ::cosplay_codec::Interface for #ident {
+                const NAME: &str = #name;
             }
         }
     }
