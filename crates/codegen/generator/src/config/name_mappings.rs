@@ -108,7 +108,7 @@ mod serde_impl {
                 CnameSuffix::parse("baz_qux".to_string()).unwrap(),
             );
 
-            let expected = GeneratorConfig { name_mappings };
+            let expected = GeneratorConfig { name_mappings, external_interfaces: Default::default() };
 
             let actual = toml::from_str::<GeneratorConfig>(toml).unwrap();
 

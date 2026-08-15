@@ -7,6 +7,7 @@ pub struct InterfaceItem;
 
 #[derive(Clone, Copy)]
 pub struct InterfaceContext<'a> {
+    pub external_interfaces: &'a ExternalInterfaces,
     pub name_mappings: &'a NameMappings,
 }
 
@@ -22,7 +23,11 @@ impl InterfaceItem {
 
         let trait_impl = Self::trait_impl(&name, &ident);
 
-        let message_ctx = MessageContext { interface_name: &name, name_mappings: ctx.name_mappings };
+        let message_ctx = MessageContext {
+            interface_name: &name,
+            external_interfaces: ctx.external_interfaces,
+            name_mappings: ctx.name_mappings,
+        };
 
         let requests = MessageItem::quote_list(requests, message_ctx);
 

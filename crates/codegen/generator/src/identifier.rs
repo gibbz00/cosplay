@@ -38,11 +38,25 @@ impl IdentifierItem {
         quote::format_ident!("{}", name.as_ref().to_snake_case())
     }
 
-    pub fn qualified_interface(name: &Cname) -> proc_macro2::TokenStream {
-        let module_name = Self::module_name(name);
+    pub fn qualified_interface(external_interfaces: &ExternalInterfaces, interface_name: &Cname) -> proc_macro2::TokenStream {
+        let interface_ident = Self::type_name(interface_name);
+        Self::qualified_interface_item(external_interfaces, interface_name, &interface_ident)
+    }
 
-        let type_name = Self::type_name(name);
+    pub fn qualified_interface_item(
+        external_interfaces: &ExternalInterfaces,
+        interface_name: &Cname,
+        item_name: &proc_macro2::Ident,
+    ) -> proc_macro2::TokenStream {
+        let qualifier = match external_interfaces.get(interface_name) {
+            Some(path) => {
+                quote! { #path }
+            }
+            None => quote! { crate },
+        };
 
-        quote! { crate::#module_name::#type_name }
+        let module_name = Self::module_name(interface_name);
+
+        quote! { #qualifier::#module_name::#item_name }
     }
 }

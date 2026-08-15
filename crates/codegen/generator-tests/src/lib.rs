@@ -112,3 +112,27 @@ mod tests {
         received_message
     }
 }
+
+// NB: Used to test if the output of `external.xml` compiles. Do not remove.
+mod external_mod {
+    pub mod wl_ext {
+        pub struct WlExt;
+
+        #[derive(Debug, Clone, Copy, PartialEq)]
+        pub enum ExtEnum {
+            Other(u32),
+        }
+
+        impl cosplay_codec::Enumeration<u32> for ExtEnum {
+            fn from_repr(repr: u32) -> Self {
+                Self::Other(repr)
+            }
+
+            fn to_repr(&self) -> u32 {
+                match self {
+                    ExtEnum::Other(repr) => *repr,
+                }
+            }
+        }
+    }
+}

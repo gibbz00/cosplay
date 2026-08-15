@@ -1,0 +1,2 @@
+[external_interfaces]
+"crate::external_mod" = ["wl_ext"]

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="example">
+  <interface name="xdg_sub" version="1">
+    <request name="Foo">
+      <arg name="a" type="object" interface="wl_ext"/>
+      <arg name="b" type="uint" enum="wl_ext.ext_enum"/>
+    </request>
+  </interface>
+</protocol>

@@ -8,6 +8,7 @@ pub struct MessageItem;
 #[derive(Clone, Copy)]
 pub struct MessageContext<'a> {
     pub interface_name: &'a Cname,
+    pub external_interfaces: &'a ExternalInterfaces,
     pub name_mappings: &'a NameMappings,
 }
 
@@ -136,11 +137,11 @@ impl ArgumentItem {
             ArgumentVariant::Array => quote! { ::std::vec::Vec<u8> },
             ArgumentVariant::Fd => quote! { ::std::os::fd::OwnedFd },
             ArgumentVariant::I32 { enumeration } => match enumeration {
-                Some(path) => Self::enum_path(ctx.interface_name, path, ctx.name_mappings, true),
+                Some(path) => Self::enum_path(ctx.interface_name, path, ctx.external_interfaces, ctx.name_mappings, true),
                 None => quote! { i32 },
             },
             ArgumentVariant::U32 { enumeration } => match enumeration {
-                Some(path) => Self::enum_path(ctx.interface_name, path, ctx.name_mappings, false),
+                Some(path) => Self::enum_path(ctx.interface_name, path, ctx.external_interfaces, ctx.name_mappings, false),
                 None => quote! { u32 },
             },
             ArgumentVariant::Fixed => quote! { ::cosplay_codec::Fixed },
@@ -148,14 +149,14 @@ impl ArgumentItem {
             ArgumentVariant::ObjectId { concrete, nullable } => match concrete {
                 None => maybe_optional(quote! { ::cosplay_codec::OpaqueObjectId }, nullable),
                 Some(interface_name) => {
-                    let path = IdentifierItem::qualified_interface(&interface_name);
+                    let path = IdentifierItem::qualified_interface(ctx.external_interfaces, &interface_name);
                     maybe_optional(quote! { ::cosplay_codec::ObjectId<#path> }, nullable)
                 }
             },
             ArgumentVariant::NewObjectId { concrete } => match concrete {
                 None => quote! { ::cosplay_codec::OpaqueNewObjectId },
                 Some(interface_name) => {
-                    let path = IdentifierItem::qualified_interface(&interface_name);
+                    let path = IdentifierItem::qualified_interface(ctx.external_interfaces, &interface_name);
                     quote! { ::cosplay_codec::NewObjectId<#path> }
                 }
             },
@@ -169,7 +170,13 @@ impl ArgumentItem {
         }
     }
 
-    fn enum_path(parent_interface: &Cname, path: EnumPath, name_mappings: &NameMappings, signed: bool) -> proc_macro2::TokenStream {
+    fn enum_path(
+        parent_interface: &Cname,
+        path: EnumPath,
+        external_interfaces: &ExternalInterfaces,
+        name_mappings: &NameMappings,
+        signed: bool,
+    ) -> proc_macro2::TokenStream {
         let EnumPath { interface, enumeration } = path;
 
         let interface_name = interface.as_ref().unwrap_or(parent_interface);
@@ -178,14 +185,11 @@ impl ArgumentItem {
             .get(interface_name, &enumeration, ItemType::Enum)
             .unwrap_or(&enumeration);
 
-        let name = IdentifierItem::sanitized_type_name(mapped_name);
+        let enum_ident = IdentifierItem::sanitized_type_name(mapped_name);
 
-        let ident = match interface {
-            Some(interface_name) => {
-                let module = IdentifierItem::module_name(&interface_name);
-                quote! { crate::#module::#name }
-            }
-            None => quote! { #name },
+        let enum_path = match interface {
+            Some(interface_name) => IdentifierItem::qualified_interface_item(external_interfaces, &interface_name, &enum_ident),
+            None => quote! { #enum_ident },
         };
 
         let repr = match signed {
@@ -193,6 +197,6 @@ impl ArgumentItem {
             false => quote! { u32 },
         };
 
-        quote! { ::cosplay_codec::EnumArg<#ident, #repr> }
+        quote! { ::cosplay_codec::EnumArg<#enum_path, #repr> }
     }
 }

@@ -28,4 +28,4 @@ mod identifier;
 pub(crate) use identifier::IdentifierItem;
 
 pub mod config;
-pub(crate) use config::{GeneratorConfig, ItemType, NameMappings};
+pub(crate) use config::*;
