@@ -1,16 +1,6 @@
-//! Items for modifying generator output.
-
 use std::collections::HashMap;
 
 use cosplay_xml::{Cname, CnameSuffix};
-
-/// Configuration for modifying generator output.
-#[derive(Debug, Default, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
-#[allow(missing_docs)]
-pub struct GeneratorConfig {
-    pub name_mappings: NameMappings,
-}
 
 /// Provided to [`NameMappings::insert`]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -92,6 +82,7 @@ mod serde_impl {
     #[cfg(test)]
     mod tests {
         use super::*;
+        use crate::*;
 
         #[test]
         fn from_toml() {
