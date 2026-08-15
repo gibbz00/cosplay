@@ -4,6 +4,7 @@ use cosplay_agent::{Client, Server};
 use cosplay_codec::{Message, ObjectId, OpaqueObjectId, WaylandMessageSink, WaylandMessageStream};
 use cosplay_net::{WaylandUnixStreamReadHalf, WaylandUnixStreamWriteHalf};
 use cosplay_protocols_wayland::{
+    wl_callback,
     wl_display::{self, WlDisplay},
     wl_registry,
 };
@@ -25,6 +26,9 @@ async fn main() -> anyhow::Result<()> {
     w.send_concrete(WL_DISPLAY_ID, wl_display::GetRegistry { registry: registry_id })
         .await?;
 
+    let callback_id = id_factory.next();
+    w.send_concrete(WL_DISPLAY_ID, wl_display::Sync { callback: callback_id }).await?;
+
     while let Some(inbound_frame) = r.receive_opaque().await {
         let (id, msg) = inbound_frame?;
 
@@ -43,6 +47,12 @@ async fn main() -> anyhow::Result<()> {
             let global_message = msg.into_concrete::<wl_registry::Global>()?;
             tracing::info!(?global_message, "Received global from server.");
             continue;
+        }
+
+        if id == callback_id.inner() {
+            let done_message = msg.into_concrete::<wl_callback::Done>()?;
+            tracing::info!(?done_message, "Received sync callback from server.");
+            break;
         }
     }
 
