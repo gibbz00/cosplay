@@ -22,6 +22,13 @@ mod tests {
     }
 
     #[test]
+    fn interface_version() {
+        use super::wl_encoding::*;
+
+        assert_eq!(123, <WlEncoding as cosplay_codec::Interface>::VERSION);
+    }
+
+    #[test]
     fn opcodes() {
         use super::opcodes::*;
 

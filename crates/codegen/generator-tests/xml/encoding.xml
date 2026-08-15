@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <protocol name="example">
-  <interface name="wl_encoding" version="1">
+  <interface name="wl_encoding" version="123">
     <request name="basic_message">
       <arg name="text" type="string" />
     </request>
