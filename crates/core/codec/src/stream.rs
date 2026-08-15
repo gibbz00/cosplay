@@ -31,13 +31,13 @@ impl<W: AsyncWrite + AncillaryBuffer + Unpin> WaylandMessageSink<W> {
         object_id: ObjectId<M::Interface>,
         message: M,
     ) -> std::io::Result<()> {
-        let opaque_message = OpaqueMessage::from_concrete(message);
-        self.send_opaque(object_id.inner, opaque_message).await
+        let opaque_message = OpaqueMessage::from_concrete(object_id, message);
+        self.send_opaque(opaque_message).await
     }
 
     /// Send (and flush) an opaque wayland message.
-    pub async fn send_opaque(&mut self, object_id: OpaqueObjectId, opaque_message: OpaqueMessage) -> std::io::Result<()> {
-        let OpaqueMessage { op_code, argument_buffer, fd_buffer } = opaque_message;
+    pub async fn send_opaque(&mut self, opaque_message: OpaqueMessage) -> std::io::Result<()> {
+        let OpaqueMessage { object_id, op_code, argument_buffer, fd_buffer } = opaque_message;
 
         let frame = OpaqueFrame { object_id: object_id.0, op_code, argument_buffer };
 
@@ -57,18 +57,6 @@ pub struct WaylandMessageStream<R> {
     frame_reader: FramedRead<R, OpaqueFrameDecoder>,
 }
 
-/// Returned from the various `WaylandMessageStream::receive_*` methods.
-#[derive(Debug, thiserror::Error)]
-#[allow(missing_docs)]
-pub enum WaylandMessageStreamError {
-    #[error("Failed to decode bytes into an opaque frame: {0}")]
-    Opaque(#[from] OpaqueFrameDecodeError),
-    #[error("Failed to message from frame: {0}")]
-    Argument(#[from] DecodeMessageError),
-    #[error("Received opcode '{0}' does not match expected message opcate '{1}'.")]
-    OpcodeMismatch(u16, u16),
-}
-
 impl<R> WaylandMessageStream<R> {
     /// Create a new message stream from an underlying I/O stream.
     pub fn new(stream: R) -> Self {
@@ -82,26 +70,11 @@ impl<R> WaylandMessageStream<R> {
 }
 
 impl<R: AsyncRead + AncillaryBuffer + Unpin> WaylandMessageStream<R> {
-    /// Receive an opaque wayland message and deserialize it to a message of type `M`.
-    pub async fn receive_concrete<M: Message + DecodeMessage>(
-        &mut self,
-    ) -> Option<Result<(ObjectId<M::Interface>, M), WaylandMessageStreamError>> {
-        self.receive_opaque().await.map(|result| {
-            let (object_id, opaque_message) = result?;
-
-            if opaque_message.op_code != M::OP_CODE {
-                return Err(WaylandMessageStreamError::OpcodeMismatch(opaque_message.op_code, M::OP_CODE));
-            }
-
-            let object_id = ObjectId::new(object_id);
-            let message = opaque_message.into_concrete()?;
-
-            Ok((object_id, message))
-        })
-    }
-
     /// Receive an opaque wayland message.
-    pub async fn receive_opaque(&mut self) -> Option<Result<(OpaqueObjectId, OpaqueMessage), WaylandMessageStreamError>> {
+    ///
+    /// Most users will then want to call [`OpaqueMessage::matches`] and
+    /// [`OpaqueMessage::into_concrete`].
+    pub async fn receive_opaque(&mut self) -> Option<Result<OpaqueMessage, OpaqueFrameDecodeError>> {
         self.frame_reader.next().await.map(|result| {
             let frame = result?;
 
@@ -112,9 +85,9 @@ impl<R: AsyncRead + AncillaryBuffer + Unpin> WaylandMessageStream<R> {
             let fd_buffer = std::mem::take(self.frame_reader.get_mut().file_descriptors());
 
             let object_id = OpaqueObjectId(object_id);
-            let message = OpaqueMessage { op_code, argument_buffer, fd_buffer };
+            let message = OpaqueMessage { object_id, op_code, argument_buffer, fd_buffer };
 
-            Ok((object_id, message))
+            Ok(message)
         })
     }
 }

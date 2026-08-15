@@ -6,6 +6,7 @@ version.workspace = true
 
 [dependencies]
 cosplay-codec.workspace = true
+cosplay-protocols-wayland.workspace = true
 
 sealed.workspace = true
 thiserror.workspace = true

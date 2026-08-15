@@ -15,9 +15,6 @@ pub use stream::UnixStream;
 mod split;
 pub use split::{UnixStreamReadHalf, UnixStreamWriteHalf};
 
-mod path;
-pub use path::{SocketPath, SocketPathError};
-
 /// The Wayland reference implementation sets `MAX_FDS_OUT` to 28, so the same is done here.
 const FD_BUFFER_SIZE: usize = rustix::cmsg_space!(ScmRights(28));
 

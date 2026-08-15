@@ -24,12 +24,15 @@ pub(crate) use enumeration::EnumRepr;
 pub use enumeration::{EnumArg, Enumeration};
 
 mod message;
-pub use message::{DecodeMessage, DecodeMessageError, EncodeMessage, Message, OpaqueMessage};
+pub use message::{DecodeMessage, EncodeMessage, Message};
 
 mod interface;
 pub use interface::Interface;
 
 // Combines layer 1 to 3 into one cohesive API.
 
+mod opaque_message;
+pub use opaque_message::{OpapueMessageMismatchError, OpaqueMessage};
+
 mod stream;
-pub use stream::{WaylandMemoryBuffer, WaylandMessageSink, WaylandMessageStream, WaylandMessageStreamError};
+pub use stream::{WaylandMemoryBuffer, WaylandMessageSink, WaylandMessageStream};

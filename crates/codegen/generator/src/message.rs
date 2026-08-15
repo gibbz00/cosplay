@@ -107,7 +107,7 @@ impl MessageItem {
 
         quote! {
             impl ::cosplay_codec::DecodeMessage for #ident {
-                fn decode(_bag: &mut ::cosplay_codec::ArgumentBag<'_>) -> Result<Self, ::cosplay_codec::DecodeMessageError> {
+                fn decode(_bag: &mut ::cosplay_codec::ArgumentBag<'_>) -> Result<Self, ::cosplay_codec::ArgumentDecodeError> {
                     Ok(#body)
                 }
             }

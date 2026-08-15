@@ -112,11 +112,11 @@ mod tests {
         sink.send_concrete(object_id, message).await.unwrap();
 
         let mut stream = WaylandMessageStream::new(sink.into_inner());
-        let (received_id, received_message) = stream.receive_concrete::<M>().await.unwrap().unwrap();
 
-        assert_eq!(received_id, object_id);
+        let received_message = stream.receive_opaque().await.unwrap().unwrap();
+        received_message.matches::<M>(object_id).unwrap();
 
-        received_message
+        received_message.into_concrete::<M>().unwrap()
     }
 }
 
