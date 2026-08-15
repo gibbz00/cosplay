@@ -1,0 +1,12 @@
+[package]
+name = "cosplay-protocols-xdg-shell"
+
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+cosplay-codec.workspace = true
+cosplay-protocols-wayland.workspace = true
+
+[build-dependencies]
+cosplay-scanner.workspace = true

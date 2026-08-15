@@ -43,7 +43,10 @@ mod serde_impl {
             let mappings = HashMap::<String, Vec<Cname>>::deserialize(deserializer)?;
 
             for (path_str, external_interfaces) in mappings {
-                let path = syn::parse_str::<syn::Path>(&path_str).unwrap();
+                let path = syn::parse_str::<syn::Path>(&path_str).map_err(|_| {
+                    let message = format!("Unable to parse {path_str} into a valid `syn::Path`");
+                    serde::de::Error::custom(message)
+                })?;
 
                 for interface_name in external_interfaces {
                     if this.insert(interface_name.clone(), path.clone()).is_some() {

@@ -129,6 +129,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosplay-protocols-xdg-shell"
+version = "0.1.0"
+dependencies = [
+ "cosplay-codec",
+ "cosplay-protocols-wayland",
+ "cosplay-scanner",
+]
+
+[[package]]
 name = "cosplay-scanner"
 version = "0.1.0"
 dependencies = [

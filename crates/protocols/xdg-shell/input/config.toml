@@ -1,0 +1,5 @@
+[external_interfaces]
+cosplay_protocols_wayland = ["wl_output", "wl_seat", "wl_surface"]
+
+[name_mappings.xdg_toplevel.enums]
+wm_capabilities = "wm_capability"
