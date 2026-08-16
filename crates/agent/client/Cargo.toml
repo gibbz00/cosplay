@@ -12,6 +12,8 @@ cosplay-net.workspace = true
 cosplay-protocols-wayland.workspace = true
 
 thiserror.workspace = true
+tokio = { workspace = true, features = ["sync"] }
+tracing.workspace = true
 
 [dev-dependencies]
 serial_test.workspace = true
