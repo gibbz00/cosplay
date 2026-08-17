@@ -1,12 +1,23 @@
 use cosplay_codec::{OpaqueMessage, WaylandMessageSink};
 use cosplay_net::WaylandUnixStreamWriteHalf;
 
+pub type RequestQueueTx = tokio::sync::mpsc::UnboundedSender<OpaqueMessage>;
+type RequestQueueRx = tokio::sync::mpsc::UnboundedReceiver<OpaqueMessage>;
+
 pub struct RequestQueue {
     writer: WaylandMessageSink<WaylandUnixStreamWriteHalf>,
-    rx: tokio::sync::mpsc::UnboundedReceiver<OpaqueMessage>,
+    rx: RequestQueueRx,
 }
 
 impl RequestQueue {
+    pub(crate) fn new(writer: WaylandMessageSink<WaylandUnixStreamWriteHalf>) -> (RequestQueueTx, Self) {
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+        let this = Self { writer, rx };
+
+        (tx, this)
+    }
+
     pub async fn run(mut self) {
         loop {
             match self.rx.recv().await {

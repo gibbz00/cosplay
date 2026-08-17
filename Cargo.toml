@@ -32,6 +32,7 @@ cosplay-protocols-wayland = { path = "./crates/protocols/wayland" }
 cosplay-protocols-xdg-shell = { path = "./crates/protocols/xdg-shell" }
 
 anyhow = "1"
+async-channel = "2"
 bytes = "1"
 clap = "4"
 futures-util = { version = "0.3", default-features = false }
@@ -52,6 +53,7 @@ tokio = "1"
 tokio-util = "0.7"
 toml = { version = "1", default-features = false }
 tracing = "0.1"
+tracing-subscriber = "0.3"
 
 # Testing
 serial_test = { version = "4", default-features = false }

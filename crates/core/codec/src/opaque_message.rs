@@ -23,9 +23,27 @@ pub enum OpapueMessageMismatchError {
 }
 
 impl OpaqueMessage {
+    /// Get a the object ID stored within the message.
+    pub const fn object_id(&self) -> OpaqueObjectId {
+        self.object_id
+    }
+
+    /// Get a the opcode stored within the message.
+    pub const fn opcode(&self) -> u16 {
+        self.op_code
+    }
+
+    /// Check `self` contains the same opcode as `M: Message`.
+    ///
+    /// Note that this does not mean that `self` can be deserialized into `M`,
+    /// given that multiple messages share the same opcode.
+    pub const fn has_opcode<M: Message>(&self) -> bool {
+        self.op_code == M::OP_CODE
+    }
+
     /// Assert `self` contains a message of type M belonging to the provided `object`.
     pub fn matches<M: Message>(&self, object: ObjectId<M::Interface>) -> Result<(), OpapueMessageMismatchError> {
-        if self.op_code != M::OP_CODE {
+        if !self.has_opcode::<M>() {
             return Err(OpapueMessageMismatchError::Opcode(self.op_code, M::OP_CODE));
         }
 
@@ -59,7 +77,7 @@ impl OpaqueMessage {
     /// This function does not verify that the contained opcode matches that of `Message`, nor that
     /// the contained object_id points to the corresponding [`Message::Interface`]. Users are
     /// encouraged to call first [`OpaqueMessage::matches`] for that part.
-    pub fn into_concrete<M: Message + DecodeMessage>(self) -> Result<M, ArgumentDecodeError> {
+    pub fn into_concrete<M: DecodeMessage>(self) -> Result<M, ArgumentDecodeError> {
         let Self { mut argument_buffer, mut fd_buffer, .. } = self;
 
         let mut bag = ArgumentBag { bytes: &mut argument_buffer, fd_buffer: &mut fd_buffer };

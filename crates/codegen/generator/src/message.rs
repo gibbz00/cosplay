@@ -59,12 +59,15 @@ impl MessageItem {
 
         let decode_impl = Self::decode_impl(&ident, &argument_items);
 
+        let name = name.as_ref();
+
         quote! {
             #struct_declaration
 
             impl ::cosplay_codec::Message for #ident {
                 type Interface = #interface_ident;
                 const OP_CODE: u16 = #op_code;
+                const NAME: &str = #name;
             }
 
             #encode_impl

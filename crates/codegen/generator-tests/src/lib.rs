@@ -29,6 +29,13 @@ mod tests {
     }
 
     #[test]
+    fn message_name() {
+        use super::opcodes::*;
+
+        assert_eq!("ev_c", <EvC as cosplay_codec::Message>::NAME);
+    }
+
+    #[test]
     fn opcodes() {
         use super::opcodes::*;
 

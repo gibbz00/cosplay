@@ -5,13 +5,23 @@ use cosplay_protocols_xdg_shell::xdg_wm_base::XdgWmBase;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut client = cosplay_client::Client::setup(None).await?;
+    tracing_subscriber::fmt::init();
 
-    let wl_shm_id = client.bind::<WlShm>().await?;
+    let (request_queue, event_mediator, mut registry_handle, sync_handle) = cosplay_client::ClientSetup::setup(None).await?;
 
-    let wl_compositor_id = client.bind::<WlCompositor>().await?;
+    let task_1 = tokio::spawn(request_queue.run());
+    let task_2 = tokio::spawn(event_mediator.run());
 
-    let xdg_base_id = client.bind::<XdgWmBase>().await?;
+    // Sync roundtrip before ensure global advertisement is done.
+    sync_handle.sync().await?;
+
+    let wl_shm_id = registry_handle.bind::<WlShm>().await?;
+
+    let wl_compositor_id = registry_handle.bind::<WlCompositor>().await?;
+
+    let xdg_base_id = registry_handle.bind::<XdgWmBase>().await?;
+
+    tokio::try_join!(task_1, task_2)?;
 
     Ok(())
 }

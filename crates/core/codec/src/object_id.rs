@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 /// Newtype wrapper around a u32.
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct OpaqueObjectId(pub(crate) u32);
 
 impl OpaqueObjectId {
@@ -16,8 +16,14 @@ impl OpaqueObjectId {
     }
 }
 
+impl std::fmt::Display for OpaqueObjectId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
 /// Wrapper around an [`OpaqueObjectId`] but with an interface type parameter assigned to it.
-#[impl_tools::autoimpl(Debug, PartialEq, Eq, Clone, Copy)]
+#[impl_tools::autoimpl(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ObjectId<I> {
     pub(crate) inner: OpaqueObjectId,
     pub(crate) interface_marker: PhantomData<I>,

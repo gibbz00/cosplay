@@ -12,6 +12,11 @@ pub trait Message {
     ///
     /// Unique within the message type (request or event) and within the interface.
     const OP_CODE: u16;
+
+    /// Store for the original message name.
+    ///
+    /// Mostly for debugging purposes.
+    const NAME: &str;
 }
 
 /// Serialize a [`Message`] into an opaque argument bag.

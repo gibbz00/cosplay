@@ -1,4 +1,6 @@
 /// Marker trait for protocol agents.
+///
+/// Sealed trait exclusively implemented by the [`Client`] and [`Server`] markers.
 #[sealed::sealed]
 pub trait Agent {}
 

@@ -11,3 +11,4 @@ cosplay-protocols-wayland.workspace = true
 cosplay-protocols-xdg-shell.workspace = true
 
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tracing-subscriber.workspace = true

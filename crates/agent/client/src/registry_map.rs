@@ -18,12 +18,21 @@ impl RegistryMap {
     pub fn register(&mut self, global: Global) {
         let Global { name, interface, version } = global;
 
+        tracing::debug!(
+            number_name = name,
+            inferace_name = interface,
+            server_version = version,
+            "Registering new global."
+        );
+
         let entry = RegistryEntry { number_name: name, server_version: version };
 
         self.inner.insert(interface, entry);
     }
 
     pub fn remove(&mut self, global_remove: GlobalRemove) -> Option<RegistryEntry> {
+        tracing::debug!(number_name = global_remove.name, "Removing global.");
+
         // Probably not the end of the world performance-wise, given the simplicity traded for.
         self.inner
             .iter()
