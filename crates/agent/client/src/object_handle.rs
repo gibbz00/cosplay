@@ -7,15 +7,6 @@ use crate::*;
 
 // # Lifecycle management
 //
-// ## Creation
-//
-// `new_id`s are created using the `ObjectIdRetriever`.
-//
-// A sync/register message must be sent to over the mediator channel **before** send the
-// corresponding request to the request channel. This prevents the receival of a read
-// events before the corresponding object id has been registered in the mediator's event
-// forwarding map.
-//
 // ## Removal
 //
 // Most objects should have a drop implementation which sends the object's destructor request. This
@@ -41,5 +32,35 @@ pub type ObjectHandleRx = tokio::sync::mpsc::UnboundedReceiver<ObjectHandleMessa
 impl<I> ObjectHandle<I> {
     pub async fn recv(&mut self) -> Option<ObjectHandleMessage> {
         self.inbound_rx.recv().await
+    }
+
+    pub(crate) fn subobject_with_version<J>(&self, resolved_version: u32) -> Result<ObjectHandle<J>, RequestError> {
+        let new_id = self.id_retriever.try_next().ok_or(RequestError::NoIdAvailable)?;
+
+        tracing::trace!(parent_id = self.id.inner(), %new_id, "Creating a new subject.");
+
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+        // NOTE: Send register object to mediator **before** sending the request
+        // over the request queue in order to avoid having a data race in which
+        // the mediator drops unmapped events.
+
+        // IMPROVEMENT: Return id to pool if send to mediator or request queue fails?
+        // However, there isn't much to do anyways if either channel is closed...
+
+        self.mediator_tx
+            .send(MediatorMessage::Register(new_id, tx))
+            .map_err(|_| RequestError::MediatorDown)?;
+
+        let object_handle = ObjectHandle {
+            id: ObjectId::new(new_id),
+            inbound_rx: rx,
+            resolved_version,
+            id_retriever: self.id_retriever.clone(),
+            mediator_tx: self.mediator_tx.clone(),
+            request_queue_tx: self.request_queue_tx.clone(),
+        };
+
+        Ok(object_handle)
     }
 }

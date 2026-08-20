@@ -1,4 +1,4 @@
-use cosplay_codec::{Interface, Message, ObjectId, OpaqueMessage, OpaqueNewObjectId};
+use cosplay_codec::{Interface, Message, OpaqueMessage, OpaqueNewObjectId};
 use cosplay_protocols_wayland::wl_registry::{self, WlRegistry};
 use tokio::sync::mpsc::error::TryRecvError;
 
@@ -58,34 +58,13 @@ impl RegistryHandle {
 
         let RegistryEntry { number_name, server_version } = self.registry_map.get::<I>().ok_or(BindError::NotRegistered)?;
 
-        let new_id = self.object_handle.id_retriever.try_next().ok_or(RequestError::NoIdAvailable)?;
-
         let resolved_version = std::cmp::min(*server_version, I::VERSION);
 
-        // NOTE: Send register object to mediator **before** sending it over the
-        // request queue. See `ObjectHandle` lifetime documentation for more.
-        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
-
-        // IMPROVEMENT: Return id to pool if send to mediator or request queue fails?
-        // However, there isn't much to do anyways if either channel is closed...
-
-        // FIXME: encapsulate in object handle
-        self.object_handle
-            .mediator_tx
-            .send(MediatorMessage::Register(new_id, tx))
-            .map_err(|_| RequestError::MediatorDown)?;
-        let object_handle = ObjectHandle::<I> {
-            id: ObjectId::new(new_id),
-            inbound_rx: rx,
-            resolved_version,
-            id_retriever: self.object_handle.id_retriever.clone(),
-            mediator_tx: self.object_handle.mediator_tx.clone(),
-            request_queue_tx: self.object_handle.request_queue_tx.clone(),
-        };
+        let subobject = self.object_handle.subobject_with_version(resolved_version)?;
 
         let interface_name = I::NAME.to_string();
 
-        tracing::debug!(number_name, interface_name, %new_id, "Sending bind request.");
+        tracing::debug!(number_name, interface_name, new_id = subobject.id.inner(), "Sending bind request.");
 
         self.object_handle
             .request_queue_tx
@@ -99,13 +78,13 @@ impl RegistryHandle {
                         // name sent over `wl_registry::global`.
                         interface_name,
                         interface_version: resolved_version,
-                        object_id: new_id,
+                        object_id: subobject.id.as_opaque(),
                     },
                 },
             ))
             .map_err(|_| RequestError::RequestQueueDown)?;
 
-        Ok(object_handle)
+        Ok(subobject)
     }
 }
 
