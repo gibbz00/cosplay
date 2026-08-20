@@ -9,9 +9,6 @@ pub use sync_handle::{SyncError, SyncHandle};
 mod registry_handle;
 pub use registry_handle::RegistryHandle;
 
-mod registry_map;
-pub(crate) use registry_map::{RegistryEntry, RegistryMap};
-
 mod wrapper;
 pub(crate) use wrapper::Handle;
 
