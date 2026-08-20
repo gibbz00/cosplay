@@ -49,19 +49,22 @@ impl ClientSetup {
             .send(MediatorMessage::Register(registry_id, inbound_tx))
             .expect("Event mediator channel closed at startup.");
 
+        let (request_queue_tx, request_queue) = RequestQueue::new(writer);
+
+        let id_retriever = Arc::new(id_retriever);
+
         let object_handle = ObjectHandle {
             id: ObjectId::new(registry_id),
             inbound_rx,
             // Assume one for now. Interface isn't frozen, but at the same time,
             // there isn't any way for the server to advertise its version?
             resolved_version: 1,
+            id_retriever: id_retriever.clone(),
+            mediator_tx: mediator_tx.clone(),
+            request_queue_tx: request_queue_tx.clone(),
         };
 
-        let (request_queue_tx, request_queue) = RequestQueue::new(writer);
-
-        let id_retriever = Arc::new(id_retriever);
-
-        let registry_handle = RegistryHandle::new(object_handle, id_retriever.clone(), mediator_tx.clone(), request_queue_tx.clone());
+        let registry_handle = RegistryHandle::new(object_handle);
 
         let sync_handle = SyncHandle::new(id_retriever, mediator_tx, request_queue_tx);
 

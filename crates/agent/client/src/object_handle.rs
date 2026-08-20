@@ -1,4 +1,9 @@
+use std::sync::Arc;
+
+use cosplay_agent::object_id_pool::ObjectIdRetriever;
 use cosplay_codec::{ObjectId, OpaqueMessage};
+
+use crate::*;
 
 // # Lifecycle management
 //
@@ -18,8 +23,11 @@ use cosplay_codec::{ObjectId, OpaqueMessage};
 // mediator to return the ID to the object ID pool.
 pub struct ObjectHandle<I> {
     pub(crate) id: ObjectId<I>,
-    pub(crate) inbound_rx: ObjectHandleRx,
     pub(crate) resolved_version: u32,
+    pub(crate) id_retriever: Arc<ObjectIdRetriever<cosplay_agent::Client>>,
+    pub(crate) mediator_tx: MediatorTx,
+    pub(crate) request_queue_tx: RequestQueueTx,
+    pub(crate) inbound_rx: ObjectHandleRx,
 }
 
 pub enum ObjectHandleMessage {

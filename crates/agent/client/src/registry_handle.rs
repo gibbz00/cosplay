@@ -1,6 +1,3 @@
-use std::sync::Arc;
-
-use cosplay_agent::object_id_pool::ObjectIdRetriever;
 use cosplay_codec::{Interface, Message, ObjectId, OpaqueMessage, OpaqueNewObjectId};
 use cosplay_protocols_wayland::wl_registry::{self, WlRegistry};
 use tokio::sync::mpsc::error::TryRecvError;
@@ -10,9 +7,6 @@ use crate::*;
 pub struct RegistryHandle {
     object_handle: ObjectHandle<WlRegistry>,
     registry_map: RegistryMap,
-    id_retriever: Arc<ObjectIdRetriever<cosplay_agent::Client>>,
-    mediator_tx: MediatorTx,
-    request_queue_tx: RequestQueueTx,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -24,19 +18,8 @@ pub enum BindError {
 }
 
 impl RegistryHandle {
-    pub(crate) fn new(
-        object_handle: ObjectHandle<WlRegistry>,
-        id_retriever: Arc<ObjectIdRetriever<cosplay_agent::Client>>,
-        mediator_tx: MediatorTx,
-        request_queue_tx: RequestQueueTx,
-    ) -> Self {
-        Self {
-            object_handle,
-            registry_map: Default::default(),
-            id_retriever,
-            mediator_tx,
-            request_queue_tx,
-        }
+    pub(crate) fn new(object_handle: ObjectHandle<WlRegistry>) -> Self {
+        Self { object_handle, registry_map: Default::default() }
     }
 
     pub async fn bind<I: Interface>(&mut self) -> Result<ObjectHandle<I>, BindError> {
@@ -75,7 +58,7 @@ impl RegistryHandle {
 
         let RegistryEntry { number_name, server_version } = self.registry_map.get::<I>().ok_or(BindError::NotRegistered)?;
 
-        let new_id = self.id_retriever.try_next().ok_or(RequestError::NoIdAvailable)?;
+        let new_id = self.object_handle.id_retriever.try_next().ok_or(RequestError::NoIdAvailable)?;
 
         let resolved_version = std::cmp::min(*server_version, I::VERSION);
 
@@ -86,17 +69,26 @@ impl RegistryHandle {
         // IMPROVEMENT: Return id to pool if send to mediator or request queue fails?
         // However, there isn't much to do anyways if either channel is closed...
 
-        self.mediator_tx
+        // FIXME: encapsulate in object handle
+        self.object_handle
+            .mediator_tx
             .send(MediatorMessage::Register(new_id, tx))
             .map_err(|_| RequestError::MediatorDown)?;
-
-        let object_handle = ObjectHandle::<I> { id: ObjectId::new(new_id), inbound_rx: rx, resolved_version };
+        let object_handle = ObjectHandle::<I> {
+            id: ObjectId::new(new_id),
+            inbound_rx: rx,
+            resolved_version,
+            id_retriever: self.object_handle.id_retriever.clone(),
+            mediator_tx: self.object_handle.mediator_tx.clone(),
+            request_queue_tx: self.object_handle.request_queue_tx.clone(),
+        };
 
         let interface_name = I::NAME.to_string();
 
         tracing::debug!(number_name, interface_name, %new_id, "Sending bind request.");
 
-        self.request_queue_tx
+        self.object_handle
+            .request_queue_tx
             .send(OpaqueMessage::from_concrete(
                 self.object_handle.id,
                 wl_registry::Bind {
