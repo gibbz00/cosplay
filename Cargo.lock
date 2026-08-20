@@ -266,9 +266,11 @@ name = "hello-wayland"
 version = "0.1.0"
 dependencies = [
  "cosplay-client",
+ "cosplay-codec",
  "cosplay-protocols-wayland",
  "cosplay-protocols-xdg-shell",
  "tokio",
+ "tracing",
  "tracing-subscriber",
 ]
 
