@@ -4,6 +4,7 @@ use cosplay_client::ObjectHandleMessage;
 use cosplay_codec::{Enumeration, Message};
 use cosplay_protocols_wayland::{
     wl_compositor::WlCompositor,
+    wl_seat::WlSeat,
     wl_shm::{self, WlShm},
 };
 use cosplay_protocols_xdg_shell::xdg_wm_base::XdgWmBase;
@@ -17,10 +18,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(request_queue.run());
     tokio::spawn(event_mediator.run());
 
-    // Sync roundtrip before ensure global advertisement is done.
+    // Sync roundtrip to ensure globals advertisement has finished.
     sync_handle.sync().await?;
 
     let mut wl_shm_handle = registry_handle.bind::<WlShm>().await?;
+
+    let wl_seat_handle = registry_handle.bind::<WlSeat>().await?;
 
     let wl_compositor_handle = registry_handle.bind::<WlCompositor>().await?;
 
