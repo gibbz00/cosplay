@@ -21,7 +21,8 @@ pub use event_mediator::EventMediator;
 pub(crate) use event_mediator::{MediatorMessage, MediatorTx};
 
 mod object_handle;
-pub(crate) use object_handle::{ObjectHandle, ObjectHandleMessage, ObjectHandleTx};
+pub(crate) use object_handle::ObjectHandleTx;
+pub use object_handle::{ObjectHandle, ObjectHandleMessage};
 
 mod sync_handle;
 pub(crate) use sync_handle::SyncDoneTx;

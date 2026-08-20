@@ -29,3 +29,9 @@ pub enum ObjectHandleMessage {
 
 pub type ObjectHandleTx = tokio::sync::mpsc::UnboundedSender<ObjectHandleMessage>;
 pub type ObjectHandleRx = tokio::sync::mpsc::UnboundedReceiver<ObjectHandleMessage>;
+
+impl<I> ObjectHandle<I> {
+    pub async fn recv(&mut self) -> Option<ObjectHandleMessage> {
+        self.inbound_rx.recv().await
+    }
+}

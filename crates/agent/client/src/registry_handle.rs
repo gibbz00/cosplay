@@ -92,6 +92,10 @@ impl RegistryHandle {
 
         let object_handle = ObjectHandle::<I> { id: ObjectId::new(new_id), inbound_rx: rx, resolved_version };
 
+        let interface_name = I::NAME.to_string();
+
+        tracing::debug!(number_name, interface_name, %new_id, "Sending bind request.");
+
         self.request_queue_tx
             .send(OpaqueMessage::from_concrete(
                 self.object_handle.id,
@@ -101,7 +105,7 @@ impl RegistryHandle {
                         // Seems a bit superfluous given the name argument. Regardless,
                         // most compositors will error if this does not match with the
                         // name sent over `wl_registry::global`.
-                        interface_name: I::NAME.to_string(),
+                        interface_name,
                         interface_version: resolved_version,
                         object_id: new_id,
                     },

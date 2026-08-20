@@ -101,7 +101,7 @@ impl EventMediator {
         let object_id = event.object_id();
         let opcode = event.opcode();
 
-        tracing::debug!(%object_id, %opcode, "Handling inbound event.");
+        tracing::trace!(%object_id, %opcode, "Handling inbound event.");
 
         // Check if `wl_callback::done`.
 
@@ -114,9 +114,6 @@ impl EventMediator {
                     tracing::debug!(%object_id, "Receiver closed before wl_callback::Done could be forwarded.")
                 }
             }
-
-            // `wl_callback` does not have a destructor.
-            self.return_id_logged(object_id);
 
             return;
         }
@@ -135,9 +132,10 @@ impl EventMediator {
 
                 let object_id = OpaqueObjectId::new(id);
 
-                if self.object_map.remove(&object_id).is_none() {
-                    tracing::debug!(%object_id, "Received a wl_display::delete_id, but no entry was found in the object map.");
-                }
+                // IMPROVEMENT(log): If no ID was removed. Problem is that the
+                // ID could have been part part of a wl_callback, whose entry
+                // entry is removed in conjunction with the oneshot retrieval.
+                self.object_map.remove(&object_id);
 
                 self.return_id_logged(object_id);
             }
@@ -170,6 +168,8 @@ impl EventMediator {
     fn forward_to_handle(&self, object_id: &OpaqueObjectId, message: ObjectHandleMessage) {
         match self.object_map.get(object_id) {
             Some(object_handle_tx) => {
+                tracing::trace!(%object_id, "Forwarding message to object handle.");
+
                 if object_handle_tx.send(message).is_err() {
                     // Don't attempt to return to object pool here, event may have
                     // "raced" with a destructor request. Doing so would lead to

@@ -61,9 +61,9 @@ impl ClientSetup {
 
         let id_retriever = Arc::new(id_retriever);
 
-        let registry_handle = RegistryHandle::new(object_handle, id_retriever.clone(), mediator_tx.clone(), request_queue_tx);
+        let registry_handle = RegistryHandle::new(object_handle, id_retriever.clone(), mediator_tx.clone(), request_queue_tx.clone());
 
-        let sync_handle = SyncHandle::new(id_retriever, mediator_tx);
+        let sync_handle = SyncHandle::new(id_retriever, mediator_tx, request_queue_tx);
 
         Ok((request_queue, mediator, registry_handle, sync_handle))
     }
