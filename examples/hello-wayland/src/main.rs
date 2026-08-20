@@ -1,6 +1,6 @@
 //! `cosplay` counterpart of <https://github.com/emersion/hello-wayland>
 
-use cosplay_client::ObjectHandleMessage;
+use cosplay_client::{ObjectHandleMessage, WlShmHandle};
 use cosplay_codec::{Enumeration, Message};
 use cosplay_protocols_wayland::{
     wl_compositor::WlCompositor,
@@ -21,35 +21,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Sync roundtrip to ensure globals advertisement has finished.
     sync_handle.sync().await?;
 
-    let mut wl_shm_handle = registry_handle.bind_raw::<WlShm>().await?;
+    let wl_shm_handle = registry_handle.bind::<WlShmHandle>().await?;
 
     let wl_seat_handle = registry_handle.bind_raw::<WlSeat>().await?;
 
     let wl_compositor_handle = registry_handle.bind_raw::<WlCompositor>().await?;
 
     let xdg_base_handle = registry_handle.bind_raw::<XdgWmBase>().await?;
-
-    while let Some(shm_event) = wl_shm_handle.recv().await {
-        match shm_event {
-            ObjectHandleMessage::Event(opaque_message) => {
-                let opcode = opaque_message.opcode();
-
-                match opcode == wl_shm::Format::OP_CODE {
-                    true => {
-                        let format = opaque_message.into_concrete::<wl_shm::Format>().unwrap().format.inner();
-                        tracing::info!(?format, "New server pixel format support announced.")
-                    }
-                    false => {
-                        tracing::warn!(opcode, "Unknown event forwarded to wl_shm.")
-                    }
-                }
-            }
-            ObjectHandleMessage::Error { code, message } => {
-                let code = wl_shm::Error::from_repr(code);
-                tracing::error!(?code, message, "Error event forwarded to wl_shm.");
-            }
-        }
-    }
 
     Ok(())
 }

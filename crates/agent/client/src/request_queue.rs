@@ -2,7 +2,7 @@ use cosplay_codec::{OpaqueMessage, WaylandMessageSink};
 use cosplay_net::WaylandUnixStreamWriteHalf;
 
 pub type RequestQueueTx = tokio::sync::mpsc::UnboundedSender<OpaqueMessage>;
-type RequestQueueRx = tokio::sync::mpsc::UnboundedReceiver<OpaqueMessage>;
+pub(crate) type RequestQueueRx = tokio::sync::mpsc::UnboundedReceiver<OpaqueMessage>;
 
 pub struct RequestQueue {
     writer: WaylandMessageSink<WaylandUnixStreamWriteHalf>,

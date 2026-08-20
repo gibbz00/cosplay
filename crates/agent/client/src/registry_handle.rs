@@ -9,6 +9,7 @@ pub struct RegistryHandle {
     registry_map: RegistryMap,
 }
 
+/// Returned from [`RegistryHandle::bind_raw`] and [`RegistryHandle::bind`].
 #[derive(Debug, thiserror::Error)]
 pub enum BindError {
     #[error("Global not present in registry.")]
@@ -22,6 +23,23 @@ impl RegistryHandle {
         Self { object_handle, registry_map: Default::default() }
     }
 
+    /// Bind to a global handle wrapper `H`
+    ///
+    /// These handles encapsulate common interface-specific logic. Users that
+    /// want some more granular control over the bound object can instead use
+    /// [`Self::bind_raw`].
+    pub async fn bind<H: Handle>(&mut self) -> Result<H, BindError>
+    where
+        H::Interface: Interface,
+    {
+        self.bind_raw::<H::Interface>().await.map(H::from_raw)
+    }
+
+    /// Create a raw [`ObjectHandle`] for a registered global instance of `I`.
+    ///
+    /// Many object will have wrappers, just like RegistryHandle is a wrapper
+    /// for `ObjectHandle<WlRegistry>`, for encapsulating interface-specific
+    /// logic. Such globals can instead be bound by using [`Self::bind`].
     pub async fn bind_raw<I: Interface>(&mut self) -> Result<ObjectHandle<I>, BindError> {
         // Make sure that map is up to date.
         loop {

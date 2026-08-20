@@ -26,22 +26,18 @@ impl ClientSetup {
     pub async fn setup(path: Option<&Path>) -> Result<(RequestQueue, EventMediator, RegistryHandle, SyncHandle), ClientSetupError> {
         let (reader, mut writer) = Self::init_socket_halves(path)?;
 
-        let (id_retriever, id_returner) = cosplay_agent::object_id_pool::create();
+        // == Init ID pool.
 
+        let (id_retriever, id_returner) = cosplay_agent::object_id_pool::create();
         // Skip first since it is for `wl_display`.
         id_retriever.try_next();
+        let id_retriever = Arc::new(id_retriever);
+
+        let (mediator_tx, mediator) = EventMediator::new(reader, id_returner);
 
         let registry_id = id_retriever
             .try_next()
             .expect("Exhausted all object IDs from a newly created ID pool");
-
-        // IMPROVEMENT: check for errors from server before passing the control over to the actors?
-        writer
-            .send_concrete(WL_DISPLAY_ID, GetRegistry { registry: NewObjectId::new(registry_id) })
-            .await
-            .map_err(ClientSetupError::SendFirst)?;
-
-        let (mediator_tx, mediator) = EventMediator::new(reader, id_returner);
 
         let (inbound_tx, inbound_rx) = tokio::sync::mpsc::unbounded_channel();
 
@@ -49,9 +45,13 @@ impl ClientSetup {
             .send(MediatorMessage::Register(registry_id, inbound_tx))
             .expect("Event mediator channel closed at startup.");
 
-        let (request_queue_tx, request_queue) = RequestQueue::new(writer);
+        // IMPROVEMENT: check for errors from server before passing the control over to the actors?
+        writer
+            .send_concrete(WL_DISPLAY_ID, GetRegistry { registry: NewObjectId::new(registry_id) })
+            .await
+            .map_err(ClientSetupError::SendFirst)?;
 
-        let id_retriever = Arc::new(id_retriever);
+        let (request_queue_tx, request_queue) = RequestQueue::new(writer);
 
         let object_handle = ObjectHandle {
             id: ObjectId::new(registry_id),

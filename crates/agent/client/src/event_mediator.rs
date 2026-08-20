@@ -14,7 +14,7 @@ pub enum MediatorMessage {
 }
 
 pub type MediatorTx = tokio::sync::mpsc::UnboundedSender<MediatorMessage>;
-type MediatorRx = tokio::sync::mpsc::UnboundedReceiver<MediatorMessage>;
+pub type MediatorRx = tokio::sync::mpsc::UnboundedReceiver<MediatorMessage>;
 
 pub struct EventMediator {
     reader: WaylandMessageStream<WaylandUnixStreamReadHalf>,
