@@ -22,7 +22,7 @@ impl RegistryHandle {
         Self { object_handle, registry_map: Default::default() }
     }
 
-    pub async fn bind<I: Interface>(&mut self) -> Result<ObjectHandle<I>, BindError> {
+    pub async fn bind_raw<I: Interface>(&mut self) -> Result<ObjectHandle<I>, BindError> {
         // Make sure that map is up to date.
         loop {
             match self.object_handle.inbound_rx.try_recv() {

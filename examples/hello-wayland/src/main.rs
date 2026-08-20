@@ -21,13 +21,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Sync roundtrip to ensure globals advertisement has finished.
     sync_handle.sync().await?;
 
-    let mut wl_shm_handle = registry_handle.bind::<WlShm>().await?;
+    let mut wl_shm_handle = registry_handle.bind_raw::<WlShm>().await?;
 
-    let wl_seat_handle = registry_handle.bind::<WlSeat>().await?;
+    let wl_seat_handle = registry_handle.bind_raw::<WlSeat>().await?;
 
-    let wl_compositor_handle = registry_handle.bind::<WlCompositor>().await?;
+    let wl_compositor_handle = registry_handle.bind_raw::<WlCompositor>().await?;
 
-    let xdg_base_handle = registry_handle.bind::<XdgWmBase>().await?;
+    let xdg_base_handle = registry_handle.bind_raw::<XdgWmBase>().await?;
 
     while let Some(shm_event) = wl_shm_handle.recv().await {
         match shm_event {

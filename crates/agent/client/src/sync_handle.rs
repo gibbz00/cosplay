@@ -8,10 +8,11 @@ use crate::*;
 
 pub type SyncDoneTx = tokio::sync::oneshot::Sender<wl_callback::Done>;
 
-/// Pseudo-object handle to internally handled `wl_display` object.
+// TODO: creatable directly from any object handle?
+/// Pseudo-object handle to internally managed `wl_display` object.
 ///
 /// Special in that it does not have a dedicated destructor, nor a creation
-/// hierarchy which leads to a registered global.
+/// hierarchy originating from registered global.
 pub struct SyncHandle {
     id_retriever: Arc<ObjectIdRetriever<cosplay_agent::Client>>,
     mediator_tx: MediatorTx,
