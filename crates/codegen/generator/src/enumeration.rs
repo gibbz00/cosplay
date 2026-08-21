@@ -134,13 +134,17 @@ impl EnumItem {
                 #(#entry_consts)*
 
                 /// Create an empty instance with its internal value set to zero.
-                pub fn empty() -> Self {
+                pub const fn empty() -> Self {
                     #enum_ident(0)
                 }
 
                 /// Get the internal bitfield value.
-                pub fn bits(&self) -> u32 {
+                pub const fn bits(&self) -> u32 {
                     self.0
+                }
+
+                pub const fn contains(&self, other: Self) -> bool {
+                    (self.0 & other.0) == other.0
                 }
             }
 

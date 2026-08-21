@@ -114,6 +114,20 @@ mod tests {
         assert_eq!(Direction::DOWN, value & (Direction::DOWN | Direction::LEFT));
     }
 
+    #[test]
+    fn bitfield_contains() {
+        use super::wl_bitfields::*;
+
+        let value = Direction::UP | Direction::DOWN;
+
+        assert!(value.contains(Direction::UP));
+        assert!(value.contains(Direction::DOWN));
+        assert!(value.contains(Direction::DOWN | Direction::UP));
+
+        assert!(!value.contains(Direction::LEFT));
+        assert!(!value.contains(Direction::UP | Direction::RIGHT));
+    }
+
     #[tokio::test]
     async fn inbound_requests() {
         use super::opcodes::*;
