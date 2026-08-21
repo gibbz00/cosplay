@@ -4,6 +4,8 @@ include!(concat!(env!("OUT_DIR"), "/combined.rs"));
 
 #[cfg(test)]
 mod tests {
+    use std::assert_matches;
+
     use cosplay_codec::*;
 
     #[test]
@@ -112,10 +114,38 @@ mod tests {
         assert_eq!(Direction::DOWN, value & (Direction::DOWN | Direction::LEFT));
     }
 
+    #[tokio::test]
+    async fn inbound_requests() {
+        use super::opcodes::*;
+
+        let request = roundtrip_inbound::<Request, _>(ReqA).await.unwrap();
+        assert_matches!(request, OpcodesRequest::ReqA(_));
+
+        let request = roundtrip_inbound::<Request, _>(ReqB).await.unwrap();
+        assert_matches!(request, OpcodesRequest::ReqB(_));
+    }
+
+    #[tokio::test]
+    async fn inbound_events() {
+        use super::opcodes::*;
+
+        let event = roundtrip_inbound::<Event, _>(EvC).await.unwrap();
+        assert_matches!(event, OpcodesEvent::EvC(_));
+    }
+
+    #[tokio::test]
+    async fn inbound_unknown_error() {
+        use super::opcodes::*;
+
+        let error = roundtrip_inbound::<Event, _>(ReqB).await.unwrap_err();
+        assert_matches!(error, IntoInboundError::UnknownOpcode(_));
+    }
+
     async fn roundtrip_message<M: Message + EncodeMessage + DecodeMessage>(message: M) -> M {
         let object_id = ObjectId::new(OpaqueObjectId::new(1));
 
         let mut sink = WaylandMessageSink::new(WaylandMemoryBuffer::default());
+
         sink.send_concrete(object_id, message).await.unwrap();
 
         let mut stream = WaylandMessageStream::new(sink.into_inner());
@@ -124,6 +154,25 @@ mod tests {
         received_message.matches::<M>(object_id).unwrap();
 
         received_message.into_concrete::<M>().unwrap()
+    }
+
+    async fn roundtrip_inbound<D: Direction, M: Message + EncodeMessage>(
+        message: M,
+    ) -> Result<<M::Interface as Inbound<D>>::Enum, IntoInboundError>
+    where
+        M::Interface: Inbound<D>,
+    {
+        let object_id = ObjectId::new(OpaqueObjectId::new(1));
+
+        let mut sink = WaylandMessageSink::new(WaylandMemoryBuffer::default());
+
+        sink.send_concrete(object_id, message).await.unwrap();
+
+        let mut stream = WaylandMessageStream::new(sink.into_inner());
+
+        let message = stream.receive_opaque().await.unwrap().unwrap();
+
+        <M::Interface>::from_opaque(message)
     }
 }
 

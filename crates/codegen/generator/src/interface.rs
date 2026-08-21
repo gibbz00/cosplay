@@ -1,4 +1,4 @@
-use cosplay_xml::{Cname, Interface};
+use cosplay_xml::{Cname, Interface, Message};
 use quote::quote;
 
 use crate::*;
@@ -29,8 +29,10 @@ impl InterfaceItem {
             name_mappings: ctx.name_mappings,
         };
 
+        let inbound_requests = Self::inbound_request_impl(&ident, &requests);
         let requests = MessageItem::quote_list(requests, message_ctx);
 
+        let inbound_events = Self::inbound_events_impl(&ident, &events);
         let events = MessageItem::quote_list(events, message_ctx);
 
         let enums = EnumItem::quote_list(enums, EnumContext { interface_name: &name, name_mappings: ctx.name_mappings });
@@ -44,7 +46,11 @@ impl InterfaceItem {
 
                 #(#requests)*
 
+                #inbound_requests
+
                 #(#events)*
+
+                #inbound_events
 
                 #(#enums)*
             }
@@ -57,6 +63,59 @@ impl InterfaceItem {
             impl ::cosplay_codec::Interface for #ident {
                 const NAME: &str = #name;
                 const VERSION: u32 = #version;
+            }
+        }
+    }
+
+    fn inbound_request_impl(interface_ident: &proc_macro2::Ident, messages: &[Message]) -> proc_macro2::TokenStream {
+        Self::inbound_impl(
+            interface_ident,
+            &quote::format_ident!("{interface_ident}Request"),
+            &quote! { ::cosplay_codec::Request },
+            messages,
+        )
+    }
+
+    fn inbound_events_impl(interface_ident: &proc_macro2::Ident, messages: &[Message]) -> proc_macro2::TokenStream {
+        Self::inbound_impl(
+            interface_ident,
+            &quote::format_ident!("{interface_ident}Event"),
+            &quote! { ::cosplay_codec::Event },
+            messages,
+        )
+    }
+
+    fn inbound_impl(
+        interface_ident: &proc_macro2::Ident,
+        enum_ident: &proc_macro2::Ident,
+        direction: &proc_macro2::TokenStream,
+        messages: &[Message],
+    ) -> proc_macro2::TokenStream {
+        let message_idents = messages
+            .iter()
+            .map(|message| IdentifierItem::type_name(&message.name))
+            .collect::<Vec<_>>();
+
+        quote! {
+            #[derive(Debug)]
+            pub enum #enum_ident {
+                #(#message_idents(#message_idents),)*
+            }
+
+            impl ::cosplay_codec::Inbound<#direction> for #interface_ident {
+                type Enum = #enum_ident;
+
+                fn from_opaque(message: ::cosplay_codec::OpaqueMessage) -> Result<Self::Enum, ::cosplay_codec::IntoInboundError> {
+                    match message.opcode() {
+                        #(
+                            <#message_idents as ::cosplay_codec::Message>::OP_CODE => message
+                                .into_concrete()
+                                .map(#enum_ident::#message_idents)
+                                .map_err(::cosplay_codec::IntoInboundError::from_decode::<#message_idents>),
+                        )*
+                        _ => Err(::cosplay_codec::IntoInboundError::UnknownOpcode(message)),
+                    }
+                }
             }
         }
     }

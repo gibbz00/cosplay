@@ -5,6 +5,7 @@ use bytes::BytesMut;
 use crate::*;
 
 /// An opaque message convertible to and from a concrete [`Message`].
+#[derive(Debug)]
 pub struct OpaqueMessage {
     pub(crate) object_id: OpaqueObjectId,
     pub(crate) op_code: u16,

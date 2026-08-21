@@ -35,6 +35,7 @@ impl MessageItem {
         let struct_declaration = match argument_items.is_empty() {
             true => quote! {
                 #doc
+                #[derive(Debug)]
                 pub struct #ident;
             },
             false => {
