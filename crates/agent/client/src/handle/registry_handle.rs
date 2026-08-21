@@ -72,23 +72,17 @@ impl RegistryHandle {
 
         tracing::debug!(number_name, interface_name, new_id = subobject.id.inner(), "Sending bind request.");
 
-        self.object_handle
-            .request_queue_tx
-            .send(OpaqueMessage::from_concrete(
-                self.object_handle.id,
-                wl_registry::Bind {
-                    name: *number_name,
-                    id: OpaqueNewObjectId {
-                        // Seems a bit superfluous given the name argument. Regardless,
-                        // most compositors will error if this does not match with the
-                        // name sent over `wl_registry::global`.
-                        interface_name,
-                        interface_version: resolved_version,
-                        object_id: subobject.id.as_opaque(),
-                    },
-                },
-            ))
-            .map_err(|_| RequestError::RequestQueueDown)?;
+        self.object_handle.queue_request(wl_registry::Bind {
+            name: *number_name,
+            id: OpaqueNewObjectId {
+                // Seems a bit superfluous given the name argument. Regardless,
+                // most compositors will error if this does not match with the
+                // name sent over `wl_registry::global`.
+                interface_name,
+                interface_version: resolved_version,
+                object_id: subobject.id.as_opaque(),
+            },
+        })?;
 
         Ok(subobject)
     }

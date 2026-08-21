@@ -1,7 +1,7 @@
 use std::{marker::PhantomData, sync::Arc};
 
 use cosplay_agent::object_id_pool::ObjectIdRetriever;
-use cosplay_codec::{Event, Inbound, IntoInboundError, ObjectId, OpaqueMessage};
+use cosplay_codec::{EncodeMessage, Event, Inbound, IntoInboundError, Message, ObjectId, OpaqueMessage};
 use tokio::sync::mpsc::error::TryRecvError;
 
 use crate::*;
@@ -33,6 +33,13 @@ pub type ObjectHandleRx = tokio::sync::mpsc::UnboundedReceiver<ObjectHandleMessa
 impl<I> ObjectHandle<I> {
     pub fn events_iter(&mut self) -> ObjectEventsIter<'_, I> {
         ObjectEventsIter { inbound_rx: &mut self.inbound_rx, interface_marker: PhantomData }
+    }
+
+    pub fn queue_request<M: Message<Interface = I> + EncodeMessage>(&self, message: M) -> Result<(), RequestError> {
+        self.request_queue_tx
+            .send(OpaqueMessage::from_concrete(self.id, message))
+            // IMPROVEMENT: return message object back?
+            .map_err(|_| RequestError::RequestQueueDown)
     }
 
     pub(crate) fn subobject_with_version<J>(&self, resolved_version: u32) -> Result<ObjectHandle<J>, RequestError> {

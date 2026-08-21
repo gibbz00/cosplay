@@ -5,6 +5,9 @@ use cosplay_protocols_wayland::wl_shm::{self, PixelFormat, WlShm};
 
 use crate::*;
 
+/// Handle to a `wl_shm` instance.
+///
+/// Drop implementation automatically queue a [`wl_shm::Release`] request.
 pub struct WlShmHandle {
     object_handle: ObjectHandle<WlShm>,
     supported_formats: HashSet<PixelFormat>,
@@ -70,9 +73,14 @@ impl WlShmHandle {
     }
 }
 
+impl Drop for WlShmHandle {
+    fn drop(&mut self) {
+        let _ = self.object_handle.queue_request(wl_shm::Release);
+    }
+}
+
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     #[test]
@@ -94,5 +102,24 @@ mod tests {
 
         assert!(shm_handle.supported_formats.contains(&PixelFormat::C8));
         assert!(shm_handle.supported_formats.contains(&PixelFormat::Xrgb4444));
+    }
+
+    #[test]
+    fn drop_sends_release() {
+        let (mut test_driver, object_handle) = TestDriver::new();
+
+        let shm_handle = WlShmHandle::from_raw(object_handle);
+
+        assert!(test_driver.request_queue_rx.is_empty());
+
+        let shm_id = shm_handle.object_handle.id;
+
+        drop(shm_handle);
+
+        let opaque_request = test_driver.request_queue_rx.try_recv().unwrap();
+
+        let matches_release = opaque_request.matches::<wl_shm::Release>(shm_id).is_ok();
+
+        assert!(matches_release);
     }
 }
