@@ -43,4 +43,16 @@ impl TestDriver {
 
         self.inbound_tx.send(channel_message).expect("Object handle channel closed.");
     }
+
+    pub(crate) fn assert_queued_destructor_on_drop<M: Message, T>(&mut self, handle_id: ObjectId<M::Interface>, handle: T) {
+        assert!(self.request_queue_rx.is_empty());
+
+        drop(handle);
+
+        let opaque_request = self.request_queue_rx.try_recv().unwrap();
+
+        let matches_release = opaque_request.matches::<M>(handle_id).is_ok();
+
+        assert!(matches_release);
+    }
 }

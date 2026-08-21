@@ -110,16 +110,6 @@ mod tests {
 
         let shm_handle = WlShmHandle::from_raw(object_handle);
 
-        assert!(test_driver.request_queue_rx.is_empty());
-
-        let shm_id = shm_handle.object_handle.id;
-
-        drop(shm_handle);
-
-        let opaque_request = test_driver.request_queue_rx.try_recv().unwrap();
-
-        let matches_release = opaque_request.matches::<wl_shm::Release>(shm_id).is_ok();
-
-        assert!(matches_release);
+        test_driver.assert_queued_destructor_on_drop::<wl_shm::Release, _>(shm_handle.object_handle.id, shm_handle);
     }
 }

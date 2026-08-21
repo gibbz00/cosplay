@@ -14,3 +14,6 @@ pub(crate) use wrapper::Handle;
 
 mod shm_handle;
 pub use shm_handle::{SyncSupportedFormatsError, WlShmHandle};
+
+mod seat_handle;
+pub use seat_handle::WlSeatHandle;
