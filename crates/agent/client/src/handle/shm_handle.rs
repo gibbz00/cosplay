@@ -13,7 +13,7 @@ pub struct WlShmHandle {
     supported_formats: HashSet<PixelFormat>,
 }
 
-impl Handle for WlShmHandle {
+impl GlobalHandle for WlShmHandle {
     type Interface = WlShm;
 
     fn from_raw(object_handle: ObjectHandle<Self::Interface>) -> Self {

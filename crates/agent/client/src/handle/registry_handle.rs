@@ -1,7 +1,14 @@
-use cosplay_codec::{Interface, OpaqueMessage, OpaqueNewObjectId};
+use cosplay_codec::{Interface, OpaqueNewObjectId};
 use cosplay_protocols_wayland::wl_registry::{self, WlRegistry, WlRegistryEvent};
 
 use crate::*;
+
+/// Intended to only be implemented for handles retrievable from [`RegistryHandle::bind`].
+pub trait GlobalHandle {
+    type Interface;
+
+    fn from_raw(object_handle: ObjectHandle<Self::Interface>) -> Self;
+}
 
 pub struct RegistryHandle {
     object_handle: ObjectHandle<WlRegistry>,
@@ -29,7 +36,7 @@ impl RegistryHandle {
     /// These handles encapsulate common interface-specific logic. Users that
     /// want some more granular control over the bound object can instead use
     /// [`Self::bind_raw`].
-    pub async fn bind<H: Handle>(&mut self) -> Result<H, BindError>
+    pub async fn bind<H: GlobalHandle>(&mut self) -> Result<H, BindError>
     where
         H::Interface: Interface,
     {
@@ -66,7 +73,7 @@ impl RegistryHandle {
 
         let resolved_version = std::cmp::min(*server_version, I::VERSION);
 
-        let subobject = self.object_handle.subobject_with_version(resolved_version)?;
+        let subobject = self.object_handle.init_subobject_with_version(resolved_version)?;
 
         let interface_name = I::NAME.to_string();
 

@@ -80,6 +80,7 @@ dependencies = [
  "async-channel",
  "cosplay-codec",
  "cosplay-protocols-wayland",
+ "impl-tools",
  "sealed",
  "thiserror",
 ]
@@ -96,6 +97,7 @@ dependencies = [
  "cosplay-codec",
  "cosplay-net",
  "cosplay-protocols-wayland",
+ "impl-tools",
  "sealed",
  "serial_test",
  "thiserror",

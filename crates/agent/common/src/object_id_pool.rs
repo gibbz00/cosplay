@@ -53,6 +53,7 @@ pub fn create<A: ObjectIdBounds>() -> (ObjectIdRetriever<A>, ObjectIdReturner) {
 /// Handle for removing object IDs from the object ID pool.
 ///
 /// Intended to be used  items that create `new_id`s.
+#[impl_tools::autoimpl(Debug)]
 pub struct ObjectIdRetriever<A> {
     next: AtomicU32,
     rx: async_channel::Receiver<OpaqueObjectId>,

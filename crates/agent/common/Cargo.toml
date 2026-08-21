@@ -9,5 +9,6 @@ cosplay-codec.workspace = true
 cosplay-protocols-wayland.workspace = true
 
 async-channel.workspace = true
+impl-tools.workspace = true
 sealed.workspace = true
 thiserror.workspace = true

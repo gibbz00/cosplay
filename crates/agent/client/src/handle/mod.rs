@@ -7,13 +7,13 @@ pub(crate) use sync_handle::SyncDoneTx;
 pub use sync_handle::{SyncError, SyncHandle};
 
 mod registry_handle;
-pub use registry_handle::RegistryHandle;
-
-mod wrapper;
-pub(crate) use wrapper::Handle;
+pub use registry_handle::{GlobalHandle, RegistryHandle};
 
 mod shm_handle;
 pub use shm_handle::{SyncSupportedFormatsError, WlShmHandle};
 
 mod seat_handle;
-pub use seat_handle::WlSeatHandle;
+pub use seat_handle::{WlSeatGetInputError, WlSeatHandle};
+
+mod pointer_handle;
+pub(crate) use pointer_handle::WlPointerHandle;

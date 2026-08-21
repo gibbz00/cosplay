@@ -13,6 +13,7 @@ use crate::*;
 // Most objects should have a drop implementation which sends the object's destructor request. This
 // ensures that the server sends a `wl_display::delete_id` event, which in turn allows the event
 // mediator to return the ID to the object ID pool.
+#[impl_tools::autoimpl(Debug)]
 pub struct ObjectHandle<I> {
     pub(crate) id: ObjectId<I>,
     pub(crate) resolved_version: u32,
@@ -42,7 +43,11 @@ impl<I> ObjectHandle<I> {
             .map_err(|_| RequestError::RequestQueueDown)
     }
 
-    pub(crate) fn subobject_with_version<J>(&self, resolved_version: u32) -> Result<ObjectHandle<J>, RequestError> {
+    pub(crate) fn init_subobject<J>(&self) -> Result<ObjectHandle<J>, RequestError> {
+        self.init_subobject_with_version(self.resolved_version)
+    }
+
+    pub(crate) fn init_subobject_with_version<J>(&self, resolved_version: u32) -> Result<ObjectHandle<J>, RequestError> {
         let new_id = self.id_retriever.try_next().ok_or(RequestError::NoIdAvailable)?;
 
         tracing::trace!(parent_id = self.id.inner(), %new_id, "Creating a new subject.");
