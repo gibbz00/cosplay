@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use cosplay_agent::object_id_pool::ObjectIdRetriever;
 use cosplay_codec::{ObjectId, OpaqueMessage};
+use tokio::sync::mpsc::error::TryRecvError;
 
 use crate::*;
 
@@ -30,8 +31,8 @@ pub type ObjectHandleTx = tokio::sync::mpsc::UnboundedSender<ObjectHandleMessage
 pub type ObjectHandleRx = tokio::sync::mpsc::UnboundedReceiver<ObjectHandleMessage>;
 
 impl<I> ObjectHandle<I> {
-    pub async fn recv(&mut self) -> Option<ObjectHandleMessage> {
-        self.inbound_rx.recv().await
+    pub(crate) fn events_iter(&mut self) -> ObjectSyncEventsIter<'_> {
+        ObjectSyncEventsIter { inbound_rx: &mut self.inbound_rx }
     }
 
     pub(crate) fn subobject_with_version<J>(&self, resolved_version: u32) -> Result<ObjectHandle<J>, RequestError> {
@@ -62,5 +63,29 @@ impl<I> ObjectHandle<I> {
         };
 
         Ok(object_handle)
+    }
+}
+
+pub struct ObjectSyncEventsIter<'a> {
+    inbound_rx: &'a mut ObjectHandleRx,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ObjectSyncEventsError {
+    #[error("Mediator down. Unable to receive any new events.")]
+    MediatorDown,
+}
+
+impl Iterator for ObjectSyncEventsIter<'_> {
+    type Item = Result<ObjectHandleMessage, ObjectSyncEventsError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.inbound_rx.try_recv() {
+            Ok(event) => Some(Ok(event)),
+            Err(error) => match error {
+                TryRecvError::Empty => None,
+                TryRecvError::Disconnected => Some(Err(ObjectSyncEventsError::MediatorDown)),
+            },
+        }
     }
 }

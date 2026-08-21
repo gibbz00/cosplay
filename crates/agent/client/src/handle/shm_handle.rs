@@ -2,7 +2,6 @@ use std::collections::HashSet;
 
 use cosplay_codec::{ArgumentDecodeError, Enumeration, Message};
 use cosplay_protocols_wayland::wl_shm::{self, Format, PixelFormat, WlShm};
-use tokio::sync::mpsc::error::TryRecvError;
 
 use crate::*;
 
@@ -19,6 +18,7 @@ impl Handle for WlShmHandle {
     }
 }
 
+/// Returned from [`WlShmHandle::sync_supported_formats`].
 #[derive(Debug, thiserror::Error)]
 pub enum SyncSupportedFormatsError {
     #[error("Failed to deserialize wl_shm::Format: {0}")]
@@ -27,16 +27,23 @@ pub enum SyncSupportedFormatsError {
     UnknownEvent(u16),
     #[error("Unhandled error event forwarded to wl_shm. {code:?}. {message}")]
     UnhandledError { code: wl_shm::Error, message: String },
-    #[error("Mediator down, unable to receive supported any more format updates.")]
-    Disconnected,
+    #[error("Failed to retrieve object events: {0}")]
+    SyncError(#[from] ObjectSyncEventsError),
 }
 
 impl WlShmHandle {
+    /// Shorthand for calling [`Self::sync_supported_formats`] and then
+    /// [`Self::get_supported_formats`].
+    pub fn supported_formats(&mut self) -> Result<&HashSet<PixelFormat>, SyncSupportedFormatsError> {
+        self.sync_supported_formats()?;
+        Ok(self.get_supported_formats())
+    }
+
     /// Get the internally buffered set of supported formats as announced by the server.
     ///
     /// Note that the internal buffer may be out of sync with queued inbound events. Most
     /// users will want to first call [`Self::sync_supported_formats`].
-    pub fn supported_formats(&self) -> &HashSet<PixelFormat> {
+    pub fn get_supported_formats(&self) -> &HashSet<PixelFormat> {
         &self.supported_formats
     }
 
@@ -44,36 +51,28 @@ impl WlShmHandle {
     /// server and updates the internal set accordingly. The set can then be
     /// inspected with [`Self::supported_formats`].
     pub fn sync_supported_formats(&mut self) -> Result<(), SyncSupportedFormatsError> {
-        loop {
-            match self.object_handle.inbound_rx.try_recv() {
-                Ok(event) => match event {
-                    ObjectHandleMessage::Event(opaque_message) => {
-                        let opcode = opaque_message.opcode();
+        for event_result in self.object_handle.events_iter() {
+            match event_result? {
+                ObjectHandleMessage::Event(opaque_message) => {
+                    let opcode = opaque_message.opcode();
 
-                        match opcode == Format::OP_CODE {
-                            true => {
-                                let format = opaque_message.into_concrete::<Format>()?;
-                                let format = format.format.inner();
-                                self.supported_formats.insert(format);
-                            }
-                            false => return Err(SyncSupportedFormatsError::UnknownEvent(opcode)),
+                    match opcode == Format::OP_CODE {
+                        true => {
+                            let format = opaque_message.into_concrete::<Format>()?;
+                            let format = format.format.inner();
+                            self.supported_formats.insert(format);
                         }
+                        false => return Err(SyncSupportedFormatsError::UnknownEvent(opcode)),
                     }
-                    ObjectHandleMessage::Error { code, message } => {
-                        let code = wl_shm::Error::from_repr(code);
-                        return Err(SyncSupportedFormatsError::UnhandledError { code, message });
-                    }
-                },
-                Err(error) => match error {
-                    TryRecvError::Empty => {
-                        return Ok(());
-                    }
-                    TryRecvError::Disconnected => {
-                        return Err(SyncSupportedFormatsError::Disconnected);
-                    }
-                },
+                }
+                ObjectHandleMessage::Error { code, message } => {
+                    let code = wl_shm::Error::from_repr(code);
+                    return Err(SyncSupportedFormatsError::UnhandledError { code, message });
+                }
             }
         }
+
+        Ok(())
     }
 }
 

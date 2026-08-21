@@ -1,6 +1,5 @@
 use cosplay_codec::{Interface, Message, OpaqueMessage, OpaqueNewObjectId};
 use cosplay_protocols_wayland::wl_registry::{self, WlRegistry};
-use tokio::sync::mpsc::error::TryRecvError;
 
 use crate::*;
 
@@ -16,6 +15,8 @@ pub enum BindError {
     NotRegistered,
     #[error("General request error: {0}")]
     Common(#[from] RequestError),
+    #[error("Failed to retrieve object events: {0}")]
+    SyncError(#[from] ObjectSyncEventsError),
 }
 
 impl RegistryHandle {
@@ -42,35 +43,27 @@ impl RegistryHandle {
     /// logic. Such globals can instead be bound by using [`Self::bind`].
     pub async fn bind_raw<I: Interface>(&mut self) -> Result<ObjectHandle<I>, BindError> {
         // Make sure that map is up to date.
-        loop {
-            match self.object_handle.inbound_rx.try_recv() {
-                Ok(message) => {
-                    match message {
-                        ObjectHandleMessage::Event(event) => {
-                            if event.opcode() == wl_registry::Global::OP_CODE {
-                                if let Some(global) = MessageUtils::into_concrete_logged::<wl_registry::Global>(event) {
-                                    self.registry_map.register(global);
-                                }
-                            } else if event.opcode() == wl_registry::GlobalRemove::OP_CODE {
-                                if let Some(global_remove) = MessageUtils::into_concrete_logged::<wl_registry::GlobalRemove>(event) {
-                                    self.registry_map.remove(global_remove);
-                                }
-                            } else {
-                                // TODO(log): unknown event
-                            }
+        for event_result in self.object_handle.events_iter() {
+            match event_result? {
+                ObjectHandleMessage::Event(event) => {
+                    if event.opcode() == wl_registry::Global::OP_CODE {
+                        if let Some(global) = MessageUtils::into_concrete_logged::<wl_registry::Global>(event) {
+                            self.registry_map.register(global);
                         }
-                        ObjectHandleMessage::Error { code, message } => {
-                            // Assuming that this should not occur so long as
-                            // the registry implementation is correct? Hard to
-                            // tell from the wayland.xml
-                            tracing::error!(code, message, "Registry received an unhandled error.")
+                    } else if event.opcode() == wl_registry::GlobalRemove::OP_CODE {
+                        if let Some(global_remove) = MessageUtils::into_concrete_logged::<wl_registry::GlobalRemove>(event) {
+                            self.registry_map.remove(global_remove);
                         }
+                    } else {
+                        tracing::warn!(opcode = event.opcode(), "Unrecognised event forwarded to registry.");
                     }
                 }
-                Err(recv_error) => match recv_error {
-                    TryRecvError::Empty => break,
-                    TryRecvError::Disconnected => return Err(BindError::Common(RequestError::MediatorDown)),
-                },
+                ObjectHandleMessage::Error { code, message } => {
+                    // Assuming that this should not occur so long as
+                    // the registry implementation is correct? Hard to
+                    // tell from the wayland.xml
+                    tracing::error!(code, message, "Registry received an unhandled error.")
+                }
             }
         }
 

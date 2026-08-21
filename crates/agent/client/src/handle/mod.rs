@@ -1,6 +1,6 @@
 mod object_handle;
 pub(crate) use object_handle::ObjectHandleTx;
-pub use object_handle::{ObjectHandle, ObjectHandleMessage};
+pub use object_handle::{ObjectHandle, ObjectHandleMessage, ObjectSyncEventsError, ObjectSyncEventsIter};
 
 mod sync_handle;
 pub(crate) use sync_handle::SyncDoneTx;
@@ -13,4 +13,4 @@ mod wrapper;
 pub(crate) use wrapper::Handle;
 
 mod shm_handle;
-pub use shm_handle::WlShmHandle;
+pub use shm_handle::{SyncSupportedFormatsError, WlShmHandle};
