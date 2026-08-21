@@ -1,5 +1,5 @@
-use cosplay_codec::{Interface, Message, OpaqueMessage, OpaqueNewObjectId};
-use cosplay_protocols_wayland::wl_registry::{self, WlRegistry};
+use cosplay_codec::{Interface, OpaqueMessage, OpaqueNewObjectId};
+use cosplay_protocols_wayland::wl_registry::{self, WlRegistry, WlRegistryEvent};
 
 use crate::*;
 
@@ -16,7 +16,7 @@ pub enum BindError {
     #[error("General request error: {0}")]
     Common(#[from] RequestError),
     #[error("Failed to retrieve object events: {0}")]
-    SyncError(#[from] ObjectSyncEventsError),
+    Events(#[from] ObjectEventsError),
 }
 
 impl RegistryHandle {
@@ -43,22 +43,17 @@ impl RegistryHandle {
     /// logic. Such globals can instead be bound by using [`Self::bind`].
     pub async fn bind_raw<I: Interface>(&mut self) -> Result<ObjectHandle<I>, BindError> {
         // Make sure that map is up to date.
-        for event_result in self.object_handle.events_iter() {
-            match event_result? {
-                ObjectHandleMessage::Event(event) => {
-                    if event.opcode() == wl_registry::Global::OP_CODE {
-                        if let Some(global) = MessageUtils::into_concrete_logged::<wl_registry::Global>(event) {
-                            self.registry_map.register(global);
-                        }
-                    } else if event.opcode() == wl_registry::GlobalRemove::OP_CODE {
-                        if let Some(global_remove) = MessageUtils::into_concrete_logged::<wl_registry::GlobalRemove>(event) {
-                            self.registry_map.remove(global_remove);
-                        }
-                    } else {
-                        tracing::warn!(opcode = event.opcode(), "Unrecognised event forwarded to registry.");
+        for inbound_result in self.object_handle.events_iter() {
+            match inbound_result? {
+                ObjectEvent::Event(event) => match event {
+                    WlRegistryEvent::Global(global) => {
+                        self.registry_map.register(global);
                     }
-                }
-                ObjectHandleMessage::Error { code, message } => {
+                    WlRegistryEvent::GlobalRemove(global_remove) => {
+                        self.registry_map.remove(global_remove);
+                    }
+                },
+                ObjectEvent::Error { code, message } => {
                     // Assuming that this should not occur so long as
                     // the registry implementation is correct? Hard to
                     // tell from the wayland.xml

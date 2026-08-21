@@ -1,7 +1,7 @@
-use std::sync::Arc;
+use std::{marker::PhantomData, sync::Arc};
 
 use cosplay_agent::object_id_pool::ObjectIdRetriever;
-use cosplay_codec::{ObjectId, OpaqueMessage};
+use cosplay_codec::{Event, Inbound, IntoInboundError, ObjectId, OpaqueMessage};
 use tokio::sync::mpsc::error::TryRecvError;
 
 use crate::*;
@@ -31,8 +31,8 @@ pub type ObjectHandleTx = tokio::sync::mpsc::UnboundedSender<ObjectHandleMessage
 pub type ObjectHandleRx = tokio::sync::mpsc::UnboundedReceiver<ObjectHandleMessage>;
 
 impl<I> ObjectHandle<I> {
-    pub(crate) fn events_iter(&mut self) -> ObjectSyncEventsIter<'_> {
-        ObjectSyncEventsIter { inbound_rx: &mut self.inbound_rx }
+    pub fn events_iter(&mut self) -> ObjectEventsIter<'_, I> {
+        ObjectEventsIter { inbound_rx: &mut self.inbound_rx, interface_marker: PhantomData }
     }
 
     pub(crate) fn subobject_with_version<J>(&self, resolved_version: u32) -> Result<ObjectHandle<J>, RequestError> {
@@ -66,25 +66,39 @@ impl<I> ObjectHandle<I> {
     }
 }
 
-pub struct ObjectSyncEventsIter<'a> {
+pub struct ObjectEventsIter<'a, I> {
     inbound_rx: &'a mut ObjectHandleRx,
+    interface_marker: PhantomData<I>,
+}
+
+pub enum ObjectEvent<E> {
+    Event(E),
+    Error { code: u32, message: String },
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum ObjectSyncEventsError {
+pub enum ObjectEventsError {
     #[error("Mediator down. Unable to receive any new events.")]
     MediatorDown,
+    #[error("Failed to convert opaque message into inbound event: {0}")]
+    Convert(#[from] IntoInboundError),
 }
 
-impl Iterator for ObjectSyncEventsIter<'_> {
-    type Item = Result<ObjectHandleMessage, ObjectSyncEventsError>;
+impl<I> Iterator for ObjectEventsIter<'_, I>
+where
+    I: Inbound<Event>,
+{
+    type Item = Result<ObjectEvent<I::Enum>, ObjectEventsError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.inbound_rx.try_recv() {
-            Ok(event) => Some(Ok(event)),
+            Ok(event) => Some(match event {
+                ObjectHandleMessage::Event(message) => I::from_opaque(message).map(ObjectEvent::Event).map_err(Into::into),
+                ObjectHandleMessage::Error { code, message } => Ok(ObjectEvent::Error { code, message }),
+            }),
             Err(error) => match error {
                 TryRecvError::Empty => None,
-                TryRecvError::Disconnected => Some(Err(ObjectSyncEventsError::MediatorDown)),
+                TryRecvError::Disconnected => Some(Err(ObjectEventsError::MediatorDown)),
             },
         }
     }

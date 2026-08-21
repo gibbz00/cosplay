@@ -34,18 +34,14 @@ cosplay-protocols-xdg-shell = { path = "./crates/protocols/xdg-shell" }
 anyhow = "1"
 async-channel = "2"
 bytes = "1"
-clap = "4"
 futures-util = { version = "0.3", default-features = false }
 heck = "0.5"
-i24 = "2"
-impl-tools = "0.13"
 indoc = "2"
 prettyplease = "0.3"
 proc-macro2 = "1"
 quick-xml = "0.41"
 quote = "1"
 rustix = "1"
-sealed = "0.7"
 serde = "1"
 syn = "3"
 thiserror = "2"
@@ -54,6 +50,11 @@ tokio-util = "0.7"
 toml = { version = "1", default-features = false }
 tracing = "0.1"
 tracing-subscriber = "0.3"
+
+# Prototyping
+i24 = "2"
+impl-tools = "0.13"
+sealed = "0.7"
 
 # Testing
 serial_test = { version = "4", default-features = false }

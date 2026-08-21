@@ -1,6 +1,6 @@
 mod object_handle;
 pub(crate) use object_handle::ObjectHandleTx;
-pub use object_handle::{ObjectHandle, ObjectHandleMessage, ObjectSyncEventsError, ObjectSyncEventsIter};
+pub use object_handle::{ObjectEvent, ObjectEventsError, ObjectEventsIter, ObjectHandle, ObjectHandleMessage};
 
 mod sync_handle;
 pub(crate) use sync_handle::SyncDoneTx;

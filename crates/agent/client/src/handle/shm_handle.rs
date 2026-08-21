@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use cosplay_codec::{ArgumentDecodeError, Enumeration, Message};
-use cosplay_protocols_wayland::wl_shm::{self, Format, PixelFormat, WlShm};
+use cosplay_codec::{ArgumentDecodeError, Enumeration};
+use cosplay_protocols_wayland::wl_shm::{self, PixelFormat, WlShm};
 
 use crate::*;
 
@@ -28,7 +28,7 @@ pub enum SyncSupportedFormatsError {
     #[error("Unhandled error event forwarded to wl_shm. {code:?}. {message}")]
     UnhandledError { code: wl_shm::Error, message: String },
     #[error("Failed to retrieve object events: {0}")]
-    SyncError(#[from] ObjectSyncEventsError),
+    Events(#[from] ObjectEventsError),
 }
 
 impl WlShmHandle {
@@ -51,21 +51,15 @@ impl WlShmHandle {
     /// server and updates the internal set accordingly. The set can then be
     /// inspected with [`Self::supported_formats`].
     pub fn sync_supported_formats(&mut self) -> Result<(), SyncSupportedFormatsError> {
-        for event_result in self.object_handle.events_iter() {
-            match event_result? {
-                ObjectHandleMessage::Event(opaque_message) => {
-                    let opcode = opaque_message.opcode();
-
-                    match opcode == Format::OP_CODE {
-                        true => {
-                            let format = opaque_message.into_concrete::<Format>()?;
-                            let format = format.format.inner();
-                            self.supported_formats.insert(format);
-                        }
-                        false => return Err(SyncSupportedFormatsError::UnknownEvent(opcode)),
+        for inbound_result in self.object_handle.events_iter() {
+            match inbound_result? {
+                ObjectEvent::Event(event) => match event {
+                    wl_shm::WlShmEvent::Format(format) => {
+                        let format = format.format.inner();
+                        self.supported_formats.insert(format);
                     }
-                }
-                ObjectHandleMessage::Error { code, message } => {
+                },
+                ObjectEvent::Error { code, message } => {
                     let code = wl_shm::Error::from_repr(code);
                     return Err(SyncSupportedFormatsError::UnhandledError { code, message });
                 }
