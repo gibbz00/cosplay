@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use cosplay_agent::object_id_pool::ObjectIdReturner;
-use cosplay_codec::{EncodeMessage, Message, ObjectId, OpaqueMessage, OpaqueObjectId};
+use cosplay_codec::{DecodeMessage, EncodeMessage, Message, ObjectId, OpaqueMessage, OpaqueObjectId};
 
 use crate::*;
 
@@ -44,15 +44,19 @@ impl TestDriver {
         self.inbound_tx.send(channel_message).expect("Object handle channel closed.");
     }
 
-    pub(crate) fn assert_queued_destructor_on_drop<M: Message, T>(&mut self, handle_id: ObjectId<M::Interface>, handle: T) {
+    pub(crate) fn assert_queued_destructor_on_drop<M: Message + DecodeMessage, T>(&mut self, handle_id: ObjectId<M::Interface>, handle: T) {
         assert!(self.request_queue_rx.is_empty());
 
         drop(handle);
 
+        self.assert_outbound_request::<M>(handle_id);
+    }
+
+    pub(crate) fn assert_outbound_request<M: Message + DecodeMessage>(&mut self, handle_id: ObjectId<M::Interface>) -> M {
         let opaque_request = self.request_queue_rx.try_recv().unwrap();
 
-        let matches_release = opaque_request.matches::<M>(handle_id).is_ok();
+        assert!(opaque_request.matches::<M>(handle_id).is_ok());
 
-        assert!(matches_release);
+        opaque_request.into_concrete().unwrap()
     }
 }

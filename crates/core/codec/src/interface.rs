@@ -10,7 +10,9 @@ pub trait Interface {
 /// Implemented on types which implement [`Interface`], but which also an
 /// explicit destructor **request**.
 pub trait ReleaseRequest {
+    /// The message of type destructort
     type Message;
 
+    /// Create a new [`Self::Message`].
     fn message() -> Self::Message;
 }

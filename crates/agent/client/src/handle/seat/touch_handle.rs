@@ -1,7 +1,7 @@
 use cosplay_codec::{EncodeMessage, Message, NewObjectId};
 use cosplay_protocols_wayland::{
     wl_seat::{self, WlSeat},
-    wl_touch::{self, WlTouch},
+    wl_touch::WlTouch,
 };
 
 use crate::*;
@@ -35,8 +35,8 @@ mod tests {
 
         let (mut test_driver, object_handle) = TestDriver::new();
 
-        let touch_handle = WlTouchHandle::new(object_handle, capability_broadcast.subscribe());
+        let handle = WlTouchHandle::new(object_handle, capability_broadcast.subscribe());
 
-        test_driver.assert_queued_destructor_on_drop::<wl_touch::Release, _>(touch_handle.object_handle.id, touch_handle);
+        test_driver.assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_touch::Release, _>(handle.object_handle.id, handle);
     }
 }

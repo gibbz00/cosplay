@@ -47,7 +47,7 @@ impl<I> ObjectId<I> {
 }
 
 /// `new_id` without a defined interface. Notably used in `wl_registry::bind`.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[allow(missing_docs)]
 pub struct OpaqueNewObjectId {
     pub interface_name: String,
@@ -56,7 +56,7 @@ pub struct OpaqueNewObjectId {
 }
 
 /// `new_id` message argument. Wraps an [`ObjectId<I>`].
-#[impl_tools::autoimpl(Debug, PartialEq, Eq, Clone, Copy)]
+#[impl_tools::autoimpl(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NewObjectId<I>(pub(crate) ObjectId<I>);
 
 impl<I> NewObjectId<I> {

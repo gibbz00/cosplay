@@ -18,6 +18,9 @@ pub use shm_handle::{SyncSupportedFormatsError, WlShmHandle};
 mod compositor_handle;
 pub use compositor_handle::WlCompositorHandle;
 
+mod region_handle;
+pub use region_handle::WlRegionHandle;
+
 mod seat;
 pub(crate) use seat::*;
 pub use seat::{WlKeyboardHandle, WlPointerHandle, WlSeatGetInputError, WlSeatHandle, WlTouchHandle};

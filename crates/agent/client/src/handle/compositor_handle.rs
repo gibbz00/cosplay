@@ -41,8 +41,8 @@ mod tests {
     fn drop_sends_release() {
         let (mut test_driver, object_handle) = TestDriver::new();
 
-        let shm_handle = WlCompositorHandle::from_raw(object_handle);
+        let handle = WlCompositorHandle::from_raw(object_handle);
 
-        test_driver.assert_queued_destructor_on_drop::<wl_compositor::Release, _>(shm_handle.object_handle.id, shm_handle);
+        test_driver.assert_queued_destructor_on_drop::<wl_compositor::Release, _>(handle.object_handle.id, handle);
     }
 }

@@ -11,3 +11,16 @@ pub mod misc {
 }
 
 pub mod object_id_pool;
+
+pub mod geometry {
+    //! Geometric primitives commonly found in protocol messages.
+
+    #[derive(Debug, Clone)]
+    #[allow(missing_docs)]
+    pub struct Rectangle {
+        pub x: i32,
+        pub y: i32,
+        pub width: i32,
+        pub height: i32,
+    }
+}
