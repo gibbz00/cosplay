@@ -191,26 +191,42 @@ mod tests {
 
     #[test]
     fn get_pointer_requires_capability() {
+        get_device_requires_capability_impl::<WlPointerHandle, Pointer>(Capability::KEYBOARD, Capability::POINTER);
+    }
+
+    #[test]
+    fn get_keyboard_requires_capability() {
+        get_device_requires_capability_impl::<WlKeyboardHandle, Keyboard>(Capability::TOUCH, Capability::KEYBOARD);
+    }
+
+    #[test]
+    fn get_touch_requires_capability() {
+        get_device_requires_capability_impl::<WlTouchHandle, Touch>(Capability::POINTER, Capability::TOUCH);
+    }
+
+    fn get_device_requires_capability_impl<S, T>(missing_capability: Capability, contains_capability: Capability)
+    where
+        S: std::fmt::Debug + DeviceHandle<Device = T>,
+        WlSeatHandle: DeviceCapability<T>,
+    {
         let (test_driver, object_handle) = TestDriver::new();
 
         let mut seat_handle = WlSeatHandle::from_raw(object_handle);
 
-        let result = seat_handle.get_pointer().unwrap_err();
+        let id = seat_handle.object_handle.id;
+
+        let mut get_device = || seat_handle.get_device_impl::<S, T>();
+
+        let result = get_device().unwrap_err();
         assert_matches!(result, WlSeatGetInputError::MissingCapability);
 
-        test_driver.send_event(
-            seat_handle.object_handle.id,
-            wl_seat::Capabilities { capabilities: Capability::KEYBOARD.into() },
-        );
+        test_driver.send_event(id, wl_seat::Capabilities { capabilities: missing_capability.into() });
 
-        let result = seat_handle.get_pointer().unwrap_err();
+        let result = get_device().unwrap_err();
         assert_matches!(result, WlSeatGetInputError::MissingCapability);
 
-        test_driver.send_event(
-            seat_handle.object_handle.id,
-            wl_seat::Capabilities { capabilities: Capability::POINTER.into() },
-        );
+        test_driver.send_event(id, wl_seat::Capabilities { capabilities: contains_capability.into() });
 
-        assert!(seat_handle.get_pointer().is_ok())
+        assert!(get_device().is_ok())
     }
 }

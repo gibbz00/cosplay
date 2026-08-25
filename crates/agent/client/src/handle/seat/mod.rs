@@ -4,8 +4,8 @@ pub(crate) use device_type::{DeviceHandle, Keyboard, Pointer, Touch};
 mod capability_broadcast;
 pub(crate) use capability_broadcast::{CapabilityBroadcast, CapabilityRemovedRx};
 
-mod core;
-pub use core::{WlSeatGetInputError, WlSeatHandle};
+mod seat_handle;
+pub use seat_handle::{WlSeatGetInputError, WlSeatHandle};
 
 mod pointer_handle;
 pub use pointer_handle::WlPointerHandle;
