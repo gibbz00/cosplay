@@ -1,4 +1,8 @@
-use cosplay_protocols_wayland::wl_pointer::{self, WlPointer};
+use cosplay_codec::{EncodeMessage, Message, NewObjectId};
+use cosplay_protocols_wayland::{
+    wl_pointer::{self, WlPointer},
+    wl_seat::{self, WlSeat},
+};
 
 use crate::*;
 
@@ -14,6 +18,10 @@ impl DeviceHandle for WlPointerHandle {
 
     fn new(object_handle: ObjectHandle<Self::Inner>, capability_removed_rx: CapabilityRemovedRx<Pointer>) -> Self {
         Self { object_handle, capability_removed_rx }
+    }
+
+    fn request(new_id: NewObjectId<Self::Inner>) -> impl Message<Interface = WlSeat> + EncodeMessage {
+        wl_seat::GetPointer { id: new_id }
     }
 }
 

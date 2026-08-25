@@ -1,4 +1,4 @@
-use cosplay_codec::{Interface, OpaqueNewObjectId};
+use cosplay_codec::{Interface, OpaqueNewObjectId, OpaqueObjectId};
 use cosplay_protocols_wayland::wl_registry::{self, WlRegistry, WlRegistryEvent};
 
 use crate::*;
@@ -73,23 +73,21 @@ impl RegistryHandle {
 
         let resolved_version = std::cmp::min(*server_version, I::VERSION);
 
-        let subobject = self.object_handle.init_subobject_with_version(resolved_version)?;
-
         let interface_name = I::NAME.to_string();
 
-        tracing::debug!(number_name, interface_name, new_id = subobject.id.inner(), "Sending bind request.");
-
-        self.object_handle.queue_request(wl_registry::Bind {
-            name: *number_name,
-            id: OpaqueNewObjectId {
-                // Seems a bit superfluous given the name argument. Regardless,
-                // most compositors will error if this does not match with the
-                // name sent over `wl_registry::global`.
-                interface_name,
-                interface_version: resolved_version,
-                object_id: subobject.id.as_opaque(),
-            },
-        })?;
+        let subobject = self
+            .object_handle
+            .init_subobject_with_version(resolved_version, |new_id| wl_registry::Bind {
+                name: *number_name,
+                id: OpaqueNewObjectId {
+                    // Seems a bit superfluous given the name argument. Regardless,
+                    // most compositors will error if this does not match with the
+                    // name sent over `wl_registry::global`.
+                    interface_name,
+                    interface_version: resolved_version,
+                    object_id: OpaqueObjectId::new(new_id.inner()),
+                },
+            })?;
 
         Ok(subobject)
     }

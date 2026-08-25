@@ -1,4 +1,8 @@
-use cosplay_protocols_wayland::wl_touch::{self, WlTouch};
+use cosplay_codec::{EncodeMessage, Message, NewObjectId};
+use cosplay_protocols_wayland::{
+    wl_seat::{self, WlSeat},
+    wl_touch::{self, WlTouch},
+};
 
 use crate::*;
 
@@ -14,6 +18,10 @@ impl DeviceHandle for WlTouchHandle {
 
     fn new(object_handle: ObjectHandle<Self::Inner>, capability_removed_rx: CapabilityRemovedRx<Touch>) -> Self {
         Self { object_handle, capability_removed_rx }
+    }
+
+    fn request(new_id: NewObjectId<Self::Inner>) -> impl Message<Interface = WlSeat> + EncodeMessage {
+        wl_seat::GetTouch { id: new_id }
     }
 }
 

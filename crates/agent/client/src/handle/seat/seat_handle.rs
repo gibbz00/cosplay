@@ -64,7 +64,7 @@ impl WlSeatHandle {
             .map(CapabilityBroadcast::subscribe)
             .ok_or(WlSeatGetInputError::MissingCapability)?;
 
-        let object_handle = self.object_handle.init_subobject()?;
+        let object_handle = self.object_handle.init_subobject(S::request)?;
 
         Ok(S::new(object_handle, capability_rx))
     }
@@ -240,7 +240,12 @@ mod tests {
 
         test_driver.send_event(id, wl_seat::Capabilities { capabilities: contains_capability.into() });
 
-        assert!(get_device().is_ok())
+        // IMPROVEMENT: check that the correct request is being sent
+        assert!(test_driver.request_queue_rx.is_empty());
+
+        assert!(get_device().is_ok());
+
+        assert!(!test_driver.request_queue_rx.is_empty());
     }
 
     fn removal_sends_broadcast_impl<S, T>(contains_capability: Capability)

@@ -1,7 +1,7 @@
 use std::{marker::PhantomData, sync::Arc};
 
 use cosplay_agent::object_id_pool::ObjectIdRetriever;
-use cosplay_codec::{EncodeMessage, Event, Inbound, IntoInboundError, Message, ObjectId, OpaqueMessage};
+use cosplay_codec::{EncodeMessage, Event, Inbound, IntoInboundError, Message, NewObjectId, ObjectId, OpaqueMessage};
 use tokio::sync::mpsc::error::TryRecvError;
 
 use crate::*;
@@ -43,11 +43,18 @@ impl<I> ObjectHandle<I> {
             .map_err(|_| RequestError::RequestQueueDown)
     }
 
-    pub(crate) fn init_subobject<J>(&self) -> Result<ObjectHandle<J>, RequestError> {
-        self.init_subobject_with_version(self.resolved_version)
+    pub(crate) fn init_subobject<M: Message<Interface = I> + EncodeMessage, J>(
+        &self,
+        create_request: impl FnOnce(NewObjectId<J>) -> M,
+    ) -> Result<ObjectHandle<J>, RequestError> {
+        self.init_subobject_with_version(self.resolved_version, create_request)
     }
 
-    pub(crate) fn init_subobject_with_version<J>(&self, resolved_version: u32) -> Result<ObjectHandle<J>, RequestError> {
+    pub(crate) fn init_subobject_with_version<M: Message<Interface = I> + EncodeMessage, J>(
+        &self,
+        resolved_version: u32,
+        create_request: impl FnOnce(NewObjectId<J>) -> M,
+    ) -> Result<ObjectHandle<J>, RequestError> {
         let new_id = self.id_retriever.try_next().ok_or(RequestError::NoIdAvailable)?;
 
         tracing::trace!(parent_id = self.id.inner(), %new_id, "Creating a new subject.");
@@ -64,6 +71,8 @@ impl<I> ObjectHandle<I> {
         self.mediator_tx
             .send(MediatorMessage::Register(new_id, tx))
             .map_err(|_| RequestError::MediatorDown)?;
+
+        self.queue_request(create_request(NewObjectId::new(new_id)))?;
 
         let object_handle = ObjectHandle {
             id: ObjectId::new(new_id),
