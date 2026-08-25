@@ -55,12 +55,9 @@ mod tests {
 
         let outbound = test_driver.assert_outbound_request(handle.object_handle.id);
 
-        let wl_region::Add { x, y, width, height } = outbound;
+        let expected = wl_region::Add { x: 1, y: 2, width: 3, height: 4 };
 
-        assert_eq!(x, 1);
-        assert_eq!(y, 2);
-        assert_eq!(width, 3);
-        assert_eq!(height, 4);
+        assert_eq!(expected, outbound);
     }
 
     #[test]
@@ -73,11 +70,8 @@ mod tests {
 
         let outbound = test_driver.assert_outbound_request(handle.object_handle.id);
 
-        let wl_region::Subtract { x, y, width, height } = outbound;
+        let expected = wl_region::Subtract { x: 4, y: 3, width: 2, height: 1 };
 
-        assert_eq!(x, 4);
-        assert_eq!(y, 3);
-        assert_eq!(width, 2);
-        assert_eq!(height, 1);
+        assert_eq!(expected, outbound);
     }
 }

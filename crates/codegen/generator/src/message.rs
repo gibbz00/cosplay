@@ -30,7 +30,23 @@ impl MessageItem {
     fn quote(message_type: MessageType, op_code: u16, message: cosplay_xml::Message, ctx: MessageContext) -> proc_macro2::TokenStream {
         let Message { name, description, arguments, destructor, .. } = message;
 
-        let doc = DocumentationItem::quote_outer(description.as_ref());
+        let struct_attributes = {
+            let doc = DocumentationItem::quote_outer(description.as_ref());
+
+            let additional_derives = arguments
+                .iter()
+                .find(|arg| arg.variant == ArgumentVariant::Fd)
+                .is_none()
+                .then_some(quote! {
+                    #[derive(Clone, PartialEq)]
+                });
+
+            quote! {
+                #doc
+                #[derive(Debug)]
+                #additional_derives
+            }
+        };
 
         let ident = IdentifierItem::type_name(&name);
 
@@ -40,8 +56,7 @@ impl MessageItem {
 
         let struct_declaration = match argument_items.is_empty() {
             true => quote! {
-                #doc
-                #[derive(Debug)]
+                #struct_attributes
                 pub struct #ident;
             },
             false => {
@@ -53,8 +68,7 @@ impl MessageItem {
                 });
 
                 quote! {
-                    #doc
-                    #[derive(Debug)]
+                    #struct_attributes
                     pub struct #ident {
                         #(#fields)*
                     }

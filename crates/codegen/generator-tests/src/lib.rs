@@ -17,6 +17,16 @@ mod tests {
     }
 
     #[test]
+    fn additional_derives() {
+        use super::rename::*;
+
+        let message = Format { format: PixelFormat::A.into() };
+
+        // Assert that Clone and PartialEq are implemented.
+        assert_eq!(message.clone(), message)
+    }
+
+    #[test]
     fn destructor() {
         use super::wl_destruct::*;
 
