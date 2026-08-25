@@ -12,8 +12,6 @@ pub use registry_handle::{GlobalHandle, RegistryHandle};
 mod shm_handle;
 pub use shm_handle::{SyncSupportedFormatsError, WlShmHandle};
 
-mod seat_handle;
-pub use seat_handle::{WlSeatGetInputError, WlSeatHandle};
-
-mod pointer_handle;
-pub(crate) use pointer_handle::WlPointerHandle;
+mod seat;
+pub(crate) use seat::*;
+pub use seat::{WlKeyboardHandle, WlPointerHandle, WlSeatGetInputError, WlSeatHandle, WlTouchHandle};
