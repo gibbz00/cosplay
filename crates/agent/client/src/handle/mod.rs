@@ -12,6 +12,9 @@ pub use registry_handle::{GlobalHandle, RegistryHandle};
 mod shm_handle;
 pub use shm_handle::{SyncSupportedFormatsError, WlShmHandle};
 
+mod compositor_handle;
+pub use compositor_handle::WlCompositorHandle;
+
 mod seat;
 pub(crate) use seat::*;
 pub use seat::{WlKeyboardHandle, WlPointerHandle, WlSeatGetInputError, WlSeatHandle, WlTouchHandle};
