@@ -7,7 +7,7 @@ use crate::*;
 /// capability removals. Message passing will in turn cease to work for device
 /// handles created during the corresponding capability window.
 pub struct WlSeatHandle {
-    object_handle: ObjectHandle<WlSeat>,
+    object_handle: ScopedObjectHandle<WlSeat>,
     name: Option<String>,
     pointer_broadcast: Option<CapabilityBroadcast<Pointer>>,
     keyboard_broadcast: Option<CapabilityBroadcast<Keyboard>>,
@@ -19,7 +19,7 @@ impl GlobalHandle for WlSeatHandle {
 
     fn from_raw(object_handle: ObjectHandle<Self::Interface>) -> Self {
         Self {
-            object_handle,
+            object_handle: object_handle.into(),
             name: None,
             pointer_broadcast: None,
             keyboard_broadcast: None,
@@ -123,16 +123,6 @@ impl WlSeatHandle {
                 }
             }
         }
-    }
-}
-
-impl Drop for WlSeatHandle {
-    fn drop(&mut self) {
-        // Unclear from spec how this shoudd affect pointer, keyboards etc.
-        //
-        // Devices will in this implementation close shortly thereafter since
-        // there's no way for them to tell if a capability has been removed.
-        let _ = self.object_handle.queue_request(wl_seat::Release);
     }
 }
 

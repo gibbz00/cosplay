@@ -16,7 +16,7 @@ mod interface;
 pub(crate) use interface::{InterfaceContext, InterfaceItem};
 
 mod message;
-pub(crate) use message::{MessageContext, MessageItem};
+pub(crate) use message::{MessageContext, MessageItem, MessageType};
 
 mod enumeration;
 pub(crate) use enumeration::{EnumContext, EnumItem};

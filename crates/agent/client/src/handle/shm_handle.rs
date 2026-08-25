@@ -9,7 +9,7 @@ use crate::*;
 ///
 /// Drop implementation automatically queue a [`wl_shm::Release`] request.
 pub struct WlShmHandle {
-    object_handle: ObjectHandle<WlShm>,
+    object_handle: ScopedObjectHandle<WlShm>,
     supported_formats: HashSet<PixelFormat>,
 }
 
@@ -17,7 +17,10 @@ impl GlobalHandle for WlShmHandle {
     type Interface = WlShm;
 
     fn from_raw(object_handle: ObjectHandle<Self::Interface>) -> Self {
-        Self { object_handle, supported_formats: Default::default() }
+        Self {
+            object_handle: object_handle.into(),
+            supported_formats: Default::default(),
+        }
     }
 }
 
@@ -70,12 +73,6 @@ impl WlShmHandle {
         }
 
         Ok(())
-    }
-}
-
-impl Drop for WlShmHandle {
-    fn drop(&mut self) {
-        let _ = self.object_handle.queue_request(wl_shm::Release);
     }
 }
 

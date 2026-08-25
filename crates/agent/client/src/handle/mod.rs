@@ -2,6 +2,9 @@ mod object_handle;
 pub(crate) use object_handle::ObjectHandleTx;
 pub use object_handle::{ObjectEvent, ObjectEventsError, ObjectEventsIter, ObjectHandle, ObjectHandleMessage};
 
+mod scoped_object_handle;
+pub(crate) use scoped_object_handle::ScopedObjectHandle;
+
 mod sync_handle;
 pub(crate) use sync_handle::SyncDoneTx;
 pub use sync_handle::{SyncError, SyncHandle};

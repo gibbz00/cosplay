@@ -30,10 +30,10 @@ impl InterfaceItem {
         };
 
         let inbound_requests = Self::inbound_request_impl(&ident, &requests);
-        let requests = MessageItem::quote_list(requests, message_ctx);
+        let requests = MessageItem::quote_list(MessageType::Request, requests, message_ctx);
 
         let inbound_events = Self::inbound_events_impl(&ident, &events);
-        let events = MessageItem::quote_list(events, message_ctx);
+        let events = MessageItem::quote_list(MessageType::Event, events, message_ctx);
 
         let enums = EnumItem::quote_list(enums, EnumContext { interface_name: &name, name_mappings: ctx.name_mappings });
 

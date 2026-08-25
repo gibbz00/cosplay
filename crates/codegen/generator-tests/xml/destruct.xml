@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="example">
+  <interface name="wl_destruct" version="1">
+    <request name="release" type="destructor" />
+  </interface>
+</protocol>

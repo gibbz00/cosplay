@@ -10,14 +10,14 @@ use crate::*;
 ///
 /// Drop implementation automatically queue a [`wl_compositor::Release`] request.
 pub struct WlCompositorHandle {
-    object_handle: ObjectHandle<WlCompositor>,
+    object_handle: ScopedObjectHandle<WlCompositor>,
 }
 
 impl GlobalHandle for WlCompositorHandle {
     type Interface = WlCompositor;
 
     fn from_raw(object_handle: ObjectHandle<Self::Interface>) -> Self {
-        Self { object_handle }
+        Self { object_handle: object_handle.into() }
     }
 }
 
@@ -30,12 +30,6 @@ impl WlCompositorHandle {
     // Wrapper for sending [`wl_compositor::CreateRegion`].
     pub fn create_region(&self) -> Result<ObjectHandle<WlRegion>, RequestError> {
         self.object_handle.init_subobject(|id| wl_compositor::CreateRegion { id })
-    }
-}
-
-impl Drop for WlCompositorHandle {
-    fn drop(&mut self) {
-        let _ = self.object_handle.queue_request(wl_compositor::Release);
     }
 }
 

@@ -30,7 +30,7 @@ mod opaque_message;
 pub use opaque_message::{OpapueMessageMismatchError, OpaqueMessage};
 
 mod interface;
-pub use interface::Interface;
+pub use interface::{ReleaseRequest, Interface};
 
 mod inbound;
 pub use inbound::{Direction, Event, Inbound, IntoInboundError, Request};

@@ -8,7 +8,7 @@ use crate::*;
 
 #[derive(Debug)]
 pub struct WlTouchHandle {
-    object_handle: ObjectHandle<WlTouch>,
+    object_handle: ScopedObjectHandle<WlTouch>,
     capability_removed_rx: CapabilityRemovedRx<Touch>,
 }
 
@@ -17,17 +17,11 @@ impl DeviceHandle for WlTouchHandle {
     type Inner = WlTouch;
 
     fn new(object_handle: ObjectHandle<Self::Inner>, capability_removed_rx: CapabilityRemovedRx<Touch>) -> Self {
-        Self { object_handle, capability_removed_rx }
+        Self { object_handle: object_handle.into(), capability_removed_rx }
     }
 
     fn request(new_id: NewObjectId<Self::Inner>) -> impl Message<Interface = WlSeat> + EncodeMessage {
         wl_seat::GetTouch { id: new_id }
-    }
-}
-
-impl Drop for WlTouchHandle {
-    fn drop(&mut self) {
-        let _ = self.object_handle.queue_request(wl_touch::Release);
     }
 }
 

@@ -17,6 +17,15 @@ mod tests {
     }
 
     #[test]
+    fn destructor() {
+        use super::wl_destruct::*;
+
+        // Assert that Destruct is implemented and
+        // that it returns `wl_destruct::Release`.
+        let _: Release = <WlDestruct as ReleaseRequest>::message();
+    }
+
+    #[test]
     fn interface_name() {
         use super::wl_encoding::*;
 

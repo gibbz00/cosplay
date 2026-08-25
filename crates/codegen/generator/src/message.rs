@@ -12,17 +12,23 @@ pub struct MessageContext<'a> {
     pub name_mappings: &'a NameMappings,
 }
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum MessageType {
+    Request,
+    Event,
+}
+
 impl MessageItem {
-    pub fn quote_list(messages: Vec<Message>, ctx: MessageContext) -> Vec<proc_macro2::TokenStream> {
+    pub fn quote_list(message_type: MessageType, messages: Vec<Message>, ctx: MessageContext) -> Vec<proc_macro2::TokenStream> {
         messages
             .into_iter()
             .enumerate()
-            .map(|(op_code, message)| Self::quote(op_code as u16, message, ctx))
+            .map(|(op_code, message)| Self::quote(message_type, op_code as u16, message, ctx))
             .collect()
     }
 
-    fn quote(op_code: u16, message: cosplay_xml::Message, ctx: MessageContext) -> proc_macro2::TokenStream {
-        let Message { name, description, arguments, .. } = message;
+    fn quote(message_type: MessageType, op_code: u16, message: cosplay_xml::Message, ctx: MessageContext) -> proc_macro2::TokenStream {
+        let Message { name, description, arguments, destructor, .. } = message;
 
         let doc = DocumentationItem::quote_outer(description.as_ref());
 
@@ -60,6 +66,8 @@ impl MessageItem {
 
         let decode_impl = Self::decode_impl(&ident, &argument_items);
 
+        let destruct_impl = Self::destruct_impl(destructor, message_type, &interface_ident, &ident);
+
         let name = name.as_ref();
 
         quote! {
@@ -74,6 +82,8 @@ impl MessageItem {
             #encode_impl
 
             #decode_impl
+
+            #destruct_impl
         }
     }
 
@@ -116,6 +126,31 @@ impl MessageItem {
                 }
             }
         }
+    }
+
+    fn destruct_impl(
+        destructor: bool,
+        message_type: MessageType,
+        interface_ident: &proc_macro2::Ident,
+        message_ident: &proc_macro2::Ident,
+    ) -> Option<proc_macro2::TokenStream> {
+        if !destructor || message_type != MessageType::Request {
+            return None;
+        }
+
+        // NB: Assumes destructor is a unit struct.
+        //
+        // FIXME: add exemption to destructor impl, needed if the the destructor has arguments.
+
+        Some(quote! {
+            impl ::cosplay_codec::ReleaseRequest for #interface_ident {
+                type Message = #message_ident;
+
+                fn message() -> Self::Message {
+                    #message_ident
+                }
+            }
+        })
     }
 }
 
