@@ -53,13 +53,13 @@ impl WlSeatHandle {
 
     fn get_device_impl<S, T>(&mut self) -> Result<S, WlSeatGetInputError>
     where
-        Self: DeviceCapability<T>,
+        Self: DeviceBroadcast<T>,
         S: DeviceHandle<Device = T>,
     {
         self.sync_metadata()?;
 
         let capability_rx = self
-            .get_capability()
+            .get_device_broadcast()
             .as_ref()
             .map(CapabilityBroadcast::subscribe)
             .ok_or(WlSeatGetInputError::MissingCapability)?;
@@ -102,9 +102,9 @@ impl WlSeatHandle {
     }
 
     fn handle_capability_change(&mut self, new_capability: Capability) {
-        handle_capability_impl::<Pointer>(self.get_capability(), new_capability);
-        handle_capability_impl::<Keyboard>(self.get_capability(), new_capability);
-        handle_capability_impl::<Touch>(self.get_capability(), new_capability);
+        handle_capability_impl::<Pointer>(self.get_device_broadcast(), new_capability);
+        handle_capability_impl::<Keyboard>(self.get_device_broadcast(), new_capability);
+        handle_capability_impl::<Touch>(self.get_device_broadcast(), new_capability);
 
         fn handle_capability_impl<T: CapabilityBit>(broadcast_tx: &mut Option<CapabilityBroadcast<T>>, new_capability: Capability) {
             let has_capability = new_capability.contains(T::BIT);
@@ -136,24 +136,24 @@ impl Drop for WlSeatHandle {
     }
 }
 
-trait DeviceCapability<T> {
-    fn get_capability(&mut self) -> &mut Option<CapabilityBroadcast<T>>;
+trait DeviceBroadcast<T> {
+    fn get_device_broadcast(&mut self) -> &mut Option<CapabilityBroadcast<T>>;
 }
 
-impl DeviceCapability<Pointer> for WlSeatHandle {
-    fn get_capability(&mut self) -> &mut Option<CapabilityBroadcast<Pointer>> {
+impl DeviceBroadcast<Pointer> for WlSeatHandle {
+    fn get_device_broadcast(&mut self) -> &mut Option<CapabilityBroadcast<Pointer>> {
         &mut self.pointer_broadcast
     }
 }
 
-impl DeviceCapability<Keyboard> for WlSeatHandle {
-    fn get_capability(&mut self) -> &mut Option<CapabilityBroadcast<Keyboard>> {
+impl DeviceBroadcast<Keyboard> for WlSeatHandle {
+    fn get_device_broadcast(&mut self) -> &mut Option<CapabilityBroadcast<Keyboard>> {
         &mut self.keyboard_broadcast
     }
 }
 
-impl DeviceCapability<Touch> for WlSeatHandle {
-    fn get_capability(&mut self) -> &mut Option<CapabilityBroadcast<Touch>> {
+impl DeviceBroadcast<Touch> for WlSeatHandle {
+    fn get_device_broadcast(&mut self) -> &mut Option<CapabilityBroadcast<Touch>> {
         &mut self.touch_broadcast
     }
 }
@@ -176,7 +176,7 @@ impl CapabilityBit for Touch {
 
 #[cfg(test)]
 mod tests {
-    use std::assert_matches;
+    use std::{assert_matches, marker::PhantomData};
 
     use super::*;
 
@@ -204,10 +204,25 @@ mod tests {
         get_device_requires_capability_impl::<WlTouchHandle, Touch>(Capability::POINTER, Capability::TOUCH);
     }
 
+    #[test]
+    fn pointer_removal_sends_broadcast() {
+        removal_sends_broadcast_impl::<WlPointerHandle, Pointer>(Capability::POINTER);
+    }
+
+    #[test]
+    fn keyboard_removal_sends_broadcast() {
+        removal_sends_broadcast_impl::<WlKeyboardHandle, Keyboard>(Capability::KEYBOARD);
+    }
+
+    #[test]
+    fn touch_removal_sends_broadcast() {
+        removal_sends_broadcast_impl::<WlTouchHandle, Touch>(Capability::TOUCH);
+    }
+
     fn get_device_requires_capability_impl<S, T>(missing_capability: Capability, contains_capability: Capability)
     where
         S: std::fmt::Debug + DeviceHandle<Device = T>,
-        WlSeatHandle: DeviceCapability<T>,
+        WlSeatHandle: DeviceBroadcast<T>,
     {
         let (test_driver, object_handle) = TestDriver::new();
 
@@ -217,16 +232,42 @@ mod tests {
 
         let mut get_device = || seat_handle.get_device_impl::<S, T>();
 
-        let result = get_device().unwrap_err();
-        assert_matches!(result, WlSeatGetInputError::MissingCapability);
+        assert_matches!(get_device(), Err(WlSeatGetInputError::MissingCapability));
 
         test_driver.send_event(id, wl_seat::Capabilities { capabilities: missing_capability.into() });
 
-        let result = get_device().unwrap_err();
-        assert_matches!(result, WlSeatGetInputError::MissingCapability);
+        assert_matches!(get_device(), Err(WlSeatGetInputError::MissingCapability));
 
         test_driver.send_event(id, wl_seat::Capabilities { capabilities: contains_capability.into() });
 
         assert!(get_device().is_ok())
+    }
+
+    fn removal_sends_broadcast_impl<S, T>(contains_capability: Capability)
+    where
+        S: DeviceHandle<Device = T>,
+        WlSeatHandle: DeviceBroadcast<T>,
+    {
+        let (test_driver, object_handle) = TestDriver::new();
+
+        let mut seat_handle = WlSeatHandle::from_raw(object_handle);
+
+        let id = seat_handle.object_handle.id;
+
+        assert!(seat_handle.get_device_broadcast().is_none());
+
+        test_driver.send_event(id, wl_seat::Capabilities { capabilities: contains_capability.into() });
+        seat_handle.sync_metadata().unwrap();
+
+        let mut rx = seat_handle.get_device_broadcast().as_ref().unwrap().subscribe();
+
+        assert!(rx.is_empty());
+        assert!(!rx.is_closed());
+
+        test_driver.send_event(id, wl_seat::Capabilities { capabilities: Capability::empty().into() });
+        seat_handle.sync_metadata().unwrap();
+
+        assert_eq!(PhantomData, rx.try_recv().unwrap());
+        assert!(rx.is_closed());
     }
 }
