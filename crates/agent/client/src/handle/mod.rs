@@ -1,26 +1,14 @@
-mod object_handle;
-pub(crate) use object_handle::ObjectHandleTx;
-pub use object_handle::{ObjectEvent, ObjectEventsError, ObjectEventsIter, ObjectHandle, ObjectHandleMessage};
+pub mod base;
+pub(crate) use base::*;
 
-mod scoped_object_handle;
-pub(crate) use scoped_object_handle::ScopedObjectHandle;
+pub mod raw;
+pub(crate) use raw::*;
 
-mod sync_handle;
-pub(crate) use sync_handle::SyncDoneTx;
-pub use sync_handle::{SyncError, SyncHandle};
+pub mod shared_memory;
+pub(crate) use shared_memory::*;
 
-mod registry_handle;
-pub use registry_handle::{GlobalHandle, RegistryHandle};
+pub mod compositor;
+pub(crate) use compositor::*;
 
-mod shm_handle;
-pub use shm_handle::{SyncSupportedFormatsError, WlShmHandle};
-
-mod compositor_handle;
-pub use compositor_handle::WlCompositorHandle;
-
-mod region_handle;
-pub use region_handle::WlRegionHandle;
-
-mod seat;
+pub mod seat;
 pub(crate) use seat::*;
-pub use seat::{WlKeyboardHandle, WlPointerHandle, WlSeatGetInputError, WlSeatHandle, WlTouchHandle};

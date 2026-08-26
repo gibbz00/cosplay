@@ -1,6 +1,6 @@
 //! `cosplay` counterpart of <https://github.com/emersion/hello-wayland>
 
-use cosplay_client::handle::{WlCompositorHandle, WlSeatHandle, WlShmHandle};
+use cosplay_client::handle::{compositor::WlCompositorHandle, seat::WlSeatHandle, shared_memory::WlShmHandle};
 use cosplay_protocols_xdg_shell::xdg_wm_base::XdgWmBase;
 
 #[tokio::main]
