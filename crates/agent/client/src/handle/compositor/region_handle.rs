@@ -5,7 +5,7 @@ use crate::*;
 
 /// Handle to a `wl_region` instance.
 ///
-/// Drop implementation automatically queue a [`wl_region::Destroy`] request.
+/// Drop implementation queues a [`wl_region::Destroy`] request.
 pub struct WlRegionHandle {
     object_handle: ScopedObjectHandle<WlRegion>,
 }
