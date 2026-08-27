@@ -2,8 +2,8 @@
 members = [
   "crates/agent/common",
   "crates/codegen/*",
-  "crates/core/*",
   "crates/protocols/*",
+  "crates/wire/*",
   "examples/*",
 ]
 resolver = "3"
@@ -16,10 +16,10 @@ version = "0.1.0"
 crane.name = "cosplay"
 
 [workspace.dependencies]
-# Core
-cosplay-ancillary = { path = "./crates/core/ancillary" }
-cosplay-codec = { path = "./crates/core/codec" }
-cosplay-net = { path = "./crates/core/net" }
+# Wire
+cosplay-ancillary = { path = "./crates/wire/ancillary" }
+cosplay-codec = { path = "./crates/wire/codec" }
+cosplay-net = { path = "./crates/wire/net" }
 # Codegen
 cosplay-generator = { path = "./crates/codegen/generator" }
 cosplay-scanner = { path = "./crates/codegen/scanner" }
