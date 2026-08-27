@@ -68,15 +68,3 @@ impl<I> RequestHandle<I> {
         Ok(object_handle)
     }
 }
-
-#[impl_tools::autoimpl(Debug)]
-pub struct EventHandle<I> {
-    pub(crate) inbound_rx: ObjectHandleRx,
-    pub(crate) interface_marker: PhantomData<I>,
-}
-
-impl<I> EventHandle<I> {
-    pub fn iter(&mut self) -> ObjectEventsIter<'_, I> {
-        ObjectEventsIter::new(&mut self.inbound_rx)
-    }
-}

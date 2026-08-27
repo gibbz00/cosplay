@@ -5,6 +5,33 @@ use tokio::sync::mpsc::error::TryRecvError;
 
 use crate::*;
 
+#[impl_tools::autoimpl(Debug)]
+pub struct EventHandle<I> {
+    pub(crate) inbound_rx: ObjectHandleRx,
+    pub(crate) interface_marker: PhantomData<I>,
+}
+
+pub enum ObjectEvent<E> {
+    Event(E),
+    Error { code: u32, message: String },
+}
+
+impl<I> EventHandle<I> {
+    pub fn iter(&mut self) -> ObjectEventsIter<'_, I> {
+        ObjectEventsIter::new(&mut self.inbound_rx)
+    }
+
+    pub async fn recv(&mut self) -> Option<Result<ObjectEvent<I::Enum>, IntoInboundError>>
+    where
+        I: Inbound<Event>,
+    {
+        self.inbound_rx.recv().await.map(|event| match event {
+            ObjectHandleMessage::Event(message) => I::from_opaque(message).map(ObjectEvent::Event),
+            ObjectHandleMessage::Error { code, message } => Ok(ObjectEvent::Error { code, message }),
+        })
+    }
+}
+
 pub struct ObjectEventsIter<'a, I> {
     inbound_rx: &'a mut ObjectHandleRx,
     interface_marker: PhantomData<I>,
@@ -14,11 +41,6 @@ impl<'a, I> ObjectEventsIter<'a, I> {
     pub(super) fn new(inbound_rx: &'a mut ObjectHandleRx) -> Self {
         Self { inbound_rx, interface_marker: PhantomData }
     }
-}
-
-pub enum ObjectEvent<E> {
-    Event(E),
-    Error { code: u32, message: String },
 }
 
 #[derive(Debug, thiserror::Error)]

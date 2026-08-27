@@ -11,8 +11,8 @@ use crate::*;
 // mediator to return the ID to the object ID pool.
 #[impl_tools::autoimpl(Debug)]
 pub struct ObjectHandle<I> {
-    pub request: RequestHandle<I>,
-    pub event: EventHandle<I>,
+    pub(crate) request: RequestHandle<I>,
+    pub(crate) event: EventHandle<I>,
 }
 
 pub enum ObjectHandleMessage {
