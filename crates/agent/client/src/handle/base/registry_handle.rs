@@ -7,11 +7,11 @@ use crate::*;
 pub trait GlobalHandle {
     type Interface;
 
-    fn from_raw(object_handle: ObjectHandle<Self::Interface>) -> Self;
+    fn from_raw(handle: ObjectHandle<Self::Interface>) -> Self;
 }
 
 pub struct RegistryHandle {
-    object_handle: ObjectHandle<WlRegistry>,
+    handle: ObjectHandle<WlRegistry>,
     registry_map: RegistryMap,
 }
 
@@ -27,8 +27,8 @@ pub enum BindError {
 }
 
 impl RegistryHandle {
-    pub(crate) fn new(object_handle: ObjectHandle<WlRegistry>) -> Self {
-        Self { object_handle, registry_map: Default::default() }
+    pub(crate) fn new(handle: ObjectHandle<WlRegistry>) -> Self {
+        Self { handle, registry_map: Default::default() }
     }
 
     /// Bind to a global handle wrapper `H`
@@ -50,7 +50,7 @@ impl RegistryHandle {
     /// logic. Such globals can instead be bound by using [`Self::bind`].
     pub async fn bind_raw<I: Interface>(&mut self) -> Result<ObjectHandle<I>, BindError> {
         // Make sure that map is up to date.
-        for inbound_result in self.object_handle.events_iter() {
+        for inbound_result in self.handle.event.iter() {
             match inbound_result? {
                 ObjectEvent::Event(event) => match event {
                     WlRegistryEvent::Global(global) => {
@@ -76,7 +76,8 @@ impl RegistryHandle {
         let interface_name = I::NAME.to_string();
 
         let subobject = self
-            .object_handle
+            .handle
+            .request
             .init_subobject_with_version(resolved_version, |new_id| wl_registry::Bind {
                 name: *number_name,
                 id: OpaqueNewObjectId {

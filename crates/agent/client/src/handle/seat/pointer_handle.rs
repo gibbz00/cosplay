@@ -38,7 +38,7 @@ mod tests {
         let pointer_handle = WlPointerHandle::new(object_handle, capability_broadcast.subscribe());
 
         test_driver.assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_pointer::Release, _>(
-            pointer_handle.object_handle.id,
+            pointer_handle.object_handle.request.id,
             pointer_handle,
         );
     }

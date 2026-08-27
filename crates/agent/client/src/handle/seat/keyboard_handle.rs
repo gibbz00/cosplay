@@ -8,7 +8,7 @@ use crate::*;
 
 #[derive(Debug)]
 pub struct WlKeyboardHandle {
-    object_handle: ScopedObjectHandle<WlKeyboard>,
+    handle: ScopedObjectHandle<WlKeyboard>,
     capability_removed_rx: CapabilityRemovedRx<Keyboard>,
 }
 
@@ -16,8 +16,8 @@ impl DeviceHandle for WlKeyboardHandle {
     type Device = Keyboard;
     type Inner = WlKeyboard;
 
-    fn new(object_handle: ObjectHandle<Self::Inner>, capability_removed_rx: CapabilityRemovedRx<Keyboard>) -> Self {
-        Self { object_handle: object_handle.into(), capability_removed_rx }
+    fn new(handle: ObjectHandle<Self::Inner>, capability_removed_rx: CapabilityRemovedRx<Keyboard>) -> Self {
+        Self { handle: handle.into(), capability_removed_rx }
     }
 
     fn request(new_id: NewObjectId<Self::Inner>) -> impl Message<Interface = WlSeat> + EncodeMessage {
@@ -38,7 +38,7 @@ mod tests {
         let keyboard_handle = WlKeyboardHandle::new(object_handle, capability_broadcast.subscribe());
 
         test_driver.assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_keyboard::Release, _>(
-            keyboard_handle.object_handle.id,
+            keyboard_handle.handle.request.id,
             keyboard_handle,
         );
     }

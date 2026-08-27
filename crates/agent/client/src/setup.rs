@@ -1,4 +1,4 @@
-use std::{path::Path, sync::Arc};
+use std::{marker::PhantomData, path::Path, sync::Arc};
 
 use cosplay_agent::misc::WL_DISPLAY_ID;
 use cosplay_codec::{NewObjectId, ObjectId, WaylandMessageSink, WaylandMessageStream};
@@ -53,15 +53,20 @@ impl ClientSetup {
 
         let (request_queue_tx, request_queue) = RequestQueue::new(writer);
 
-        let object_handle = ObjectHandle {
-            id: ObjectId::new(registry_id),
-            inbound_rx,
-            // Assume one for now. Interface isn't frozen, but at the same time,
-            // there isn't any way for the server to advertise its version?
-            resolved_version: 1,
-            id_retriever: id_retriever.clone(),
-            mediator_tx: mediator_tx.clone(),
-            request_queue_tx: request_queue_tx.clone(),
+        let object_handle = {
+            let request_handle = RequestHandle {
+                id: ObjectId::new(registry_id),
+                // Assume one for now. Interface isn't frozen, but at the same time,
+                // there isn't any way for the server to advertise its version?
+                resolved_version: 1,
+                id_retriever: id_retriever.clone(),
+                mediator_tx: mediator_tx.clone(),
+                request_queue_tx: request_queue_tx.clone(),
+            };
+
+            let event_handle = EventHandle { inbound_rx, interface_marker: PhantomData };
+
+            ObjectHandle { request: request_handle, event: event_handle }
         };
 
         let registry_handle = RegistryHandle::new(object_handle);

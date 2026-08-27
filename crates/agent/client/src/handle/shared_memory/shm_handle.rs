@@ -9,18 +9,15 @@ use crate::*;
 ///
 /// Drop implementation automatically queue a [`wl_shm::Release`] request.
 pub struct WlShmHandle {
-    object_handle: ScopedObjectHandle<WlShm>,
+    handle: ScopedObjectHandle<WlShm>,
     supported_formats: HashSet<PixelFormat>,
 }
 
 impl GlobalHandle for WlShmHandle {
     type Interface = WlShm;
 
-    fn from_raw(object_handle: ObjectHandle<Self::Interface>) -> Self {
-        Self {
-            object_handle: object_handle.into(),
-            supported_formats: Default::default(),
-        }
+    fn from_raw(handle: ObjectHandle<Self::Interface>) -> Self {
+        Self { handle: handle.into(), supported_formats: Default::default() }
     }
 }
 
@@ -57,7 +54,7 @@ impl WlShmHandle {
     /// server and updates the internal set accordingly. The set can then be
     /// inspected with [`Self::supported_formats`].
     pub fn sync_supported_formats(&mut self) -> Result<(), SyncSupportedFormatsError> {
-        for inbound_result in self.object_handle.events_iter() {
+        for inbound_result in self.handle.event.iter() {
             match inbound_result? {
                 ObjectEvent::Event(event) => match event {
                     wl_shm::WlShmEvent::Format(format) => {
@@ -92,8 +89,11 @@ mod tests {
 
         assert!(shm_handle.supported_formats.is_empty());
 
-        test_driver.send_event(shm_handle.object_handle.id, wl_shm::Format { format: PixelFormat::C8.into() });
-        test_driver.send_event(shm_handle.object_handle.id, wl_shm::Format { format: PixelFormat::Xrgb4444.into() });
+        test_driver.send_event(shm_handle.handle.request.id, wl_shm::Format { format: PixelFormat::C8.into() });
+        test_driver.send_event(
+            shm_handle.handle.request.id,
+            wl_shm::Format { format: PixelFormat::Xrgb4444.into() },
+        );
 
         shm_handle.sync_supported_formats().unwrap();
 
@@ -107,6 +107,6 @@ mod tests {
 
         let shm_handle = WlShmHandle::from_raw(object_handle);
 
-        test_driver.assert_queued_destructor_on_drop::<wl_shm::Release, _>(shm_handle.object_handle.id, shm_handle);
+        test_driver.assert_queued_destructor_on_drop::<wl_shm::Release, _>(shm_handle.handle.request.id, shm_handle);
     }
 }

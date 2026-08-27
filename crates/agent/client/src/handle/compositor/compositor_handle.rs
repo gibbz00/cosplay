@@ -10,26 +10,26 @@ use crate::*;
 ///
 /// Drop implementation automatically queue a [`wl_compositor::Release`] request.
 pub struct WlCompositorHandle {
-    object_handle: ScopedObjectHandle<WlCompositor>,
+    handle: ScopedObjectHandle<WlCompositor>,
 }
 
 impl GlobalHandle for WlCompositorHandle {
     type Interface = WlCompositor;
 
-    fn from_raw(object_handle: ObjectHandle<Self::Interface>) -> Self {
-        Self { object_handle: object_handle.into() }
+    fn from_raw(handle: ObjectHandle<Self::Interface>) -> Self {
+        Self { handle: handle.into() }
     }
 }
 
 impl WlCompositorHandle {
     // Wrapper for sending [`wl_compositor::CreateSurface`].
     pub fn create_surface(&self) -> Result<ObjectHandle<WlSurface>, RequestError> {
-        self.object_handle.init_subobject(|id| wl_compositor::CreateSurface { id })
+        self.handle.request.init_subobject(|id| wl_compositor::CreateSurface { id })
     }
 
     // Wrapper for sending [`wl_compositor::CreateRegion`].
     pub fn create_region(&self) -> Result<ObjectHandle<WlRegion>, RequestError> {
-        self.object_handle.init_subobject(|id| wl_compositor::CreateRegion { id })
+        self.handle.request.init_subobject(|id| wl_compositor::CreateRegion { id })
     }
 }
 
@@ -43,6 +43,6 @@ mod tests {
 
         let handle = WlCompositorHandle::from_raw(object_handle);
 
-        test_driver.assert_queued_destructor_on_drop::<wl_compositor::Release, _>(handle.object_handle.id, handle);
+        test_driver.assert_queued_destructor_on_drop::<wl_compositor::Release, _>(handle.handle.request.id, handle);
     }
 }

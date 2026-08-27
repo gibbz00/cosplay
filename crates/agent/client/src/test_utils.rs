@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{marker::PhantomData, sync::Arc};
 
 use cosplay_agent::object_id_pool::ObjectIdReturner;
 use cosplay_codec::{DecodeMessage, EncodeMessage, Message, ObjectId, OpaqueMessage, OpaqueObjectId};
@@ -22,14 +22,17 @@ impl TestDriver {
 
         let (inbound_tx, inbound_rx) = tokio::sync::mpsc::unbounded_channel();
 
-        let root_handle = ObjectHandle {
+        let request_handle = RequestHandle {
             id: ObjectId::new(OpaqueObjectId::new(1)),
             resolved_version: 1,
             id_retriever: Arc::new(id_retriever),
             mediator_tx,
             request_queue_tx,
-            inbound_rx,
         };
+
+        let event_handle = EventHandle { inbound_rx, interface_marker: PhantomData };
+
+        let root_handle = ObjectHandle { request: request_handle, event: event_handle };
 
         let this = Self { id_returner, mediator_rx, request_queue_rx, inbound_tx };
 

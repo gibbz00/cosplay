@@ -7,14 +7,14 @@ use crate::*;
 ///
 /// Drop implementation queues a [`wl_region::Destroy`] request.
 pub struct WlRegionHandle {
-    object_handle: ScopedObjectHandle<WlRegion>,
+    handle: ScopedObjectHandle<WlRegion>,
 }
 
 impl GlobalHandle for WlRegionHandle {
     type Interface = WlRegion;
 
-    fn from_raw(object_handle: ObjectHandle<Self::Interface>) -> Self {
-        Self { object_handle: object_handle.into() }
+    fn from_raw(handle: ObjectHandle<Self::Interface>) -> Self {
+        Self { handle: handle.into() }
     }
 }
 
@@ -22,13 +22,13 @@ impl WlRegionHandle {
     // Wrapper for sending [`wl_region::Add`].
     pub fn add(&self, rectangle: &Rectangle) -> Result<(), RequestError> {
         let Rectangle { x, y, width, height } = rectangle.clone();
-        self.object_handle.queue_request(wl_region::Add { x, y, width, height })
+        self.handle.request.queue_request(wl_region::Add { x, y, width, height })
     }
 
     // Wrapper for sending [`wl_region::Subtract`].
     pub fn subtract(&self, rectangle: &Rectangle) -> Result<(), RequestError> {
         let Rectangle { x, y, width, height } = rectangle.clone();
-        self.object_handle.queue_request(wl_region::Subtract { x, y, width, height })
+        self.handle.request.queue_request(wl_region::Subtract { x, y, width, height })
     }
 }
 
@@ -40,9 +40,10 @@ mod tests {
     fn drop_sends_destroy() {
         let (mut test_driver, object_handle) = TestDriver::new();
 
-        let handle = WlRegionHandle::from_raw(object_handle);
+        let wl_region = WlRegionHandle::from_raw(object_handle);
 
-        test_driver.assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_region::Destroy, _>(handle.object_handle.id, handle);
+        test_driver
+            .assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_region::Destroy, _>(wl_region.handle.request.id, wl_region);
     }
 
     #[test]
@@ -53,7 +54,7 @@ mod tests {
 
         handle.add(&Rectangle { x: 1, y: 2, width: 3, height: 4 }).unwrap();
 
-        let outbound = test_driver.assert_outbound_request(handle.object_handle.id);
+        let outbound = test_driver.assert_outbound_request(handle.handle.request.id);
 
         let expected = wl_region::Add { x: 1, y: 2, width: 3, height: 4 };
 
@@ -64,11 +65,11 @@ mod tests {
     fn subtract() {
         let (mut test_driver, object_handle) = TestDriver::new();
 
-        let handle = WlRegionHandle::from_raw(object_handle);
+        let wl_region = WlRegionHandle::from_raw(object_handle);
 
-        handle.subtract(&Rectangle { x: 4, y: 3, width: 2, height: 1 }).unwrap();
+        wl_region.subtract(&Rectangle { x: 4, y: 3, width: 2, height: 1 }).unwrap();
 
-        let outbound = test_driver.assert_outbound_request(handle.object_handle.id);
+        let outbound = test_driver.assert_outbound_request(wl_region.handle.request.id);
 
         let expected = wl_region::Subtract { x: 4, y: 3, width: 2, height: 1 };
 

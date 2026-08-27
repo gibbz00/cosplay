@@ -7,7 +7,7 @@ use crate::*;
 /// capability removals. Message passing will in turn cease to work for device
 /// handles created during the corresponding capability window.
 pub struct WlSeatHandle {
-    object_handle: ScopedObjectHandle<WlSeat>,
+    handle: ScopedObjectHandle<WlSeat>,
     name: Option<String>,
     pointer_broadcast: Option<CapabilityBroadcast<Pointer>>,
     keyboard_broadcast: Option<CapabilityBroadcast<Keyboard>>,
@@ -17,9 +17,9 @@ pub struct WlSeatHandle {
 impl GlobalHandle for WlSeatHandle {
     type Interface = WlSeat;
 
-    fn from_raw(object_handle: ObjectHandle<Self::Interface>) -> Self {
+    fn from_raw(handle: ObjectHandle<Self::Interface>) -> Self {
         Self {
-            object_handle: object_handle.into(),
+            handle: handle.into(),
             name: None,
             pointer_broadcast: None,
             keyboard_broadcast: None,
@@ -64,13 +64,13 @@ impl WlSeatHandle {
             .map(CapabilityBroadcast::subscribe)
             .ok_or(WlSeatGetInputError::MissingCapability)?;
 
-        let object_handle = self.object_handle.init_subobject(S::request)?;
+        let object_handle = self.handle.request.init_subobject(S::request)?;
 
         Ok(S::new(object_handle, capability_rx))
     }
 
     fn sync_metadata(&mut self) -> Result<(), ObjectEventsError> {
-        let events = self.object_handle.events_iter().collect::<Vec<_>>();
+        let events = self.handle.event.iter().collect::<Vec<_>>();
 
         for inbound_result in events {
             match inbound_result? {
@@ -176,7 +176,7 @@ mod tests {
 
         let seat_handle = WlSeatHandle::from_raw(object_handle);
 
-        test_driver.assert_queued_destructor_on_drop::<wl_seat::Release, _>(seat_handle.object_handle.id, seat_handle);
+        test_driver.assert_queued_destructor_on_drop::<wl_seat::Release, _>(seat_handle.handle.request.id, seat_handle);
     }
 
     #[test]
@@ -218,7 +218,7 @@ mod tests {
 
         let mut seat_handle = WlSeatHandle::from_raw(object_handle);
 
-        let id = seat_handle.object_handle.id;
+        let id = seat_handle.handle.request.id;
 
         let mut get_device = || seat_handle.get_device_impl::<S, T>();
 
@@ -247,7 +247,7 @@ mod tests {
 
         let mut seat_handle = WlSeatHandle::from_raw(object_handle);
 
-        let id = seat_handle.object_handle.id;
+        let id = seat_handle.handle.request.id;
 
         assert!(seat_handle.get_device_broadcast().is_none());
 

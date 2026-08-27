@@ -37,6 +37,7 @@ mod tests {
 
         let handle = WlTouchHandle::new(object_handle, capability_broadcast.subscribe());
 
-        test_driver.assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_touch::Release, _>(handle.object_handle.id, handle);
+        test_driver
+            .assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_touch::Release, _>(handle.object_handle.request.id, handle);
     }
 }

@@ -5,4 +5,4 @@ mod region_handle;
 pub use region_handle::WlRegionHandle;
 
 mod surface_handle;
-pub use surface_handle::WlSurfaceHandle;
+pub use surface_handle::{UnassignedRole, WlSurfaceHandle};

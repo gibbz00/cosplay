@@ -1,8 +1,8 @@
-pub mod base;
-pub(crate) use base::*;
-
 pub mod raw;
 pub(crate) use raw::*;
+
+pub mod base;
+pub(crate) use base::*;
 
 pub mod shared_memory;
 pub(crate) use shared_memory::*;
