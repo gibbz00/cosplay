@@ -1,7 +1,7 @@
 // TEMP:
 #![allow(missing_docs)]
 
-//! # `cosplay-client`
+//! # `cosplay-core-client`
 
 mod setup;
 pub use setup::{ClientSetup, ClientSetupError};

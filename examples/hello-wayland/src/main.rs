@@ -1,13 +1,13 @@
 //! `cosplay` counterpart of <https://github.com/emersion/hello-wayland>
 
-use cosplay_client::handle::{compositor::WlCompositorHandle, seat::WlSeatHandle, shared_memory::WlShmHandle};
+use cosplay_core_client::handle::{compositor::WlCompositorHandle, seat::WlSeatHandle, shared_memory::WlShmHandle};
 use cosplay_protocols_xdg_shell::xdg_wm_base::XdgWmBase;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt::init();
 
-    let (request_queue, event_mediator, mut registry_handle, sync_handle) = cosplay_client::ClientSetup::setup(None).await?;
+    let (request_queue, event_mediator, mut registry_handle, sync_handle) = cosplay_core_client::ClientSetup::setup(None).await?;
 
     tokio::spawn(request_queue.run());
     tokio::spawn(event_mediator.run());
@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 mod xdg_handles {
     use std::sync::Arc;
 
-    use cosplay_client::{
+    use cosplay_core_client::{
         RequestError,
         handle::{
             compositor::{UnassignedRole, WlSurfaceHandle},

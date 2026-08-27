@@ -1,5 +1,5 @@
 [package]
-name = "cosplay-client"
+name = "cosplay-core-client"
 
 edition.workspace = true
 version.workspace = true

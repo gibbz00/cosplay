@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "crates/agent/common",
+  "crates/client/*",
   "crates/codegen/*",
   "crates/protocols/*",
   "crates/wire/*",
@@ -26,7 +27,7 @@ cosplay-scanner = { path = "./crates/codegen/scanner" }
 cosplay-xml = { path = "./crates/codegen/xml" }
 # Agent
 cosplay-agent = { path = "./crates/agent/common" }
-cosplay-client = { path = "./crates/agent/client" }
+cosplay-core-client = { path = "./crates/client/core" }
 # Protocols
 cosplay-protocols-wayland = { path = "./crates/protocols/wayland" }
 cosplay-protocols-xdg-shell = { path = "./crates/protocols/xdg-shell" }

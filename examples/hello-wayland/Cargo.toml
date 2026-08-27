@@ -5,8 +5,8 @@ edition.workspace = true
 version.workspace = true
 
 [dependencies]
-cosplay-client.workspace = true
 cosplay-codec.workspace = true
+cosplay-core-client.workspace = true
 
 cosplay-protocols-wayland.workspace = true
 cosplay-protocols-xdg-shell.workspace = true

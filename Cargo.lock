@@ -90,22 +90,6 @@ name = "cosplay-ancillary"
 version = "0.1.0"
 
 [[package]]
-name = "cosplay-client"
-version = "0.1.0"
-dependencies = [
- "cosplay-agent",
- "cosplay-codec",
- "cosplay-net",
- "cosplay-protocols-wayland",
- "impl-tools",
- "sealed",
- "serial_test",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "cosplay-codec"
 version = "0.1.0"
 dependencies = [
@@ -118,6 +102,22 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-util",
+]
+
+[[package]]
+name = "cosplay-core-client"
+version = "0.1.0"
+dependencies = [
+ "cosplay-agent",
+ "cosplay-codec",
+ "cosplay-net",
+ "cosplay-protocols-wayland",
+ "impl-tools",
+ "sealed",
+ "serial_test",
+ "thiserror",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -267,8 +267,8 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 name = "hello-wayland"
 version = "0.1.0"
 dependencies = [
- "cosplay-client",
  "cosplay-codec",
+ "cosplay-core-client",
  "cosplay-protocols-wayland",
  "cosplay-protocols-xdg-shell",
  "tokio",
