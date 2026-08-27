@@ -17,20 +17,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Sync roundtrip to ensure globals advertisement has finished.
     sync_handle.sync().await?;
 
-    let wl_shm_handle = registry_handle.bind::<WlShmHandle>().await?;
+    let wl_shm_handle = registry_handle.bind::<WlShmHandle>()?;
 
-    let mut wl_seat_handle = registry_handle.bind::<WlSeatHandle>().await?;
+    let mut wl_seat_handle = registry_handle.bind::<WlSeatHandle>()?;
 
     // Sync roundtrip to ensure seat capability exchange has finished.
     sync_handle.sync().await?;
 
     let wl_pointer_handle = wl_seat_handle.get_pointer()?;
 
-    let wl_compositor_handle = registry_handle.bind::<WlCompositorHandle>().await?;
+    let wl_compositor_handle = registry_handle.bind::<WlCompositorHandle>()?;
 
     let surface = wl_compositor_handle.create_surface()?;
 
-    let xdg_base_handle = registry_handle.bind::<XdgWmBaseHandle>().await?;
+    let xdg_base_handle = registry_handle.bind::<XdgWmBaseHandle>()?;
 
     let xdg_surface = xdg_base_handle.get_xdg_surface(surface);
 
