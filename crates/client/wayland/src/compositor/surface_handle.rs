@@ -6,22 +6,12 @@ use cosplay_protocols_wayland::wl_surface::WlSurface;
 
 use crate::*;
 
-pub struct UnassignedRole;
-
 /// Handle to a `wl_surface` instance.
 ///
 /// Drop implementation queues a [`wl_surface::Destroy`] request.
 pub struct WlSurfaceHandle<R> {
     handle: ScopedObjectHandle<WlSurface>,
     role_marker: PhantomData<R>,
-}
-
-impl GlobalHandle for WlSurfaceHandle<UnassignedRole> {
-    type Interface = WlSurface;
-
-    fn from_raw(handle: ObjectHandle<Self::Interface>) -> Self {
-        Self { handle: handle.into(), role_marker: PhantomData }
-    }
 }
 
 impl<R> WlSurfaceHandle<R> {
@@ -31,7 +21,11 @@ impl<R> WlSurfaceHandle<R> {
 }
 
 impl WlSurfaceHandle<UnassignedRole> {
-    pub fn with_role<R>(self) -> WlSurfaceHandle<R> {
+    pub(crate) fn new(handle: ObjectHandle<WlSurface>) -> Self {
+        Self { handle: handle.into(), role_marker: PhantomData }
+    }
+
+    pub fn with_role<R: SurfaceRole<Overridable = OverridableRole>>(self) -> WlSurfaceHandle<R> {
         WlSurfaceHandle { handle: self.handle, role_marker: PhantomData }
     }
 }
@@ -44,7 +38,7 @@ mod tests {
     fn drop_sends_destroy() {
         let (mut test_driver, object_handle) = TestDriver::new();
 
-        let handle = WlSurfaceHandle::from_raw(object_handle);
+        let handle = WlSurfaceHandle::new(object_handle);
 
         test_driver.assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_surface::Destroy, _>(handle.id(), handle);
     }

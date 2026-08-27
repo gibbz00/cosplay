@@ -190,6 +190,21 @@ dependencies = [
  "cosplay-codec",
  "cosplay-core-client",
  "cosplay-protocols-wayland",
+ "sealed",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "cosplay-xdg-shell-client"
+version = "0.1.0"
+dependencies = [
+ "cosplay-codec",
+ "cosplay-core-client",
+ "cosplay-protocols-wayland",
+ "cosplay-protocols-xdg-shell",
+ "cosplay-wayland-client",
  "thiserror",
  "tokio",
  "tracing",
@@ -285,6 +300,7 @@ dependencies = [
  "cosplay-protocols-wayland",
  "cosplay-protocols-xdg-shell",
  "cosplay-wayland-client",
+ "cosplay-xdg-shell-client",
  "tokio",
  "tracing",
  "tracing-subscriber",

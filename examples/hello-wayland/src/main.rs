@@ -3,6 +3,7 @@
 use cosplay_core_client::*;
 use cosplay_protocols_xdg_shell::xdg_wm_base::XdgWmBase;
 use cosplay_wayland_client::{compositor::WlCompositorHandle, seat::WlSeatHandle, shared_memory::WlShmHandle};
+use cosplay_xdg_shell_client::XdgWmBaseHandle;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -29,59 +30,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let surface = wl_compositor_handle.create_surface()?;
 
-    let xdg_base_handle = registry_handle.bind_raw::<XdgWmBase>().await?;
+    let xdg_base_handle = registry_handle.bind::<XdgWmBaseHandle>().await?;
+
+    let xdg_surface = xdg_base_handle.get_xdg_surface(surface);
 
     Ok(())
-}
-
-mod xdg_handles {
-    use std::sync::Arc;
-
-    use cosplay_core_client::*;
-    use cosplay_protocols_xdg_shell::{
-        xdg_surface::XdgSurface,
-        xdg_wm_base::{self, Ping, Pong, XdgWmBase, XdgWmBaseEvent},
-    };
-    use cosplay_wayland_client::compositor::{UnassignedRole, WlSurfaceHandle};
-
-    fn init_xdg_wm_base(object_handle: ObjectHandle<XdgWmBase>) {
-        let (request_handle, event_handle) = object_handle.into_split();
-
-        let request_handle = Arc::new(request_handle);
-
-        let ping_pong = run_ping_pong(request_handle, event_handle);
-    }
-
-    pub struct XdgSurfacePlaceholderRole;
-
-    fn get_xdg_surface(
-        request_handle: &Arc<RequestHandle<XdgWmBase>>,
-        surface: WlSurfaceHandle<UnassignedRole>,
-    ) -> Result<(WlSurfaceHandle<XdgSurfacePlaceholderRole>, ObjectHandle<XdgSurface>), RequestError> {
-        let xdg_surface = request_handle.init_subobject(|id| xdg_wm_base::GetXdgSurface { id, surface: surface.id() })?;
-
-        let wayland_surface = surface.with_role();
-
-        Ok((wayland_surface, xdg_surface))
-    }
-
-    async fn run_ping_pong(request_handle: Arc<RequestHandle<XdgWmBase>>, mut event_handle: EventHandle<XdgWmBase>) {
-        while let Some(result) = event_handle.recv().await {
-            match result {
-                Ok(ObjectEvent::Event(XdgWmBaseEvent::Ping(Ping { serial }))) => {
-                    if request_handle.enqueue(Pong { serial }).is_err() {
-                        // TODO: log and break
-                    }
-                }
-                Ok(ObjectEvent::Error { code, message }) => {
-                    // TODO: log error
-                }
-                Err(error) => {
-                    // TODO: log error
-                }
-            }
-        }
-
-        // TODO(log):
-    }
 }

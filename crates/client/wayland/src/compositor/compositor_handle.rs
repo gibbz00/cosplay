@@ -2,7 +2,6 @@ use cosplay_core_client::*;
 use cosplay_protocols_wayland::{
     wl_compositor::{self, WlCompositor},
     wl_region::WlRegion,
-    wl_surface::WlSurface,
 };
 
 use crate::*;
@@ -24,8 +23,11 @@ impl GlobalHandle for WlCompositorHandle {
 
 impl WlCompositorHandle {
     // Wrapper for sending [`wl_compositor::CreateSurface`].
-    pub fn create_surface(&self) -> Result<ObjectHandle<WlSurface>, RequestError> {
-        self.handle.request().init_subobject(|id| wl_compositor::CreateSurface { id })
+    pub fn create_surface(&self) -> Result<WlSurfaceHandle<UnassignedRole>, RequestError> {
+        self.handle
+            .request()
+            .init_subobject(|id| wl_compositor::CreateSurface { id })
+            .map(WlSurfaceHandle::new)
     }
 
     // Wrapper for sending [`wl_compositor::CreateRegion`].

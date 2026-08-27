@@ -29,6 +29,7 @@ cosplay-xml = { path = "./crates/codegen/xml" }
 cosplay-agent = { path = "./crates/agent/common" }
 cosplay-core-client = { path = "./crates/client/core" }
 cosplay-wayland-client = { path = "./crates/client/wayland" }
+cosplay-xdg-shell-client = { path = "./crates/client/xdg-shell" }
 # Protocols
 cosplay-protocols-wayland = { path = "./crates/protocols/wayland" }
 cosplay-protocols-xdg-shell = { path = "./crates/protocols/xdg-shell" }
