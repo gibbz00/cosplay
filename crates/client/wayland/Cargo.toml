@@ -1,24 +1,18 @@
 [package]
-name = "cosplay-core-client"
+name = "cosplay-wayland-client"
 
 edition.workspace = true
 version.workspace = true
 
-[features]
-test-driver = []
-
 [dependencies]
 cosplay-agent.workspace = true
 cosplay-codec.workspace = true
-cosplay-net.workspace = true
-
+cosplay-core-client.workspace = true
 cosplay-protocols-wayland.workspace = true
 
-impl-tools.workspace = true
-sealed.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = ["macros", "sync"] }
+tokio = { workspace = true, features = ["sync"] }
 tracing.workspace = true
 
 [dev-dependencies]
-serial_test.workspace = true
+cosplay-core-client = { workspace = true, features = ["test-driver"] }

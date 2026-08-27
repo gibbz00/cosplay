@@ -43,6 +43,6 @@ where
     I::Message: Message<Interface = I> + EncodeMessage,
 {
     fn drop(&mut self) {
-        let _ = self.request.queue_request(I::message());
+        let _ = self.request.enqueue(I::message());
     }
 }

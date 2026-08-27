@@ -14,8 +14,19 @@ pub struct RequestHandle<I> {
     pub(crate) request_queue_tx: RequestQueueTx,
 }
 
+/// Common request errors.
+#[derive(Debug, thiserror::Error)]
+pub enum RequestError {
+    #[error("Failed to allocate a new object ID. No ID available.")]
+    NoIdAvailable,
+    #[error("Failed to communicate with event mediator.")]
+    MediatorDown,
+    #[error("Request channel dropped.")]
+    RequestQueueDown,
+}
+
 impl<I> RequestHandle<I> {
-    pub fn queue_request<M: Message<Interface = I> + EncodeMessage>(&self, message: M) -> Result<(), RequestError> {
+    pub fn enqueue<M: Message<Interface = I> + EncodeMessage>(&self, message: M) -> Result<(), RequestError> {
         self.request_queue_tx
             .send(OpaqueMessage::from_concrete(self.id, message))
             // IMPROVEMENT: return message object back?
@@ -51,7 +62,7 @@ impl<I> RequestHandle<I> {
             .send(MediatorMessage::Register(new_id, tx))
             .map_err(|_| RequestError::MediatorDown)?;
 
-        self.queue_request(create_request(NewObjectId::new(new_id)))?;
+        self.enqueue(create_request(NewObjectId::new(new_id)))?;
 
         let request_handle = RequestHandle {
             id: ObjectId::new(new_id),

@@ -3,17 +3,17 @@ use std::{marker::PhantomData, sync::Arc};
 use cosplay_agent::object_id_pool::ObjectIdReturner;
 use cosplay_codec::{DecodeMessage, EncodeMessage, Message, ObjectId, OpaqueMessage, OpaqueObjectId};
 
-use crate::*;
+use crate::{event_mediator::MediatorRx, request_queue::RequestQueueRx, *};
 
-pub(crate) struct TestDriver {
-    pub(crate) id_returner: ObjectIdReturner,
-    pub(crate) mediator_rx: MediatorRx,
-    pub(crate) request_queue_rx: RequestQueueRx,
-    pub(crate) inbound_tx: ObjectHandleTx,
+pub struct TestDriver {
+    pub id_returner: ObjectIdReturner,
+    pub mediator_rx: MediatorRx,
+    pub request_queue_rx: RequestQueueRx,
+    pub inbound_tx: ObjectHandleTx,
 }
 
 impl TestDriver {
-    pub(crate) fn new<I>() -> (Self, ObjectHandle<I>) {
+    pub fn new<I>() -> (Self, ObjectHandle<I>) {
         let (id_retriever, id_returner) = cosplay_agent::object_id_pool::create();
 
         let (mediator_tx, mediator_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -39,7 +39,7 @@ impl TestDriver {
         (this, root_handle)
     }
 
-    pub(crate) fn send_event<M: Message + EncodeMessage>(&self, object_id: ObjectId<M::Interface>, message: M) {
+    pub fn send_event<M: Message + EncodeMessage>(&self, object_id: ObjectId<M::Interface>, message: M) {
         let opaque_message = OpaqueMessage::from_concrete(object_id, message);
 
         let channel_message = ObjectHandleMessage::Event(opaque_message);
@@ -47,7 +47,7 @@ impl TestDriver {
         self.inbound_tx.send(channel_message).expect("Object handle channel closed.");
     }
 
-    pub(crate) fn assert_queued_destructor_on_drop<M: Message + DecodeMessage, T>(&mut self, handle_id: ObjectId<M::Interface>, handle: T) {
+    pub fn assert_queued_destructor_on_drop<M: Message + DecodeMessage, T>(&mut self, handle_id: ObjectId<M::Interface>, handle: T) {
         assert!(self.request_queue_rx.is_empty());
 
         drop(handle);
@@ -55,7 +55,7 @@ impl TestDriver {
         self.assert_outbound_request::<M>(handle_id);
     }
 
-    pub(crate) fn assert_outbound_request<M: Message + DecodeMessage>(&mut self, handle_id: ObjectId<M::Interface>) -> M {
+    pub fn assert_outbound_request<M: Message + DecodeMessage>(&mut self, handle_id: ObjectId<M::Interface>) -> M {
         let opaque_request = self.request_queue_rx.try_recv().unwrap();
 
         assert!(opaque_request.matches::<M>(handle_id).is_ok());

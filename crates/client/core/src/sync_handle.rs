@@ -8,7 +8,7 @@ use crate::*;
 
 pub type SyncDoneTx = tokio::sync::oneshot::Sender<wl_callback::Done>;
 
-// TODO: creatable directly from any object handle?
+// TODO: Creatable directly from any object handle?
 /// Pseudo-object handle to internally managed `wl_display` object.
 ///
 /// Special in that it does not have a dedicated destructor, nor a creation

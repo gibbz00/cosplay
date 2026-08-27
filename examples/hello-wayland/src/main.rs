@@ -1,7 +1,8 @@
 //! `cosplay` counterpart of <https://github.com/emersion/hello-wayland>
 
-use cosplay_core_client::handle::{compositor::WlCompositorHandle, seat::WlSeatHandle, shared_memory::WlShmHandle};
+use cosplay_core_client::*;
 use cosplay_protocols_xdg_shell::xdg_wm_base::XdgWmBase;
+use cosplay_wayland_client::{compositor::WlCompositorHandle, seat::WlSeatHandle, shared_memory::WlShmHandle};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -36,17 +37,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 mod xdg_handles {
     use std::sync::Arc;
 
-    use cosplay_core_client::{
-        RequestError,
-        handle::{
-            compositor::{UnassignedRole, WlSurfaceHandle},
-            raw::{EventHandle, ObjectEvent, ObjectHandle, RequestHandle},
-        },
-    };
+    use cosplay_core_client::*;
     use cosplay_protocols_xdg_shell::{
         xdg_surface::XdgSurface,
         xdg_wm_base::{self, Ping, Pong, XdgWmBase, XdgWmBaseEvent},
     };
+    use cosplay_wayland_client::compositor::{UnassignedRole, WlSurfaceHandle};
 
     fn init_xdg_wm_base(object_handle: ObjectHandle<XdgWmBase>) {
         let (request_handle, event_handle) = object_handle.into_split();
@@ -73,7 +69,7 @@ mod xdg_handles {
         while let Some(result) = event_handle.recv().await {
             match result {
                 Ok(ObjectEvent::Event(XdgWmBaseEvent::Ping(Ping { serial }))) => {
-                    if request_handle.queue_request(Pong { serial }).is_err() {
+                    if request_handle.enqueue(Pong { serial }).is_err() {
                         // TODO: log and break
                     }
                 }

@@ -1,4 +1,5 @@
 use cosplay_codec::{EncodeMessage, Message, NewObjectId};
+use cosplay_core_client::*;
 use cosplay_protocols_wayland::{
     wl_keyboard::WlKeyboard,
     wl_seat::{self, WlSeat},
@@ -38,7 +39,7 @@ mod tests {
         let keyboard_handle = WlKeyboardHandle::new(object_handle, capability_broadcast.subscribe());
 
         test_driver.assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_keyboard::Release, _>(
-            keyboard_handle.handle.request.id,
+            keyboard_handle.handle.id(),
             keyboard_handle,
         );
     }

@@ -11,26 +11,33 @@ pub use path::{SocketPath, SocketPathError};
 
 mod request_queue;
 pub use request_queue::RequestQueue;
-#[cfg(test)]
-pub(crate) use request_queue::RequestQueueRx;
 pub(crate) use request_queue::RequestQueueTx;
-
-mod request_error;
-pub use request_error::RequestError;
 
 mod event_mediator;
 pub use event_mediator::EventMediator;
-#[cfg(test)]
-pub(crate) use event_mediator::MediatorRx;
 pub(crate) use event_mediator::{MediatorMessage, MediatorTx};
 
-pub mod handle;
-pub(crate) use handle::*;
+mod request_handle;
+pub use request_handle::{RequestError, RequestHandle};
 
-mod message_utils;
-pub(crate) use message_utils::MessageUtils;
+mod event_handle;
+pub use event_handle::{EventHandle, ObjectEvent, ObjectEventsError, ObjectEventsIter};
 
-#[cfg(test)]
-mod test_utils;
-#[cfg(test)]
-pub(crate) use test_utils::TestDriver;
+mod object_handle;
+pub use object_handle::{ObjectHandle, ObjectHandleMessage};
+pub(crate) use object_handle::{ObjectHandleRx, ObjectHandleTx};
+
+mod scoped_handle;
+pub use scoped_handle::ScopedObjectHandle;
+
+mod sync_handle;
+pub(crate) use sync_handle::SyncDoneTx;
+pub use sync_handle::{SyncError, SyncHandle};
+
+mod registry_handle;
+pub use registry_handle::{GlobalHandle, RegistryHandle};
+
+#[cfg(feature = "test-driver")]
+mod test_driver;
+#[cfg(feature = "test-driver")]
+pub use test_driver::TestDriver;

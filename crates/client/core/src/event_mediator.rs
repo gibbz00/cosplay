@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use cosplay_agent::{misc::WL_DISPLAY_ID, object_id_pool::ObjectIdReturner};
-use cosplay_codec::{Message, OpaqueMessage, OpaqueObjectId, WaylandMessageStream};
+use cosplay_codec::{DecodeMessage, Interface, Message, OpaqueMessage, OpaqueObjectId, WaylandMessageStream};
 use cosplay_net::WaylandUnixStreamReadHalf;
 use cosplay_protocols_wayland::{wl_callback, wl_display};
 
@@ -109,7 +109,7 @@ impl EventMediator {
             && let Some(sync_done_tx) = self.sync_map.remove(&object_id)
         {
             #[allow(clippy::collapsible_if)]
-            if let Some(done_event) = MessageUtils::into_concrete_logged::<wl_callback::Done>(event) {
+            if let Some(done_event) = into_concrete_logged::<wl_callback::Done>(event) {
                 if sync_done_tx.send(done_event).is_err() {
                     tracing::debug!(%object_id, "Receiver closed before wl_callback::Done could be forwarded.")
                 }
@@ -121,7 +121,7 @@ impl EventMediator {
         // Check if `wl_display::delete_id`.
 
         if event.matches::<wl_display::DeleteId>(WL_DISPLAY_ID).is_ok() {
-            if let Some(wl_display::DeleteId { id }) = MessageUtils::into_concrete_logged(event) {
+            if let Some(wl_display::DeleteId { id }) = into_concrete_logged(event) {
                 // We don't want to introduce an ObjectId(0) into the object
                 // pool. One could wish that the protocol could just have used he
                 // correct argument type...
@@ -146,7 +146,7 @@ impl EventMediator {
         // Check if `wl_display::error`.
 
         if event.matches::<wl_display::Error>(WL_DISPLAY_ID).is_ok() {
-            if let Some(wl_display::Error { object_id, code, message }) = MessageUtils::into_concrete_logged(event) {
+            if let Some(wl_display::Error { object_id, code, message }) = into_concrete_logged(event) {
                 match object_id == WL_DISPLAY_ID.as_opaque() {
                     true => {
                         tracing::warn!(code, message, "wl_display received a wl_display::error from server.");
@@ -188,4 +188,26 @@ impl EventMediator {
             tracing::debug!(%object_id, "Unable to return object id; all retrievers dropped.")
         }
     }
+}
+
+fn into_concrete_logged<M: Message + DecodeMessage>(event: OpaqueMessage) -> Option<M>
+where
+    M::Interface: Interface,
+{
+    let object_id = event.object_id();
+    let opcode = event.opcode();
+
+    event
+        .into_concrete::<M>()
+        .inspect_err(|error| {
+            tracing::error!(
+                %object_id,
+                %opcode,
+                interface = <M::Interface as Interface>::NAME,
+                event = M::NAME,
+                %error,
+                "Failed to event into its concrete counterpart."
+            );
+        })
+        .ok()
 }

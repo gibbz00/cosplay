@@ -1,4 +1,5 @@
 use cosplay_codec::Enumeration;
+use cosplay_core_client::*;
 use cosplay_protocols_wayland::wl_seat::{self, Capability, WlSeat, WlSeatEvent};
 
 use crate::*;
@@ -64,13 +65,13 @@ impl WlSeatHandle {
             .map(CapabilityBroadcast::subscribe)
             .ok_or(WlSeatGetInputError::MissingCapability)?;
 
-        let object_handle = self.handle.request.init_subobject(S::request)?;
+        let object_handle = self.handle.request().init_subobject(S::request)?;
 
         Ok(S::new(object_handle, capability_rx))
     }
 
     fn sync_metadata(&mut self) -> Result<(), ObjectEventsError> {
-        let events = self.handle.event.iter().collect::<Vec<_>>();
+        let events = self.handle.event().iter().collect::<Vec<_>>();
 
         for inbound_result in events {
             match inbound_result? {
@@ -176,7 +177,7 @@ mod tests {
 
         let seat_handle = WlSeatHandle::from_raw(object_handle);
 
-        test_driver.assert_queued_destructor_on_drop::<wl_seat::Release, _>(seat_handle.handle.request.id, seat_handle);
+        test_driver.assert_queued_destructor_on_drop::<wl_seat::Release, _>(seat_handle.handle.id(), seat_handle);
     }
 
     #[test]
@@ -218,7 +219,7 @@ mod tests {
 
         let mut seat_handle = WlSeatHandle::from_raw(object_handle);
 
-        let id = seat_handle.handle.request.id;
+        let id = seat_handle.handle.id();
 
         let mut get_device = || seat_handle.get_device_impl::<S, T>();
 
@@ -247,7 +248,7 @@ mod tests {
 
         let mut seat_handle = WlSeatHandle::from_raw(object_handle);
 
-        let id = seat_handle.handle.request.id;
+        let id = seat_handle.handle.id();
 
         assert!(seat_handle.get_device_broadcast().is_none());
 

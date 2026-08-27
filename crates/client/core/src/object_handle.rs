@@ -1,4 +1,4 @@
-use cosplay_codec::OpaqueMessage;
+use cosplay_codec::{ObjectId, OpaqueMessage};
 
 use crate::*;
 
@@ -24,6 +24,18 @@ pub type ObjectHandleTx = tokio::sync::mpsc::UnboundedSender<ObjectHandleMessage
 pub type ObjectHandleRx = tokio::sync::mpsc::UnboundedReceiver<ObjectHandleMessage>;
 
 impl<I> ObjectHandle<I> {
+    pub fn id(&self) -> ObjectId<I> {
+        self.request.id
+    }
+
+    pub fn request(&self) -> &RequestHandle<I> {
+        &self.request
+    }
+
+    pub fn event(&mut self) -> &mut EventHandle<I> {
+        &mut self.event
+    }
+
     pub fn into_split(self) -> (RequestHandle<I>, EventHandle<I>) {
         let Self { request, event } = self;
         (request, event)

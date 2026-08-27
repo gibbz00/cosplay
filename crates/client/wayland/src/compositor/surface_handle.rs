@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use cosplay_codec::ObjectId;
+use cosplay_core_client::*;
 use cosplay_protocols_wayland::wl_surface::WlSurface;
 
 use crate::*;
@@ -25,7 +26,7 @@ impl GlobalHandle for WlSurfaceHandle<UnassignedRole> {
 
 impl<R> WlSurfaceHandle<R> {
     pub fn id(&self) -> ObjectId<WlSurface> {
-        self.handle.request.id
+        self.handle.id()
     }
 }
 
@@ -45,6 +46,6 @@ mod tests {
 
         let handle = WlSurfaceHandle::from_raw(object_handle);
 
-        test_driver.assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_surface::Destroy, _>(handle.handle.request.id, handle);
+        test_driver.assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_surface::Destroy, _>(handle.id(), handle);
     }
 }

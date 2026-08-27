@@ -1,3 +1,4 @@
+use cosplay_core_client::*;
 use cosplay_protocols_wayland::{
     wl_compositor::{self, WlCompositor},
     wl_region::WlRegion,
@@ -24,12 +25,12 @@ impl GlobalHandle for WlCompositorHandle {
 impl WlCompositorHandle {
     // Wrapper for sending [`wl_compositor::CreateSurface`].
     pub fn create_surface(&self) -> Result<ObjectHandle<WlSurface>, RequestError> {
-        self.handle.request.init_subobject(|id| wl_compositor::CreateSurface { id })
+        self.handle.request().init_subobject(|id| wl_compositor::CreateSurface { id })
     }
 
     // Wrapper for sending [`wl_compositor::CreateRegion`].
     pub fn create_region(&self) -> Result<ObjectHandle<WlRegion>, RequestError> {
-        self.handle.request.init_subobject(|id| wl_compositor::CreateRegion { id })
+        self.handle.request().init_subobject(|id| wl_compositor::CreateRegion { id })
     }
 }
 
@@ -43,6 +44,6 @@ mod tests {
 
         let handle = WlCompositorHandle::from_raw(object_handle);
 
-        test_driver.assert_queued_destructor_on_drop::<wl_compositor::Release, _>(handle.handle.request.id, handle);
+        test_driver.assert_queued_destructor_on_drop::<wl_compositor::Release, _>(handle.handle.id(), handle);
     }
 }

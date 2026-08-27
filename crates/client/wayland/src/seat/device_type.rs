@@ -1,4 +1,5 @@
 use cosplay_codec::{EncodeMessage, Message, NewObjectId};
+use cosplay_core_client::ObjectHandle;
 use cosplay_protocols_wayland::wl_seat::WlSeat;
 
 use crate::*;

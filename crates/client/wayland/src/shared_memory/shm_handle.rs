@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use cosplay_codec::{ArgumentDecodeError, Enumeration};
+use cosplay_core_client::*;
 use cosplay_protocols_wayland::wl_shm::{self, PixelFormat, WlShm};
 
 use crate::*;
@@ -54,7 +55,7 @@ impl WlShmHandle {
     /// server and updates the internal set accordingly. The set can then be
     /// inspected with [`Self::supported_formats`].
     pub fn sync_supported_formats(&mut self) -> Result<(), SyncSupportedFormatsError> {
-        for inbound_result in self.handle.event.iter() {
+        for inbound_result in self.handle.event().iter() {
             match inbound_result? {
                 ObjectEvent::Event(event) => match event {
                     wl_shm::WlShmEvent::Format(format) => {
@@ -89,11 +90,8 @@ mod tests {
 
         assert!(shm_handle.supported_formats.is_empty());
 
-        test_driver.send_event(shm_handle.handle.request.id, wl_shm::Format { format: PixelFormat::C8.into() });
-        test_driver.send_event(
-            shm_handle.handle.request.id,
-            wl_shm::Format { format: PixelFormat::Xrgb4444.into() },
-        );
+        test_driver.send_event(shm_handle.handle.id(), wl_shm::Format { format: PixelFormat::C8.into() });
+        test_driver.send_event(shm_handle.handle.id(), wl_shm::Format { format: PixelFormat::Xrgb4444.into() });
 
         shm_handle.sync_supported_formats().unwrap();
 
@@ -107,6 +105,6 @@ mod tests {
 
         let shm_handle = WlShmHandle::from_raw(object_handle);
 
-        test_driver.assert_queued_destructor_on_drop::<wl_shm::Release, _>(shm_handle.handle.request.id, shm_handle);
+        test_driver.assert_queued_destructor_on_drop::<wl_shm::Release, _>(shm_handle.handle.id(), shm_handle);
     }
 }
