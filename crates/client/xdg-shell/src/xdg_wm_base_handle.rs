@@ -48,19 +48,22 @@ impl XdgWmBaseHandle {
         while let Some(result) = event_handle.recv().await {
             match result {
                 Ok(ObjectEvent::Event(XdgWmBaseEvent::Ping(Ping { serial }))) => {
+                    tracing::debug!(serial, "Received ping request. Returning pong.");
+
                     if request_handle.enqueue(Pong { serial }).is_err() {
-                        // TODO: log and break
+                        tracing::info!("Request channel closed. Aborting");
+                        return;
                     }
                 }
                 Ok(ObjectEvent::Error { code, message }) => {
-                    // TODO: log error
+                    tracing::warn!(code, message, "Received unhandled error event.");
                 }
                 Err(error) => {
-                    // TODO: log error
+                    tracing::error!(%error, "Failed to deserialize inbound event.");
                 }
             }
         }
 
-        // TODO(log):
+        tracing::info!("Event channel closed. Aborting.");
     }
 }

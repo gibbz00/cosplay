@@ -34,5 +34,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let xdg_surface = xdg_base_handle.get_xdg_surface(surface);
 
+    loop {
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    }
+
     Ok(())
 }
