@@ -2,10 +2,11 @@ use std::{ffi::c_void, marker::PhantomData};
 
 use cosplay_core_client::{ObjectHandle, RequestError};
 use cosplay_protocols_wayland::{
-    wl_buffer::WlBuffer,
     wl_shm::PixelFormat,
     wl_shm_pool::{self, WlShmPool},
 };
+
+use crate::*;
 
 pub struct Available {
     _priv: (),
@@ -15,7 +16,7 @@ pub struct Reserved {
 }
 
 /// Simple wrapper for a `wl_shm_pool` which covers the simpler and more common
-/// usecases without becoming a full-blown memory allocator.
+/// use-cases without becoming a full-blown memory allocator.
 ///
 /// It does so by only allowing one buffer to be reserved and then returned
 /// at time. Thus avoiding fragmentation handling whilst still supporting mmap
@@ -24,8 +25,10 @@ pub struct Reserved {
 pub struct WlShmPoolHandle<S> {
     state_marker: PhantomData<S>,
     handle: ObjectHandle<WlShmPool>,
+    /// Memory mapped pointer to an in-memory file that has
+    // been sent to the server.
     shm_ptr: *mut c_void,
-    /// Length of `shm_ptr`.
+    /// Original length of memory mapped pointer.
     size: i32,
 }
 
@@ -52,7 +55,7 @@ impl WlShmPoolHandle<Available> {
         width: u16,
         height: u16,
         format: PixelFormat,
-    ) -> Result<(WlShmPoolHandle<Reserved>, ObjectHandle<WlBuffer>), (WlShmPoolHandle<Available>, CreateBufferError)> {
+    ) -> Result<(WlShmPoolHandle<Reserved>, WlBufferHandle), (WlShmPoolHandle<Available>, CreateBufferError)> {
         // i32 used used in the wire protocol but doesn't make
         // sense to be negative from a user's standpoint.
         let height = height as i32;
@@ -78,7 +81,9 @@ impl WlShmPoolHandle<Available> {
 
                 let reserved = WlShmPoolHandle { handle, shm_ptr, size, state_marker: PhantomData };
 
-                Ok((reserved, buffer_handle))
+                let buffer = WlBufferHandle::new(buffer_handle);
+
+                Ok((reserved, buffer))
             }
             Err(err) => Err((self, err.into())),
         }

@@ -1,7 +1,5 @@
 //! `cosplay` counterpart of <https://github.com/emersion/hello-wayland>
 
-use cosplay_core_client::*;
-use cosplay_protocols_xdg_shell::xdg_wm_base::XdgWmBase;
 use cosplay_wayland_client::{compositor::WlCompositorHandle, seat::WlSeatHandle, shared_memory::WlShmHandle};
 use cosplay_xdg_shell_client::XdgWmBaseHandle;
 
@@ -28,15 +26,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let wl_compositor_handle = registry_handle.bind::<WlCompositorHandle>()?;
 
-    let surface = wl_compositor_handle.create_surface()?;
-
     let xdg_base_handle = registry_handle.bind::<XdgWmBaseHandle>()?;
 
-    let xdg_surface = xdg_base_handle.get_xdg_surface(surface);
+    let xdg_surface = xdg_base_handle.create_toplevel(&wl_compositor_handle).await?;
 
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
     }
-
-    Ok(())
 }

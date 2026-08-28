@@ -14,7 +14,8 @@ cosplay-protocols-xdg-shell.workspace = true
 cosplay-wayland-client.workspace = true
 
 thiserror.workspace = true
-tokio = { workspace = true, features = ["sync"] }
+tokio = { workspace = true, features = ["rt"] }
 tracing.workspace = true
+
 [dev-dependencies]
 cosplay-core-client = { workspace = true, features = ["test-driver"] }
