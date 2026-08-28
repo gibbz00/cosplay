@@ -2,8 +2,6 @@ use cosplay_agent::geometry::Rectangle;
 use cosplay_core_client::*;
 use cosplay_protocols_wayland::wl_region::{self, WlRegion};
 
-use crate::*;
-
 /// Handle to a `wl_region` instance.
 ///
 /// Drop implementation queues a [`wl_region::Destroy`] request.

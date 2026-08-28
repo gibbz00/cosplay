@@ -3,14 +3,14 @@
 mod agent_marker;
 pub use agent_marker::{Agent, Client, Server};
 
+pub mod object_id_pool;
+
 pub mod misc {
     use cosplay_codec::*;
     use cosplay_protocols_wayland::wl_display::WlDisplay;
 
     pub const WL_DISPLAY_ID: ObjectId<WlDisplay> = ObjectId::new(OpaqueObjectId::new(1));
 }
-
-pub mod object_id_pool;
 
 pub mod geometry {
     //! Geometric primitives commonly found in protocol messages.
@@ -24,3 +24,6 @@ pub mod geometry {
         pub height: i32,
     }
 }
+
+// TODO(refactor): move to a separate crate?
+pub mod pixel_format;

@@ -190,6 +190,8 @@ dependencies = [
  "cosplay-codec",
  "cosplay-core-client",
  "cosplay-protocols-wayland",
+ "impl-tools",
+ "rustix",
  "sealed",
  "thiserror",
  "tokio",

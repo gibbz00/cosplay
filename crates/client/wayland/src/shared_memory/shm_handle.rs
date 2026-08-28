@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use cosplay_codec::{ArgumentDecodeError, Enumeration};
 use cosplay_core_client::*;
 use cosplay_protocols_wayland::wl_shm::{self, PixelFormat, WlShm};
+use rustix::mm::{MapFlags, ProtFlags};
 
 use crate::*;
 
@@ -74,8 +75,74 @@ impl WlShmHandle {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum WlShmPoolError {
+    #[error("Requested size does not fit into protocol message argument.")]
+    SizeOverflow,
+    #[error("Failed to invoke `memfd_create`: {0}")]
+    FdCreate(std::io::Error),
+    #[error("Unable resize in-memory file with `ftruncate`: {0}")]
+    Resize(std::io::Error),
+    #[error("Failed to invoke `mmap` on in-memory file: {0}")]
+    Mmap(std::io::Error),
+    #[error("Failed to request `wl_shm::create_pool`.")]
+    Request(#[from] RequestError),
+}
+
+impl WlShmHandle {
+    pub fn create_pool(&self, size: u32) -> Result<WlShmPoolHandle<Available>, WlShmPoolError> {
+        // i32 used used in the wire protocol but doesn't make
+        // sense to be negative from a user's standpoint.
+        //
+        // Intentionally done before any syscalls are made.
+        let arg_size = i32::try_from(size).map_err(|_| WlShmPoolError::SizeOverflow)?;
+
+        // Fine to reuse name as file descriptor number is prefixed to final path.
+        const MEMFD_NAME: &str = "cosplay-memfd";
+
+        // Create an in-memory file.
+        let fd = rustix::fs::memfd_create(MEMFD_NAME, rustix::fs::MemfdFlags::CLOEXEC)
+            .map_err(into_io_error)
+            .map_err(WlShmPoolError::FdCreate)?;
+
+        // Size it to the appropriate buffer size.
+        rustix::fs::ftruncate(&fd, size as u64)
+            .map_err(into_io_error)
+            .map_err(WlShmPoolError::FdCreate)?;
+
+        // SAFETY: Passed pointer is null and therefore guaranteed to be aligned.
+        let shm_ptr = unsafe {
+            rustix::mm::mmap(
+                std::ptr::null_mut(),
+                size as usize,
+                ProtFlags::WRITE | ProtFlags::READ,
+                MapFlags::SHARED,
+                &fd,
+                0,
+            )
+        }
+        .map_err(into_io_error)
+        .map_err(WlShmPoolError::Mmap)?;
+
+        let raw_handle = self
+            .handle
+            .request()
+            .init_subobject(|id| wl_shm::CreatePool { id, fd, size: arg_size })?;
+
+        let shm_pool = WlShmPoolHandle::new(shm_ptr, arg_size, raw_handle);
+
+        Ok(shm_pool)
+    }
+}
+
+fn into_io_error(errno: rustix::io::Errno) -> std::io::Error {
+    std::io::Error::from_raw_os_error(errno.raw_os_error())
+}
+
 #[cfg(test)]
 mod tests {
+    use std::assert_matches;
+
     use super::*;
 
     #[test]
@@ -106,5 +173,25 @@ mod tests {
         let shm_handle = WlShmHandle::from_raw(object_handle);
 
         test_driver.assert_queued_destructor_on_drop::<wl_shm::Release, _>(shm_handle.handle.id(), shm_handle);
+    }
+
+    #[test]
+    fn arg_size_overflow() {
+        let (_, object_handle) = TestDriver::new();
+
+        let shm_handle = WlShmHandle::from_raw(object_handle);
+
+        assert_matches!(shm_handle.create_pool(u32::MAX), Err(WlShmPoolError::SizeOverflow));
+    }
+
+    #[test]
+    fn multiple_pools() {
+        let (_driver, object_handle) = TestDriver::new();
+
+        let shm_handle = WlShmHandle::from_raw(object_handle);
+
+        let _pool_result_0 = shm_handle.create_pool(100).unwrap();
+
+        let _pool_result_1 = shm_handle.create_pool(100).unwrap();
     }
 }

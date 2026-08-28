@@ -2,9 +2,7 @@ use std::marker::PhantomData;
 
 use cosplay_codec::ObjectId;
 use cosplay_core_client::*;
-use cosplay_protocols_wayland::wl_surface::WlSurface;
-
-use crate::*;
+use cosplay_protocols_wayland::wl_surface::{self, WlSurface};
 
 /// Handle to a `wl_surface` instance.
 ///
@@ -14,9 +12,17 @@ pub struct WlSurfaceHandle<R> {
     role_marker: PhantomData<R>,
 }
 
+pub struct UnassignedRole {
+    _priv: (),
+}
+
 impl<R> WlSurfaceHandle<R> {
     pub fn id(&self) -> ObjectId<WlSurface> {
         self.handle.id()
+    }
+
+    pub fn commit(&self) -> Result<(), RequestError> {
+        self.handle.request().enqueue(wl_surface::Commit)
     }
 }
 
@@ -25,7 +31,7 @@ impl WlSurfaceHandle<UnassignedRole> {
         Self { handle: handle.into(), role_marker: PhantomData }
     }
 
-    pub fn with_role<R: SurfaceRole<Overridable = OverridableRole>>(self) -> WlSurfaceHandle<R> {
+    pub fn with_role<R>(self) -> WlSurfaceHandle<R> {
         WlSurfaceHandle { handle: self.handle, role_marker: PhantomData }
     }
 }

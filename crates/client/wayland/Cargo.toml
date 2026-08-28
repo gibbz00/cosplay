@@ -10,6 +10,8 @@ cosplay-codec.workspace = true
 cosplay-core-client.workspace = true
 cosplay-protocols-wayland.workspace = true
 
+impl-tools.workspace = true
+rustix = { workspace = true, features = ["fs", "mm"] }
 sealed.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["sync"] }
