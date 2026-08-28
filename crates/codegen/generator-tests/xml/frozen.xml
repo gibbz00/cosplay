@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="example">
+  <interface name="wl_frozen_true" version="1" frozen="true" />
+  <interface name="wl_frozen_false" version="1" />
+</protocol>

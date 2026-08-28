@@ -1,7 +1,7 @@
 use std::{marker::PhantomData, sync::Arc};
 
 use cosplay_agent::object_id_pool::ObjectIdRetriever;
-use cosplay_codec::{EncodeMessage, Message, NewObjectId, ObjectId, OpaqueMessage};
+use cosplay_codec::{EncodeMessage, Interface, Message, NewObjectId, ObjectId, OpaqueMessage};
 
 use crate::*;
 
@@ -33,11 +33,16 @@ impl<I> RequestHandle<I> {
             .map_err(|_| RequestError::RequestQueueDown)
     }
 
-    pub fn init_subobject<M: Message<Interface = I> + EncodeMessage, J>(
+    pub fn init_subobject<M: Message<Interface = I> + EncodeMessage, J: Interface>(
         &self,
         create_request: impl FnOnce(NewObjectId<J>) -> M,
     ) -> Result<ObjectHandle<J>, RequestError> {
-        self.init_subobject_with_version(self.resolved_version, create_request)
+        let subobject_version = match J::FROZEN {
+            true => J::VERSION,
+            false => self.resolved_version,
+        };
+
+        self.init_subobject_with_version(subobject_version, create_request)
     }
 
     pub(crate) fn init_subobject_with_version<M: Message<Interface = I> + EncodeMessage, J>(

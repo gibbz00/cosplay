@@ -5,6 +5,12 @@ pub trait Interface {
 
     /// Defines the version supported supported by the framework.
     const VERSION: u32;
+
+    /// The interface is frozen and forever stuck at version 1.
+    ///
+    /// This attribute should be applied to interfaces that have multiple parent interfaces with
+    /// independent ancestor global interfaces, for example `wl_buffer` and `wl_callback`.
+    const FROZEN: bool;
 }
 
 /// Implemented on types which implement [`Interface`], but which also an

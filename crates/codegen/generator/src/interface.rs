@@ -13,7 +13,7 @@ pub struct InterfaceContext<'a> {
 
 impl InterfaceItem {
     pub fn quote(interface: Interface, ctx: InterfaceContext) -> proc_macro2::TokenStream {
-        let Interface { name, description, requests, events, enums, version, .. } = interface;
+        let Interface { name, description, requests, events, enums, version, frozen } = interface;
 
         let module_name = IdentifierItem::module_name(&name);
 
@@ -21,7 +21,7 @@ impl InterfaceItem {
 
         let ident = IdentifierItem::type_name(&name);
 
-        let trait_impl = Self::trait_impl(&ident, &name, version.as_ref().get());
+        let trait_impl = Self::trait_impl(&ident, &name, version.as_ref().get(), frozen);
 
         let message_ctx = MessageContext {
             interface_name: &name,
@@ -57,12 +57,13 @@ impl InterfaceItem {
         }
     }
 
-    fn trait_impl(ident: &proc_macro2::Ident, name: &Cname, version: u32) -> proc_macro2::TokenStream {
+    fn trait_impl(ident: &proc_macro2::Ident, name: &Cname, version: u32, frozen: bool) -> proc_macro2::TokenStream {
         let name = name.as_ref();
         quote! {
             impl ::cosplay_codec::Interface for #ident {
                 const NAME: &str = #name;
                 const VERSION: u32 = #version;
+                const FROZEN: bool = #frozen;
             }
         }
     }

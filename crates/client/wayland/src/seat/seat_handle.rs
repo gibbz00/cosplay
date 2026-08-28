@@ -1,4 +1,4 @@
-use cosplay_codec::Enumeration;
+use cosplay_codec::{Enumeration, Interface};
 use cosplay_core_client::*;
 use cosplay_protocols_wayland::wl_seat::{self, Capability, WlSeat, WlSeatEvent};
 
@@ -56,6 +56,7 @@ impl WlSeatHandle {
     where
         Self: DeviceBroadcast<T>,
         S: DeviceHandle<Device = T>,
+        S::Inner: Interface,
     {
         self.sync_metadata()?;
 
@@ -214,6 +215,7 @@ mod tests {
     where
         S: std::fmt::Debug + DeviceHandle<Device = T>,
         WlSeatHandle: DeviceBroadcast<T>,
+        S::Inner: Interface,
     {
         let (test_driver, object_handle) = TestDriver::new();
 

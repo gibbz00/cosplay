@@ -50,6 +50,14 @@ mod tests {
     }
 
     #[test]
+    fn interface_frozen() {
+        const {
+            assert!(super::wl_frozen_true::WlFrozenTrue::FROZEN);
+            assert!(!super::wl_frozen_false::WlFrozenFalse::FROZEN);
+        }
+    }
+
+    #[test]
     fn message_name() {
         use super::opcodes::*;
 
