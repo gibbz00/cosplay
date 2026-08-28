@@ -1,22 +1,17 @@
-use std::marker::PhantomData;
-
 use cosplay_codec::ObjectId;
 use cosplay_core_client::*;
 use cosplay_protocols_wayland::wl_surface::{self, WlSurface};
 
 /// Handle to a `wl_surface` instance.
 ///
+/// It is up the the creator of WlSurface to ensure its roles do not change.
+///
 /// Drop implementation queues a [`wl_surface::Destroy`] request.
-pub struct WlSurfaceHandle<R> {
+pub struct WlSurfaceHandle {
     handle: ScopedObjectHandle<WlSurface>,
-    role_marker: PhantomData<R>,
 }
 
-pub struct UnassignedRole {
-    _priv: (),
-}
-
-impl<R> WlSurfaceHandle<R> {
+impl WlSurfaceHandle {
     pub fn id(&self) -> ObjectId<WlSurface> {
         self.handle.id()
     }
@@ -24,15 +19,9 @@ impl<R> WlSurfaceHandle<R> {
     pub fn commit(&self) -> Result<(), RequestError> {
         self.handle.request().enqueue(wl_surface::Commit)
     }
-}
 
-impl WlSurfaceHandle<UnassignedRole> {
     pub(crate) fn new(handle: ObjectHandle<WlSurface>) -> Self {
-        Self { handle: handle.into(), role_marker: PhantomData }
-    }
-
-    pub fn with_role<R>(self) -> WlSurfaceHandle<R> {
-        WlSurfaceHandle { handle: self.handle, role_marker: PhantomData }
+        Self { handle: handle.into() }
     }
 }
 

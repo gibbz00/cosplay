@@ -23,7 +23,7 @@ impl GlobalHandle for WlCompositorHandle {
 
 impl WlCompositorHandle {
     // Wrapper for sending [`wl_compositor::CreateSurface`].
-    pub fn create_surface(&self) -> Result<WlSurfaceHandle<UnassignedRole>, RequestError> {
+    pub fn create_surface(&self) -> Result<WlSurfaceHandle, RequestError> {
         self.handle
             .request()
             .init_subobject(|id| wl_compositor::CreateSurface { id })

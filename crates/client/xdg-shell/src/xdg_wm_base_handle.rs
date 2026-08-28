@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use cosplay_core_client::*;
 use cosplay_protocols_xdg_shell::xdg_wm_base::{self, Ping, Pong, XdgWmBase, XdgWmBaseEvent};
-use cosplay_wayland_client::compositor::{UnassignedRole, WlCompositorHandle, WlSurfaceHandle};
+use cosplay_wayland_client::compositor::WlCompositorHandle;
 
 use crate::*;
 
@@ -57,6 +57,8 @@ impl XdgWmBaseHandle {
     pub async fn create_toplevel(&self, compositor: &WlCompositorHandle) -> Result<XdgToplevelHandle, XdgToplevelError> {
         // Create within the library to prevent users from passing a surface
         // that has a a role or a buffer already attached.
+        //
+        // - "A role must be assigned before any other requests are made to the xdg_surface object."
         let wayland_surface = compositor.create_surface()?;
 
         let xdg_surface = self

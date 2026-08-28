@@ -4,12 +4,10 @@ use cosplay_protocols_xdg_shell::{
     xdg_surface::{AckConfigure, Configure, Error, XdgSurface, XdgSurfaceEvent},
     xdg_toplevel::XdgToplevel,
 };
-use cosplay_wayland_client::compositor::{UnassignedRole, WlSurfaceHandle};
-
-pub struct XdgToplevelSurfaceRole;
+use cosplay_wayland_client::compositor::WlSurfaceHandle;
 
 pub struct XdgToplevelHandle {
-    wayland_surface_handle: WlSurfaceHandle<XdgToplevelSurfaceRole>,
+    wayland_surface_handle: WlSurfaceHandle,
 
     // FIXME: Graceful destructor request; release toplevel before surface.
     // "An xdg_surface must only be destroyed after its role object has been destroyed, otherwise a defunct_role_object error is raised."
@@ -30,14 +28,8 @@ pub enum XdgToplevelError {
 }
 
 impl XdgToplevelHandle {
-    pub(super) async fn new(
-        wayland_surface: WlSurfaceHandle<UnassignedRole>,
-        mut xdg_surface: ObjectHandle<XdgSurface>,
-    ) -> Result<Self, XdgToplevelError> {
+    pub(super) async fn new(wayland_surface: WlSurfaceHandle, mut xdg_surface: ObjectHandle<XdgSurface>) -> Result<Self, XdgToplevelError> {
         // IMPROVEMENT: log and improve error messaging?
-
-        // "A role must be assigned before any other requests are made to the xdg_surface object."
-        let wayland_surface = wayland_surface.with_role();
 
         let toplevel = xdg_surface
             .request()
