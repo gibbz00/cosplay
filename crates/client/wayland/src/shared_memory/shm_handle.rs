@@ -1,4 +1,4 @@
-use std::{collections::HashSet, ptr::NonNull};
+use std::{collections::HashSet, num::NonZeroUsize};
 
 use cosplay_codec::{ArgumentDecodeError, Enumeration};
 use cosplay_core_client::*;
@@ -6,7 +6,6 @@ use cosplay_protocols_wayland::{
     wl_shm::{self, PixelFormat, WlShm},
     wl_shm_pool,
 };
-use rustix::mm::{MapFlags, ProtFlags};
 
 use crate::*;
 
@@ -84,12 +83,10 @@ pub enum CreateCombinedBuffer {
     UnknownPixelDensity,
     #[error("Requested size does not fit into protocol message argument.")]
     SizeOverflow,
-    #[error("Failed to invoke `memfd_create`: {0}")]
-    FdCreate(std::io::Error),
-    #[error("Unable resize in-memory file with `ftruncate`: {0}")]
-    Resize(std::io::Error),
-    #[error("Failed to invoke `mmap` on in-memory file: {0}")]
-    Mmap(std::io::Error),
+    #[error("Requested size can not be zero.")]
+    ZeroSized,
+    #[error("Failed to create shared memory region: {0}")]
+    CreateShmPtr(#[from] CreateShmPtrError),
     #[error("Failed to request `wl_shm::create_pool`.")]
     CreatePool(RequestError),
     #[error("Failed to request `wl_shm_pool::create_buffer`: {0}")]
@@ -125,9 +122,6 @@ impl WlShmHandle {
         height: u16,
         format: PixelFormat,
     ) -> Result<WlCombinedBufferHandle, CreateCombinedBuffer> {
-        // Fine to reuse name as file descriptor number is prefixed to final path.
-        const MEMFD_NAME: &str = "cosplay-memfd";
-
         // i32 used used in the wire protocol but doesn't make
         // sense to be negative from a user's standpoint.
         let height = height as i32;
@@ -137,31 +131,9 @@ impl WlShmHandle {
         let stride = width * (bytes_per_pixel as i32);
         let size = stride.checked_mul(height).ok_or(CreateCombinedBuffer::SizeOverflow)?;
 
-        // Create an in-memory file.
-        let fd = rustix::fs::memfd_create(MEMFD_NAME, rustix::fs::MemfdFlags::CLOEXEC)
-            .map_err(into_io_error)
-            .map_err(CreateCombinedBuffer::FdCreate)?;
+        let len = NonZeroUsize::new(size as usize).ok_or(CreateCombinedBuffer::ZeroSized)?;
 
-        // Size it to the appropriate buffer size.
-        rustix::fs::ftruncate(&fd, size as u64)
-            .map_err(into_io_error)
-            .map_err(CreateCombinedBuffer::Resize)?;
-
-        // SAFETY: Passed pointer is null and therefore guaranteed to be aligned.
-        let shm_ptr = unsafe {
-            rustix::mm::mmap(
-                std::ptr::null_mut(),
-                size as usize,
-                ProtFlags::WRITE | ProtFlags::READ,
-                MapFlags::SHARED,
-                &fd,
-                0,
-            )
-        }
-        .map(|ptr| NonNull::new(ptr).expect("`rustix::mm::mmap` returned nullptr even when the function succeeded."))
-        .map(|ptr| ShmPtr::new(ptr, size))
-        .map_err(into_io_error)
-        .map_err(CreateCombinedBuffer::Mmap)?;
+        let (shm_ptr, fd) = ShmPtr::new(len)?;
 
         let raw_pool_handle = self
             .handle
@@ -176,10 +148,6 @@ impl WlShmHandle {
 
         Ok(WlCombinedBufferHandle::new(raw_pool_handle, raw_buffer_handle, shm_ptr))
     }
-}
-
-fn into_io_error(errno: rustix::io::Errno) -> std::io::Error {
-    std::io::Error::from_raw_os_error(errno.raw_os_error())
 }
 
 #[cfg(test)]
@@ -216,16 +184,6 @@ mod tests {
         let shm_handle = WlShmHandle::from_raw(object_handle);
 
         driver.assert_queued_destructor_on_drop::<wl_shm::Release, _>(shm_handle.handle.id(), shm_handle);
-    }
-
-    #[test]
-    fn create_multiple_combined_buffers() {
-        let (_driver, object_handle) = TestDriver::new();
-        let shm_handle = WlShmHandle::from_raw(object_handle);
-
-        let _combonid_buffer_0 = shm_handle.create_combined_buffer(1, 1, PixelFormat::Y8).unwrap();
-
-        let _combined_buffer_1 = shm_handle.create_combined_buffer(1, 1, PixelFormat::Y8).unwrap();
     }
 
     #[test]

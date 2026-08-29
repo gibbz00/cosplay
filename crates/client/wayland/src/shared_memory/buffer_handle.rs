@@ -32,7 +32,7 @@ impl WlCombinedBufferHandle {
 
 #[cfg(test)]
 mod tests {
-    use std::ptr::NonNull;
+    use std::{num::NonZeroUsize, ptr::NonNull};
 
     use cosplay_core_client::TestDriver;
     use cosplay_protocols_wayland::{
@@ -62,7 +62,9 @@ mod tests {
         let pool_id = wl_shm_pool.id();
         let buffer_id = wl_buffer.id();
 
-        let combined_buffer = WlCombinedBufferHandle::new(wl_shm_pool, wl_buffer, ShmPtr::new(NonNull::dangling(), 0));
+        let (shm_ptr, _fd) = ShmPtr::new(NonZeroUsize::new(1).unwrap()).unwrap();
+
+        let combined_buffer = WlCombinedBufferHandle::new(wl_shm_pool, wl_buffer, shm_ptr);
 
         drop(combined_buffer);
 
