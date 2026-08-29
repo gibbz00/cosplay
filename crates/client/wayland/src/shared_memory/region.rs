@@ -96,9 +96,22 @@ impl ShmRegion {
     }
 }
 
+impl Drop for ShmRegion {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is aligned, exclusively owned, and has a page size of `self.len()`.
+        let munmap_result = unsafe { rustix::mm::munmap(self.ptr, self.len) };
+
+        if let Err(error_number) = munmap_result {
+            tracing::error!(kind = %error_number.kind(), "`rustix::mm::munmap returned an unhandled error.`")
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Read;
+
+    use rustix::mm::MsyncFlags;
 
     use super::*;
 
@@ -135,5 +148,24 @@ mod tests {
         let (mut region, _fd) = ShmRegion::new(len).unwrap();
 
         unsafe { region.write(&[0, 0]) }
+    }
+
+    #[test]
+    fn unmap_on_drop() {
+        let len = NonZeroUsize::new(1).unwrap();
+
+        let (region, _fd) = ShmRegion::new(len).unwrap();
+
+        let ptr = region.ptr;
+        let len = region.len;
+
+        // SAFETY: ptr and length are valid.
+        let msync = || unsafe { rustix::mm::msync(ptr, len, MsyncFlags::empty()) };
+
+        assert!(msync().is_ok());
+
+        drop(region);
+
+        assert!(msync().is_err());
     }
 }
