@@ -208,7 +208,6 @@ dependencies = [
  "cosplay-protocols-xdg-shell",
  "cosplay-wayland-client",
  "thiserror",
- "tokio",
  "tracing",
 ]
 

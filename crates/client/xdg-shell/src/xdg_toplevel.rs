@@ -14,7 +14,6 @@ use crate::*;
 
 pub struct XdgToplevelHandle<S> {
     wayland_surface_handle: WlSurfaceHandle<S>,
-
     // FIXME: Graceful destructor request; release toplevel before surface.
     // "An xdg_surface must only be destroyed after its role object has been destroyed, otherwise a defunct_role_object error is raised."
     xdg_surface_handle: ObjectHandle<XdgSurface>,

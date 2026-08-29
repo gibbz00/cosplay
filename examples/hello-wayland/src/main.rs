@@ -3,7 +3,7 @@
 use cosplay_core_client::{RegistryHandle, SyncHandle};
 use cosplay_protocols_wayland::wl_shm::PixelFormat;
 use cosplay_wayland_client::{compositor::WlCompositorHandle, seat::WlSeatHandle, shared_memory::WlShmHandle};
-use cosplay_xdg_shell_client::XdgWmBaseHandle;
+use cosplay_xdg_shell_client::XdgWmBaseGlobal;
 
 mod cat;
 use cat::CatImage;
@@ -27,7 +27,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Prepare surface.
     let wl_compositor_handle = registry_handle.bind::<WlCompositorHandle>()?;
-    let xdg_base_handle = registry_handle.bind::<XdgWmBaseHandle>()?;
+
+    let (xdg_base_handle, ping_pong_task) = registry_handle.bind::<XdgWmBaseGlobal>()?.into_parts();
+    tokio::spawn(ping_pong_task.run());
+
     let toplevel_surface = xdg_base_handle.create_toplevel(&wl_compositor_handle).await?;
 
     // Display buffer. Dropping the assigned variables causes the corresponding
