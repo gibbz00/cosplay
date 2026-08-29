@@ -9,7 +9,7 @@ use crate::*;
 pub struct WlCombinedBufferHandle {
     pool_handle: ScopedObjectHandle<WlShmPool>,
     buffer_handle: ScopedObjectHandle<WlBuffer>,
-    ptr: ShmPtr,
+    region: ShmRegion,
 }
 
 impl WlCombinedBufferHandle {
@@ -17,22 +17,26 @@ impl WlCombinedBufferHandle {
         self.buffer_handle.id()
     }
 
-    pub(super) fn new(pool_handle: ObjectHandle<WlShmPool>, buffer_handle: ObjectHandle<WlBuffer>, ptr: ShmPtr) -> Self {
+    pub(super) fn new(pool_handle: ObjectHandle<WlShmPool>, buffer_handle: ObjectHandle<WlBuffer>, region: ShmRegion) -> Self {
         Self {
             pool_handle: pool_handle.into(),
             buffer_handle: buffer_handle.into(),
-            ptr,
+            region,
         }
     }
 
-    pub fn size(&self) -> usize {
-        self.ptr.len()
+    pub fn region(&self) -> &ShmRegion {
+        &self.region
+    }
+
+    pub fn region_mut(&mut self) -> &mut ShmRegion {
+        &mut self.region
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{num::NonZeroUsize, ptr::NonNull};
+    use std::num::NonZeroUsize;
 
     use cosplay_core_client::TestDriver;
     use cosplay_protocols_wayland::{
@@ -62,7 +66,7 @@ mod tests {
         let pool_id = wl_shm_pool.id();
         let buffer_id = wl_buffer.id();
 
-        let (shm_ptr, _fd) = ShmPtr::new(NonZeroUsize::new(1).unwrap()).unwrap();
+        let (shm_ptr, _fd) = ShmRegion::new(NonZeroUsize::new(1).unwrap()).unwrap();
 
         let combined_buffer = WlCombinedBufferHandle::new(wl_shm_pool, wl_buffer, shm_ptr);
 

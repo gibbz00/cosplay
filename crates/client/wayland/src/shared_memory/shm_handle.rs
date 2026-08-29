@@ -133,7 +133,7 @@ impl WlShmHandle {
 
         let len = NonZeroUsize::new(size as usize).ok_or(CreateCombinedBuffer::ZeroSized)?;
 
-        let (shm_ptr, fd) = ShmPtr::new(len)?;
+        let (shm_ptr, fd) = ShmRegion::new(len)?;
 
         let raw_pool_handle = self
             .handle
@@ -212,9 +212,9 @@ mod tests {
         let shm_handle = WlShmHandle::from_raw(object_handle);
 
         let buffer = shm_handle.create_combined_buffer(2, 2, PixelFormat::Argb8888).unwrap();
-        assert_eq!(2 * 2 * 4, buffer.size());
+        assert_eq!(2 * 2 * 4, buffer.region().len());
 
         let buffer = shm_handle.create_combined_buffer(2, 2, PixelFormat::Y8).unwrap();
-        assert_eq!(2 * 2, buffer.size());
+        assert_eq!(2 * 2, buffer.region().len());
     }
 }

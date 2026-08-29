@@ -1,6 +1,5 @@
-mod shm_ptr;
-pub use shm_ptr::CreateShmPtrError;
-pub(crate) use shm_ptr::ShmPtr;
+mod region;
+pub use region::{CreateShmPtrError, ShmRegion};
 
 mod shm_handle;
 pub use shm_handle::{SyncSupportedFormatsError, WlShmHandle};
