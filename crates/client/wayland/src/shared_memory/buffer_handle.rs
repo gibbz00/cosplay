@@ -5,7 +5,7 @@ use cosplay_protocols_wayland::{wl_buffer::WlBuffer, wl_shm_pool::WlShmPool};
 use crate::*;
 
 #[derive(Debug)]
-pub struct WlCombinedBufferHandle {
+pub struct ShmBuffer {
     pool_handle: ScopedObjectHandle<WlShmPool>,
     /// Buffer can safely be destroyed before compositor is done with processing the a surface
     /// commit as long as ShmRegion isn't taken and used for something else.
@@ -18,7 +18,7 @@ pub struct WlCombinedBufferHandle {
     region: ShmRegion,
 }
 
-impl WlCombinedBufferHandle {
+impl ShmBuffer {
     pub(crate) fn id(&self) -> ObjectId<WlBuffer> {
         self.buffer_handle.id()
     }
@@ -74,9 +74,9 @@ mod tests {
 
         let (shm_ptr, _fd) = ShmRegion::new(NonZeroUsize::new(1).unwrap()).unwrap();
 
-        let combined_buffer = WlCombinedBufferHandle::new(wl_shm_pool, wl_buffer, shm_ptr);
+        let shm_buffer = ShmBuffer::new(wl_shm_pool, wl_buffer, shm_ptr);
 
-        drop(combined_buffer);
+        drop(shm_buffer);
 
         driver.assert_outbound_request::<CreateBuffer>(pool_id);
         driver.assert_outbound_request::<wl_shm_pool::Destroy>(pool_id);

@@ -52,6 +52,7 @@ impl ShmRegion {
         .map_err(into_io_error)
         .map_err(CreateShmRegionError::Mmap)?;
 
+        // Needed for safety assumptions further down.
         assert!(
             !ptr.is_null(),
             "`rustix::mm::mmap` returned nullptr even when the function succeeded."

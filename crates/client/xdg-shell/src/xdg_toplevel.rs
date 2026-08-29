@@ -7,7 +7,7 @@ use cosplay_protocols_xdg_shell::{
 };
 use cosplay_wayland_client::{
     compositor::{WlCompositorHandle, WlSurfaceHandle},
-    shared_memory::WlCombinedBufferHandle,
+    shared_memory::ShmBuffer,
 };
 
 use crate::*;
@@ -38,7 +38,7 @@ impl XdgToplevelHandle {
         base_handle: &XdgWmBaseHandle,
         compositor_handle: &WlCompositorHandle,
         // TEMP: just for POC
-        buffer: WlCombinedBufferHandle,
+        buffer: ShmBuffer,
     ) -> Result<Self, XdgToplevelError> {
         // IMPROVEMENT: log and improve error messaging?
 

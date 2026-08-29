@@ -86,35 +86,35 @@ pub enum CreateBufferError {
 }
 
 impl WlShmHandle {
-    /// Create a buffer without creating a standalone pool handle. (The wl_shm_pool is held within
-    /// wl_buffer.)
+    /// Create a buffer without creating a standalone pool handle. (The `wl_shm_pool` is held within
+    /// the wrapped `wl_buffer`)
     ///
-    /// This should cover the majority of simpler pooling uses-cases without becoming full-blown
-    /// memory allocators. Thus avoiding fragmentation handling whilst still supporting mmap
-    /// reuse; just reuse the buffer.
+    /// This should cover the majority of simpler pooling uses-cases without turning into the pool a
+    /// full-blown memory allocator. Thus avoiding fragmentation handling whilst still
+    /// supporting mmap reuse; "just" reuse the buffer.
     ///
     /// Additional benefits from both the implementation and user perspective include:
     ///
-    /// - Size changes need not be coordinated between the pool and the buffer.
+    /// - Size changes need not be coordinated between pool and buffer handles.
     ///
     /// - No error handling for trying to take a buffer from a pool with too few bytes remaining.
     ///
     /// - No overhead of managing how buffers are returned to the parent pool.
     ///
     /// - Pool size is often a function of expected pixel format, width, and height. Passing them
-    ///   upfront removes the possibility of sizing error from being returned in
+    ///   upfront removes the possibility of sizing errors from being returned in a
     ///   `wl_shm_pool::create_buffer` .
     ///
-    /// - Pixel format support is communicated to `wl_shm`, but passed as as argument to
-    ///   `wl_shm_pool::create_buffer`. Combining both removes the need sync the supported formats
-    ///   between the handles.
+    /// - Pixel format support is held in `wl_shm`, but passed as as argument to
+    ///   `wl_shm_pool::create_buffer`. Avoiding the intermediary handle removes the need sync
+    ///   supported formats between handles.
     ///
     /// # Pixel Format Support
     ///
-    /// First thing `create_combined_buffer()` does is to check if the requested pixel format exists
+    /// First thing `create_shm_buffer()` does is to check if the requested pixel format exists
     /// in the internal set of supported formats. This set is in turn only populated by calling
     /// [`Self::sync_supported_formats`]. As such, the user is expected to have synced the supported
-    /// formats at startup, or risk receiving [`CreateCombinedBuffer::UnsupportedPixelFormat`]
+    /// formats at startup, or risk receiving [`CreateBufferError::UnsupportedPixelFormat`]
     /// indefinitely.
     ///
     /// ```
@@ -135,17 +135,12 @@ impl WlShmHandle {
     ///     shm_handle.sync_supported_formats()?;
     ///
     ///     // It can now be assumed that `shm_handle` knows about all formats currently supported by the compositor.
-    ///     let _buffer = shm_handle.create_combined_buffer(128, 128, PixelFormat::Argb8888)?;
+    ///     let _buffer = shm_handle.create_shm_buffer(128, 128, PixelFormat::Argb8888)?;
     ///
     ///     Ok(())
     /// }
     /// ````
-    pub fn create_combined_buffer(
-        &self,
-        width: u16,
-        height: u16,
-        format: PixelFormat,
-    ) -> Result<WlCombinedBufferHandle, CreateBufferError> {
+    pub fn create_shm_buffer(&self, width: u16, height: u16, format: PixelFormat) -> Result<ShmBuffer, CreateBufferError> {
         if !self.supported_formats.contains(&format) {
             return Err(CreateBufferError::UnsupportedPixelFormat);
         }
@@ -174,7 +169,7 @@ impl WlShmHandle {
             .init_subobject(|id| wl_shm_pool::CreateBuffer { id, offset: 0, width, height, stride, format: format.into() })
             .map_err(CreateBufferError::CreateBuffer)?;
 
-        Ok(WlCombinedBufferHandle::new(raw_pool_handle, raw_buffer_handle, shm_ptr))
+        Ok(ShmBuffer::new(raw_pool_handle, raw_buffer_handle, shm_ptr))
     }
 }
 
@@ -211,43 +206,43 @@ mod tests {
     }
 
     #[test]
-    fn create_combined_buffer_unknown_format_err() {
+    fn create_buffer_unknown_format_err() {
         let (_driver, shm_handle) = TestDriver::new_global::<WlShmHandle>();
 
-        let error = shm_handle.create_combined_buffer(0, 0, PixelFormat::Argb8888).unwrap_err();
+        let error = shm_handle.create_shm_buffer(0, 0, PixelFormat::Argb8888).unwrap_err();
         assert_matches!(error, CreateBufferError::UnsupportedPixelFormat);
     }
 
     #[test]
-    fn create_combined_buffer_unknown_density_err() {
+    fn create_buffer_unknown_density_err() {
         let (_driver, mut shm_handle) = TestDriver::new_global::<WlShmHandle>();
         shm_handle.supported_formats.insert(PixelFormat::Other(0));
 
-        let error = shm_handle.create_combined_buffer(0, 0, PixelFormat::Other(0)).unwrap_err();
+        let error = shm_handle.create_shm_buffer(0, 0, PixelFormat::Other(0)).unwrap_err();
         assert_matches!(error, CreateBufferError::UnknownPixelDensity);
     }
 
     #[test]
-    fn create_combined_buffer_size_overflow() {
+    fn create_buffer_size_overflow() {
         let (_driver, mut shm_handle) = TestDriver::new_global::<WlShmHandle>();
         shm_handle.supported_formats.insert(PixelFormat::Y8);
 
         assert_matches!(
-            shm_handle.create_combined_buffer(u16::MAX, u16::MAX, PixelFormat::Y8),
+            shm_handle.create_shm_buffer(u16::MAX, u16::MAX, PixelFormat::Y8),
             Err(CreateBufferError::SizeOverflow)
         );
     }
 
     #[test]
-    fn create_combined_buffer_with_stride() {
+    fn create_buffer_with_stride() {
         let (_driver, mut shm_handle) = TestDriver::new_global::<WlShmHandle>();
         shm_handle.supported_formats.insert(PixelFormat::Argb8888);
         shm_handle.supported_formats.insert(PixelFormat::Y8);
 
-        let buffer = shm_handle.create_combined_buffer(2, 2, PixelFormat::Argb8888).unwrap();
+        let buffer = shm_handle.create_shm_buffer(2, 2, PixelFormat::Argb8888).unwrap();
         assert_eq!(2 * 2 * 4, buffer.region().len());
 
-        let buffer = shm_handle.create_combined_buffer(2, 2, PixelFormat::Y8).unwrap();
+        let buffer = shm_handle.create_shm_buffer(2, 2, PixelFormat::Y8).unwrap();
         assert_eq!(2 * 2, buffer.region().len());
     }
 }

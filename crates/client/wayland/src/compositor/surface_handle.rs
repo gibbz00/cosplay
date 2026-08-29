@@ -4,7 +4,7 @@ use cosplay_codec::ObjectId;
 use cosplay_core_client::*;
 use cosplay_protocols_wayland::wl_surface::{self, WlSurface};
 
-use crate::WlCombinedBufferHandle;
+use crate::*;
 
 /// Handle to a `wl_surface` instance.
 ///
@@ -17,8 +17,8 @@ pub struct WlSurfaceHandle {
     ///
     /// "If a pending wl_buffer has been destroyed, the result is not specified... Clients seeking
     /// to maximise compatibility should not destroy pending buffers...
-    pending_buffer: Option<WlCombinedBufferHandle>,
-    applied_buffers: VecDeque<WlCombinedBufferHandle>,
+    pending_buffer: Option<ShmBuffer>,
+    applied_buffers: VecDeque<ShmBuffer>,
 }
 
 impl WlSurfaceHandle {
@@ -27,11 +27,11 @@ impl WlSurfaceHandle {
     }
 
     // FIXME: Return buffer if operation failed? pass &mut and to mem::take?
-    pub fn attach(&mut self, buffer: Option<WlCombinedBufferHandle>) -> Result<(), RequestError> {
+    pub fn attach(&mut self, buffer: Option<ShmBuffer>) -> Result<(), RequestError> {
         self.pending_buffer = buffer;
 
         self.handle.request().enqueue(wl_surface::Attach {
-            buffer: self.pending_buffer.as_ref().map(WlCombinedBufferHandle::id),
+            buffer: self.pending_buffer.as_ref().map(ShmBuffer::id),
             // See official `wl_surface::attach` for why x and y should be set
             // to zero. (Deprecated in favor of wl_surface::offset.)
             x: 0,

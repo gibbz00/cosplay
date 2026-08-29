@@ -5,4 +5,4 @@ mod shm_handle;
 pub use shm_handle::{CreateBufferError, SyncSupportedFormatsError, WlShmHandle};
 
 mod buffer_handle;
-pub use buffer_handle::WlCombinedBufferHandle;
+pub use buffer_handle::ShmBuffer;

@@ -5,7 +5,7 @@ use cosplay_protocols_wayland::wl_shm::PixelFormat;
 use cosplay_wayland_client::{
     compositor::WlCompositorHandle,
     seat::WlSeatHandle,
-    shared_memory::{WlCombinedBufferHandle, WlShmHandle},
+    shared_memory::{ShmBuffer, WlShmHandle},
 };
 use cosplay_xdg_shell_client::XdgWmBaseHandle;
 
@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let shm_handle = create_shm_handle(&mut registry_handle, &sync_handle).await?;
 
-    let buffer = create_buffer(&shm_handle)?;
+    let buffer = create_shm_buffer(&shm_handle)?;
 
     let wl_compositor_handle = registry_handle.bind::<WlCompositorHandle>()?;
 
@@ -54,16 +54,16 @@ async fn create_shm_handle(
     Ok(shm_handle)
 }
 
-fn create_buffer(shm_handle: &WlShmHandle) -> Result<WlCombinedBufferHandle, Box<dyn std::error::Error>> {
-    let mut wl_buffer = shm_handle.create_combined_buffer(CatImage::WIDTH, CatImage::HEIGHT, PixelFormat::Argb8888)?;
+fn create_shm_buffer(shm_handle: &WlShmHandle) -> Result<ShmBuffer, Box<dyn std::error::Error>> {
+    let mut shm_buffer = shm_handle.create_shm_buffer(CatImage::WIDTH, CatImage::HEIGHT, PixelFormat::Argb8888)?;
 
     // SAFETY: Little risk of concurrent access since wl_buffer has yet to be
     // attached to a surface for compositor reads.
     unsafe {
-        wl_buffer.region_mut().write(CatImage::BYTES);
+        shm_buffer.region_mut().write(CatImage::BYTES);
     }
 
-    Ok(wl_buffer)
+    Ok(shm_buffer)
 }
 
 // TODO: for pointer grab functionality
