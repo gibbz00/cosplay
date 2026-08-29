@@ -90,8 +90,6 @@ impl ShmRegion {
         unsafe { std::ptr::copy_nonoverlapping(src_ptr, self.ptr.cast(), src.len()) };
     }
 
-    // Never empty since new requires len of NonZeroUsize.
-    #[expect(clippy::len_without_is_empty)]
     pub(crate) fn len(&self) -> usize {
         self.len
     }

@@ -1,7 +1,7 @@
-use cosplay_codec::{Enumeration, IntoInboundError};
+use cosplay_codec::{Enumeration, IntoInboundError, ReleaseRequest};
 use cosplay_core_client::{ObjectEvent, ObjectHandle, RequestError};
 use cosplay_protocols_xdg_shell::{
-    xdg_surface::{AckConfigure, Configure, Error, XdgSurface, XdgSurfaceEvent},
+    xdg_surface::{AckConfigure, Configure, Error, GetToplevel, XdgSurface, XdgSurfaceEvent},
     xdg_toplevel::XdgToplevel,
     xdg_wm_base::GetXdgSurface,
 };
@@ -14,10 +14,23 @@ use crate::*;
 
 pub struct XdgToplevelHandle<S> {
     wayland_surface_handle: WlSurfaceHandle<S>,
-    // FIXME: Graceful destructor request; release toplevel before surface.
-    // "An xdg_surface must only be destroyed after its role object has been destroyed, otherwise a defunct_role_object error is raised."
-    xdg_surface_handle: ObjectHandle<XdgSurface>,
-    toplevel_handle: ObjectHandle<XdgToplevel>,
+    raw_handles: RawHandles,
+}
+
+// NB: handles not wrapped in `ScopedObjectHandle` for manual
+// destructor request ordering in Drop implementation.
+struct RawHandles {
+    xdg_surface: ObjectHandle<XdgSurface>,
+    toplevel: ObjectHandle<XdgToplevel>,
+}
+
+impl Drop for RawHandles {
+    fn drop(&mut self) {
+        // "An xdg_surface must only be destroyed after its role object has been
+        // destroyed, otherwise a defunct_role_object error is raised."
+        let _ = self.toplevel.request().enqueue(<XdgToplevel as ReleaseRequest>::message());
+        let _ = self.xdg_surface.request().enqueue(<XdgSurface as ReleaseRequest>::message());
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -48,9 +61,7 @@ impl XdgToplevelHandle<Empty> {
             .request_handle
             .init_subobject(|id| GetXdgSurface { id, surface: wayland_surface.id() })?;
 
-        let toplevel = xdg_surface
-            .request()
-            .init_subobject(|id| cosplay_protocols_xdg_shell::xdg_surface::GetToplevel { id })?;
+        let toplevel = xdg_surface.request().init_subobject(|id| GetToplevel { id })?;
 
         // TODO: Intermediary toplevel setup before first commit? (Title, app ID etc.)
 
@@ -83,28 +94,50 @@ impl XdgToplevelHandle<Empty> {
 
         Ok(Self {
             wayland_surface_handle: wayland_surface,
-            xdg_surface_handle: xdg_surface,
-            toplevel_handle: toplevel,
+            raw_handles: RawHandles { xdg_surface, toplevel },
         })
     }
 
     pub fn attach(self, buffer: Option<ShmBuffer<Available>>) -> Result<XdgToplevelHandle<Pending>, RequestError> {
-        let Self { wayland_surface_handle, xdg_surface_handle, toplevel_handle } = self;
+        let Self { wayland_surface_handle, raw_handles: handles } = self;
 
         let wayland_surface_handle = wayland_surface_handle.attach(buffer)?;
 
-        Ok(XdgToplevelHandle { wayland_surface_handle, xdg_surface_handle, toplevel_handle })
+        Ok(XdgToplevelHandle { wayland_surface_handle, raw_handles: handles })
     }
 }
 
 impl XdgToplevelHandle<Pending> {
     pub fn commit(self) -> Result<(XdgToplevelHandle<Empty>, Option<ShmBuffer<Committed>>), RequestError> {
-        let Self { wayland_surface_handle, xdg_surface_handle, toplevel_handle } = self;
+        let Self { wayland_surface_handle, raw_handles: handles } = self;
 
         let (surface, buffer) = wayland_surface_handle.commit()?;
 
-        let this = XdgToplevelHandle { wayland_surface_handle: surface, xdg_surface_handle, toplevel_handle };
+        let this = XdgToplevelHandle { wayland_surface_handle: surface, raw_handles: handles };
 
         Ok((this, buffer))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use cosplay_core_client::TestDriver;
+    use cosplay_protocols_xdg_shell::{xdg_surface, xdg_toplevel};
+
+    use super::*;
+
+    #[test]
+    fn drop_toplevel_then_surface() {
+        let (mut driver, xdg_surface) = TestDriver::new_raw::<XdgSurface>();
+        let toplevel = xdg_surface.request().init_subobject(|id| GetToplevel { id }).unwrap();
+
+        let surface_id = xdg_surface.id();
+        let toplevel_id = toplevel.id();
+
+        drop(RawHandles { xdg_surface, toplevel });
+
+        driver.assert_outbound_request::<GetToplevel>(surface_id);
+        driver.assert_outbound_request::<xdg_toplevel::Destroy>(toplevel_id);
+        driver.assert_outbound_request::<xdg_surface::Destroy>(surface_id);
     }
 }

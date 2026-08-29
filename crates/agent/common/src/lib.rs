@@ -1,3 +1,6 @@
+// TEMP:
+#![allow(missing_docs)]
+
 //! # `cosplay-agent` - Common utilities shared between `cosplay-client` and `cosplay-server`.
 
 mod agent_marker;

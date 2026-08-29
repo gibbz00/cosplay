@@ -20,6 +20,8 @@ impl TestDriver {
 
     pub fn new_raw<I>() -> (Self, ObjectHandle<I>) {
         let (id_retriever, id_returner) = cosplay_agent::object_id_pool::create();
+        // Bump past root id of 1.
+        id_retriever.try_next().unwrap();
 
         let (mediator_tx, mediator_rx) = tokio::sync::mpsc::unbounded_channel();
 
