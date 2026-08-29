@@ -49,7 +49,7 @@ mod tests {
 
     #[test]
     fn destroy_handles_on_drop() {
-        let (mut driver, wl_shm_pool) = TestDriver::new::<WlShmPool>();
+        let (mut driver, wl_shm_pool) = TestDriver::new_raw::<WlShmPool>();
 
         let wl_buffer = wl_shm_pool
             .request()

@@ -47,10 +47,9 @@ mod tests {
 
     #[test]
     fn drop_sends_destroy() {
-        let (mut test_driver, object_handle) = TestDriver::new();
+        let (mut driver, raw_handle) = TestDriver::new_raw();
+        let handle = WlSurfaceHandle::new(raw_handle);
 
-        let handle = WlSurfaceHandle::new(object_handle);
-
-        test_driver.assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_surface::Destroy, _>(handle.id(), handle);
+        driver.assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_surface::Destroy, _>(handle.id(), handle);
     }
 }

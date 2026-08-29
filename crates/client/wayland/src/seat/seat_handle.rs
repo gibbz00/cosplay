@@ -174,9 +174,7 @@ mod tests {
 
     #[test]
     fn drop_sends_release() {
-        let (mut test_driver, object_handle) = TestDriver::new();
-
-        let seat_handle = WlSeatHandle::from_raw(object_handle);
+        let (mut test_driver, seat_handle) = TestDriver::new_global::<WlSeatHandle>();
 
         test_driver.assert_queued_destructor_on_drop::<wl_seat::Release, _>(seat_handle.handle.id(), seat_handle);
     }
@@ -217,9 +215,7 @@ mod tests {
         WlSeatHandle: DeviceBroadcast<T>,
         S::Inner: Interface,
     {
-        let (test_driver, object_handle) = TestDriver::new();
-
-        let mut seat_handle = WlSeatHandle::from_raw(object_handle);
+        let (driver, mut seat_handle) = TestDriver::new_global::<WlSeatHandle>();
 
         let id = seat_handle.handle.id();
 
@@ -227,18 +223,18 @@ mod tests {
 
         assert_matches!(get_device(), Err(WlSeatGetInputError::MissingCapability));
 
-        test_driver.send_event(id, wl_seat::Capabilities { capabilities: missing_capability.into() });
+        driver.send_event(id, wl_seat::Capabilities { capabilities: missing_capability.into() });
 
         assert_matches!(get_device(), Err(WlSeatGetInputError::MissingCapability));
 
-        test_driver.send_event(id, wl_seat::Capabilities { capabilities: contains_capability.into() });
+        driver.send_event(id, wl_seat::Capabilities { capabilities: contains_capability.into() });
 
         // IMPROVEMENT: check that the correct request is being sent
-        assert!(test_driver.request_queue_rx.is_empty());
+        assert!(driver.request_queue_rx.is_empty());
 
         assert!(get_device().is_ok());
 
-        assert!(!test_driver.request_queue_rx.is_empty());
+        assert!(!driver.request_queue_rx.is_empty());
     }
 
     fn removal_sends_broadcast_impl<S, T>(contains_capability: Capability)
@@ -246,15 +242,13 @@ mod tests {
         S: DeviceHandle<Device = T>,
         WlSeatHandle: DeviceBroadcast<T>,
     {
-        let (test_driver, object_handle) = TestDriver::new();
-
-        let mut seat_handle = WlSeatHandle::from_raw(object_handle);
+        let (driver, mut seat_handle) = TestDriver::new_global::<WlSeatHandle>();
 
         let id = seat_handle.handle.id();
 
         assert!(seat_handle.get_device_broadcast().is_none());
 
-        test_driver.send_event(id, wl_seat::Capabilities { capabilities: contains_capability.into() });
+        driver.send_event(id, wl_seat::Capabilities { capabilities: contains_capability.into() });
         seat_handle.sync_metadata().unwrap();
 
         let mut rx = seat_handle.get_device_broadcast().as_ref().unwrap().subscribe();
@@ -262,7 +256,7 @@ mod tests {
         assert!(rx.is_empty());
         assert!(!rx.is_closed());
 
-        test_driver.send_event(id, wl_seat::Capabilities { capabilities: Capability::empty().into() });
+        driver.send_event(id, wl_seat::Capabilities { capabilities: Capability::empty().into() });
         seat_handle.sync_metadata().unwrap();
 
         assert_eq!(PhantomData, rx.try_recv().unwrap());

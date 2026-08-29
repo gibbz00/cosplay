@@ -158,9 +158,7 @@ mod tests {
 
     #[test]
     fn sync_supported_formats() {
-        let (driver, object_handle) = TestDriver::new();
-
-        let mut shm_handle = WlShmHandle::from_raw(object_handle);
+        let (driver, mut shm_handle) = TestDriver::new_global::<WlShmHandle>();
 
         assert!(shm_handle.supported_formats.is_empty());
 
@@ -179,17 +177,14 @@ mod tests {
 
     #[test]
     fn send_release_on_drop() {
-        let (mut driver, object_handle) = TestDriver::new();
-
-        let shm_handle = WlShmHandle::from_raw(object_handle);
+        let (mut driver, shm_handle) = TestDriver::new_global::<WlShmHandle>();
 
         driver.assert_queued_destructor_on_drop::<wl_shm::Release, _>(shm_handle.handle.id(), shm_handle);
     }
 
     #[test]
     fn create_combined_buffer_unknown_density_err() {
-        let (_driver, object_handle) = TestDriver::new();
-        let shm_handle = WlShmHandle::from_raw(object_handle);
+        let (_driver, shm_handle) = TestDriver::new_global::<WlShmHandle>();
 
         let error = shm_handle.create_combined_buffer(0, 0, PixelFormat::Other(0)).unwrap_err();
         assert_matches!(error, CreateCombinedBuffer::UnknownPixelDensity);
@@ -197,8 +192,7 @@ mod tests {
 
     #[test]
     fn create_combined_buffer_size_overflow() {
-        let (_driver, object_handle) = TestDriver::new();
-        let shm_handle = WlShmHandle::from_raw(object_handle);
+        let (_driver, shm_handle) = TestDriver::new_global::<WlShmHandle>();
 
         assert_matches!(
             shm_handle.create_combined_buffer(u16::MAX, u16::MAX, PixelFormat::Y8),
@@ -208,8 +202,7 @@ mod tests {
 
     #[test]
     fn create_combined_buffer_with_stride() {
-        let (_driver, object_handle) = TestDriver::new();
-        let shm_handle = WlShmHandle::from_raw(object_handle);
+        let (_driver, shm_handle) = TestDriver::new_global::<WlShmHandle>();
 
         let buffer = shm_handle.create_combined_buffer(2, 2, PixelFormat::Argb8888).unwrap();
         assert_eq!(2 * 2 * 4, buffer.region().len());

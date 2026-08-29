@@ -34,7 +34,7 @@ mod tests {
     fn drops_sends_release() {
         let capability_broadcast = CapabilityBroadcast::new();
 
-        let (mut test_driver, object_handle) = TestDriver::new();
+        let (mut test_driver, object_handle) = TestDriver::new_raw();
 
         let pointer_handle = WlPointerHandle::new(object_handle, capability_broadcast.subscribe());
 

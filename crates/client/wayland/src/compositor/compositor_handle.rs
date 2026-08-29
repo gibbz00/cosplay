@@ -1,8 +1,5 @@
 use cosplay_core_client::*;
-use cosplay_protocols_wayland::{
-    wl_compositor::{self, WlCompositor},
-    wl_region::WlRegion,
-};
+use cosplay_protocols_wayland::wl_compositor::{self, WlCompositor};
 
 use crate::*;
 
@@ -31,8 +28,11 @@ impl WlCompositorHandle {
     }
 
     // Wrapper for sending [`wl_compositor::CreateRegion`].
-    pub fn create_region(&self) -> Result<ObjectHandle<WlRegion>, RequestError> {
-        self.handle.request().init_subobject(|id| wl_compositor::CreateRegion { id })
+    pub fn create_region(&self) -> Result<WlRegionHandle, RequestError> {
+        self.handle
+            .request()
+            .init_subobject(|id| wl_compositor::CreateRegion { id })
+            .map(WlRegionHandle::new)
     }
 }
 
@@ -42,10 +42,8 @@ mod tests {
 
     #[test]
     fn drop_sends_release() {
-        let (mut test_driver, object_handle) = TestDriver::new();
+        let (mut driver, handle) = TestDriver::new_global::<WlCompositorHandle>();
 
-        let handle = WlCompositorHandle::from_raw(object_handle);
-
-        test_driver.assert_queued_destructor_on_drop::<wl_compositor::Release, _>(handle.handle.id(), handle);
+        driver.assert_queued_destructor_on_drop::<wl_compositor::Release, _>(handle.handle.id(), handle);
     }
 }

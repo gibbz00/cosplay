@@ -13,7 +13,12 @@ pub struct TestDriver {
 }
 
 impl TestDriver {
-    pub fn new<I>() -> (Self, ObjectHandle<I>) {
+    pub fn new_global<H: GlobalHandle>() -> (Self, H) {
+        let (this, raw) = Self::new_raw::<H::Interface>();
+        (this, H::from_raw(raw))
+    }
+
+    pub fn new_raw<I>() -> (Self, ObjectHandle<I>) {
         let (id_retriever, id_returner) = cosplay_agent::object_id_pool::create();
 
         let (mediator_tx, mediator_rx) = tokio::sync::mpsc::unbounded_channel();
