@@ -30,8 +30,10 @@ pub(crate) use object_handle::{ObjectHandleRx, ObjectHandleTx};
 mod scoped_handle;
 pub use scoped_handle::ScopedObjectHandle;
 
+mod callback_handle;
+pub(crate) use callback_handle::CallbackHandle;
+
 mod sync_handle;
-pub(crate) use sync_handle::SyncDoneTx;
 pub use sync_handle::{SyncError, SyncHandle};
 
 mod registry_handle;

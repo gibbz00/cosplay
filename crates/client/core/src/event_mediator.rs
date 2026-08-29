@@ -3,14 +3,13 @@ use std::collections::HashMap;
 use cosplay_agent::{misc::WL_DISPLAY_ID, object_id_pool::ObjectIdReturner};
 use cosplay_codec::{DecodeMessage, Interface, Message, OpaqueMessage, OpaqueObjectId, WaylandMessageStream};
 use cosplay_net::WaylandUnixStreamReadHalf;
-use cosplay_protocols_wayland::{wl_callback, wl_display};
+use cosplay_protocols_wayland::wl_display;
 
 use crate::*;
 
 /// Respective requests should be sent before
 pub enum MediatorMessage {
     Register(OpaqueObjectId, ObjectHandleTx),
-    Sync(OpaqueObjectId, SyncDoneTx),
 }
 
 pub type MediatorTx = tokio::sync::mpsc::UnboundedSender<MediatorMessage>;
@@ -20,7 +19,6 @@ pub struct EventMediator {
     reader: WaylandMessageStream<WaylandUnixStreamReadHalf>,
     mediator_rx: MediatorRx,
     object_map: HashMap<OpaqueObjectId, ObjectHandleTx>,
-    sync_map: HashMap<OpaqueObjectId, SyncDoneTx>,
     id_returner: ObjectIdReturner,
 }
 
@@ -28,13 +26,7 @@ impl EventMediator {
     pub(crate) fn new(reader: WaylandMessageStream<WaylandUnixStreamReadHalf>, id_returner: ObjectIdReturner) -> (MediatorTx, Self) {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
-        let this = Self {
-            reader,
-            mediator_rx: rx,
-            object_map: Default::default(),
-            sync_map: Default::default(),
-            id_returner,
-        };
+        let this = Self { reader, mediator_rx: rx, object_map: Default::default(), id_returner };
 
         (tx, this)
     }
@@ -77,21 +69,12 @@ impl EventMediator {
     }
 
     fn handle_mediator_message(&mut self, message: MediatorMessage) {
-        const UNIQUE_WARNING: &str = "Object identifiers should be unique.";
-
         match message {
             MediatorMessage::Register(object_id, object_handle_tx) => {
                 tracing::debug!(%object_id, "Registering new object handle.");
 
                 if self.object_map.insert(object_id, object_handle_tx).is_some() {
-                    tracing::error!(%object_id, "Object map insertion wrote over previous object transmitter. {UNIQUE_WARNING}");
-                }
-            }
-            MediatorMessage::Sync(object_id, sync_done_tx) => {
-                tracing::debug!(%object_id, "Registering new sync callback.");
-
-                if self.sync_map.insert(object_id, sync_done_tx).is_some() {
-                    tracing::error!(%object_id, "Sync map insertion wrote over previous done transmitter. {UNIQUE_WARNING}");
+                    tracing::error!(%object_id, "Object map insertion wrote over previous object transmitter. Object identifiers should be unique.");
                 }
             }
         }
@@ -102,21 +85,6 @@ impl EventMediator {
         let opcode = event.opcode();
 
         tracing::trace!(%object_id, %opcode, "Handling inbound event.");
-
-        // Check if `wl_callback::done`.
-
-        if opcode == wl_callback::Done::OP_CODE
-            && let Some(sync_done_tx) = self.sync_map.remove(&object_id)
-        {
-            #[allow(clippy::collapsible_if)]
-            if let Some(done_event) = into_concrete_logged::<wl_callback::Done>(event) {
-                if sync_done_tx.send(done_event).is_err() {
-                    tracing::debug!(%object_id, "Receiver closed before wl_callback::Done could be forwarded.")
-                }
-            }
-
-            return;
-        }
 
         // Check if `wl_display::delete_id`.
 
