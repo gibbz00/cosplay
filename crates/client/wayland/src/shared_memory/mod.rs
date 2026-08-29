@@ -1,5 +1,5 @@
 mod region;
-pub use region::{CreateShmPtrError, ShmRegion};
+pub use region::{CreateShmRegionError, ShmRegion};
 
 mod shm_handle;
 pub use shm_handle::{CreateBufferError, SyncSupportedFormatsError, WlShmHandle};

@@ -11,7 +11,7 @@ pub struct ShmRegion {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum CreateShmPtrError {
+pub enum CreateShmRegionError {
     #[error("Failed to invoke `memfd_create`: {0}")]
     FdCreate(std::io::Error),
     #[error("Unable resize in-memory file with `ftruncate`: {0}")]
@@ -21,7 +21,7 @@ pub enum CreateShmPtrError {
 }
 
 impl ShmRegion {
-    pub(crate) fn new(len: NonZeroUsize) -> Result<(Self, OwnedFd), CreateShmPtrError> {
+    pub(crate) fn new(len: NonZeroUsize) -> Result<(Self, OwnedFd), CreateShmRegionError> {
         // `mmap()` will fail if len is zero.
         let len = len.get();
 
@@ -31,12 +31,12 @@ impl ShmRegion {
         // Create an in-memory file.
         let fd = rustix::fs::memfd_create(MEMFD_NAME, rustix::fs::MemfdFlags::CLOEXEC)
             .map_err(into_io_error)
-            .map_err(CreateShmPtrError::FdCreate)?;
+            .map_err(CreateShmRegionError::FdCreate)?;
 
         // Size it to the appropriate buffer size.
         rustix::fs::ftruncate(&fd, len as u64)
             .map_err(into_io_error)
-            .map_err(CreateShmPtrError::Resize)?;
+            .map_err(CreateShmRegionError::Resize)?;
 
         // SAFETY: Passed pointer is null and therefore guaranteed to be aligned.
         let ptr = unsafe {
@@ -50,7 +50,7 @@ impl ShmRegion {
             )
         }
         .map_err(into_io_error)
-        .map_err(CreateShmPtrError::Mmap)?;
+        .map_err(CreateShmRegionError::Mmap)?;
 
         assert!(
             !ptr.is_null(),
@@ -114,6 +114,17 @@ mod tests {
     use rustix::mm::MsyncFlags;
 
     use super::*;
+
+    #[test]
+    fn create_sets_size() {
+        let len = NonZeroUsize::new(1234).unwrap();
+
+        let (_region, fd) = ShmRegion::new(len).unwrap();
+
+        let file_size = std::fs::File::from(fd).metadata().unwrap().len();
+
+        assert_eq!(len.get() as u64, file_size);
+    }
 
     #[test]
     fn create_multiple() {

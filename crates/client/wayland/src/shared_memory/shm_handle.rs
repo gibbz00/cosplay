@@ -78,7 +78,7 @@ pub enum CreateBufferError {
     #[error("Requested size can not be zero.")]
     ZeroSized,
     #[error("Failed to create shared memory region: {0}")]
-    CreateShmPtr(#[from] CreateShmPtrError),
+    CreateShmPtr(#[from] CreateShmRegionError),
     #[error("Failed to request `wl_shm::create_pool`.")]
     CreatePool(RequestError),
     #[error("Failed to request `wl_shm_pool::create_buffer`: {0}")]
