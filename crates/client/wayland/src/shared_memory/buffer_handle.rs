@@ -4,11 +4,17 @@ use cosplay_protocols_wayland::{wl_buffer::WlBuffer, wl_shm_pool::WlShmPool};
 
 use crate::*;
 
-// A `wl_buffer` created by a `WlShmPoolHandle`.
 #[derive(Debug)]
 pub struct WlCombinedBufferHandle {
     pool_handle: ScopedObjectHandle<WlShmPool>,
+    /// Buffer can safely be destroyed before compositor is done with processing the a surface
+    /// commit as long as ShmRegion isn't taken and used for something else.
     buffer_handle: ScopedObjectHandle<WlBuffer>,
+    /// # Safety
+    ///
+    /// Do not, in any circumstance, support taking out the Shm on a committed buffer, before the
+    /// receival of a `wl_buffer::release` event. (See the official wl_surface::attach
+    /// documentation for more.)
     region: ShmRegion,
 }
 

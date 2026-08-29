@@ -42,8 +42,8 @@ impl XdgToplevelHandle {
     ) -> Result<Self, XdgToplevelError> {
         // IMPROVEMENT: log and improve error messaging?
 
-        // Create within the library to prevent users from passing a surface
-        // that has a a role or a buffer already attached.
+        // Encapsulated surface creation in order to prevent users from passing
+        // a surface that has a a role or a buffer already attached.
         //
         // - "A role must be assigned before any other requests are made to the xdg_surface object."
         // - "Creating an xdg_surface from a wl_surface which has a buffer attached or committed is a client
@@ -58,19 +58,20 @@ impl XdgToplevelHandle {
             .request()
             .init_subobject(|id| cosplay_protocols_xdg_shell::xdg_surface::GetToplevel { id })?;
 
-        // TODO: further toplevel setup?
-        //
-        // "After creating a role-specific object and setting it up (e.g. by sending the title, app ID, size
-        // constraints, parent, etc)."
+        // TODO: Intermediary toplevel setup before first commit? (Title, app ID etc.)
 
-        // After creating a role-specific object and setting it up (e.g. by sending the title, app ID, size
-        // constraints, parent, etc), the client must perform an initial commit without any buffer attached.
+        // "After creating a role-specific object and setting it up (e.g. by sending the title, app ID, size
+        // constraints, parent, etc), the client must perform an initial commit without any buffer
+        // attached."
         wayland_surface.commit()?;
 
-        // TODO: listen to events from wl_surface and toplevel configure?
+        // TODO: try_recv events from wl_surface and xdg_toplevel to then apply before the next commit.
         //
-        // The compositor will reply with initial wl_surface state such as wl_surface.preferred_buffer_scale
-        // followed by an xdg_surface.configure event.
+        // - wl_surface.preferred_buffer_scale
+        // - xdg_toplevel::configure
+        // - xdg_toplevel::configure_bounds
+        // - xdg_toplevel::wm_capabilities
+
         match xdg_surface.event().recv().await {
             Some(Ok(ObjectEvent::Event(XdgSurfaceEvent::Configure(Configure { serial })))) => {
                 xdg_surface.request().enqueue(AckConfigure { serial })?;
