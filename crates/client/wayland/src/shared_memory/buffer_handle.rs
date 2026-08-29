@@ -1,42 +1,70 @@
+use std::marker::PhantomData;
+
 use cosplay_codec::ObjectId;
 use cosplay_core_client::{ObjectHandle, ScopedObjectHandle};
 use cosplay_protocols_wayland::{wl_buffer::WlBuffer, wl_shm_pool::WlShmPool};
 
 use crate::*;
 
-#[derive(Debug)]
-pub struct ShmBuffer {
+pub struct Committed {
+    _priv: (),
+}
+
+pub struct Available {
+    _priv: (),
+}
+
+#[impl_tools::autoimpl(Debug)]
+pub struct ShmBuffer<S> {
+    state_marker: PhantomData<S>,
+
     pool_handle: ScopedObjectHandle<WlShmPool>,
     /// Buffer can safely be destroyed before compositor is done with processing the a surface
     /// commit as long as ShmRegion isn't taken and used for something else.
     buffer_handle: ScopedObjectHandle<WlBuffer>,
     /// # Safety
     ///
-    /// Do not, in any circumstance, support taking out the Shm on a committed buffer, before the
-    /// receival of a `wl_buffer::release` event. (See the official wl_surface::attach
-    /// documentation for more.)
+    /// Do not, in any circumstance, support taking out the Shm on a committed buffer,
+    /// before the receival of a `wl_buffer::release` event. (See the official
+    /// `wl_surface::attach` documentation for more.)
     region: ShmRegion,
 }
 
-impl ShmBuffer {
-    pub(crate) fn id(&self) -> ObjectId<WlBuffer> {
-        self.buffer_handle.id()
+impl ShmBuffer<Available> {
+    /// # Panics
+    ///
+    /// Panics if `src.len()` > `self.len()`.
+    pub fn write(&mut self, src: &[u8]) {
+        // SAFETY: Server should only read from buffer if the buffer is committed. This invariant is ensured
+        // by returning said buffer as `Shmbuffer<Committed>` from `WlSurfaceHandle::commit`.
+        unsafe { self.region.write(src) };
     }
 
     pub(super) fn new(pool_handle: ObjectHandle<WlShmPool>, buffer_handle: ObjectHandle<WlBuffer>, region: ShmRegion) -> Self {
         Self {
+            state_marker: PhantomData,
             pool_handle: pool_handle.into(),
             buffer_handle: buffer_handle.into(),
             region,
         }
     }
 
-    pub fn region(&self) -> &ShmRegion {
-        &self.region
+    /// Expected to only be called in [`WlSurfaceHandle::<Pending>::commit`].
+    pub(crate) fn committed(self) -> ShmBuffer<Committed> {
+        let Self { pool_handle, buffer_handle, region, .. } = self;
+        ShmBuffer { state_marker: PhantomData, pool_handle, buffer_handle, region }
+    }
+}
+
+impl<S> ShmBuffer<S> {
+    pub(crate) fn id(&self) -> ObjectId<WlBuffer> {
+        self.buffer_handle.id()
     }
 
-    pub fn region_mut(&mut self) -> &mut ShmRegion {
-        &mut self.region
+    // Never empty since ShmRegion::new requires len of NonZeroUsize.
+    #[expect(clippy::len_without_is_empty)]
+    pub fn len(&self) -> usize {
+        self.region.len()
     }
 }
 

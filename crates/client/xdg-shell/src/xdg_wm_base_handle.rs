@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use cosplay_core_client::*;
 use cosplay_protocols_xdg_shell::xdg_wm_base::{Ping, Pong, XdgWmBase, XdgWmBaseEvent};
-use cosplay_wayland_client::{compositor::WlCompositorHandle, shared_memory::ShmBuffer};
+use cosplay_wayland_client::{
+    compositor::{Empty, WlCompositorHandle},
+    shared_memory::{Available, ShmBuffer},
+};
 
 use crate::*;
 
@@ -54,7 +57,7 @@ impl GlobalHandle for XdgWmBaseHandle {
 }
 
 impl XdgWmBaseHandle {
-    pub async fn create_toplevel(&self, compositor: &WlCompositorHandle, buffer: ShmBuffer) -> Result<XdgToplevelHandle, XdgToplevelError> {
-        XdgToplevelHandle::new(self, compositor, buffer).await
+    pub async fn create_toplevel(&self, compositor: &WlCompositorHandle) -> Result<XdgToplevelHandle<Empty>, XdgToplevelError> {
+        XdgToplevelHandle::new(self, compositor).await
     }
 }

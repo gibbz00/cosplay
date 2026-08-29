@@ -2,11 +2,7 @@
 
 use cosplay_core_client::{RegistryHandle, SyncHandle};
 use cosplay_protocols_wayland::wl_shm::PixelFormat;
-use cosplay_wayland_client::{
-    compositor::WlCompositorHandle,
-    seat::WlSeatHandle,
-    shared_memory::{ShmBuffer, WlShmHandle},
-};
+use cosplay_wayland_client::{compositor::WlCompositorHandle, seat::WlSeatHandle, shared_memory::WlShmHandle};
 use cosplay_xdg_shell_client::XdgWmBaseHandle;
 
 mod cat;
@@ -24,15 +20,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Sync roundtrip to ensure that all globals have been advertised.
     sync_handle.sync().await?;
 
+    // Prepare buffer.
     let shm_handle = create_shm_handle(&mut registry_handle, &sync_handle).await?;
+    let mut buffer = shm_handle.create_shm_buffer(CatImage::WIDTH, CatImage::HEIGHT, PixelFormat::Argb8888)?;
+    buffer.write(CatImage::BYTES);
 
-    let buffer = create_shm_buffer(&shm_handle)?;
-
+    // Prepare surface.
     let wl_compositor_handle = registry_handle.bind::<WlCompositorHandle>()?;
-
     let xdg_base_handle = registry_handle.bind::<XdgWmBaseHandle>()?;
+    let toplevel_surface = xdg_base_handle.create_toplevel(&wl_compositor_handle).await?;
 
-    let xdg_toplevel = xdg_base_handle.create_toplevel(&wl_compositor_handle, buffer).await?;
+    // Display buffer. Dropping the assigned variables causes the corresponding
+    // object destructors to be sent.
+    let (_toplevel_surface, _committed_buffer) = toplevel_surface.attach(Some(buffer))?.commit()?;
 
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
@@ -52,18 +52,6 @@ async fn create_shm_handle(
     shm_handle.sync_supported_formats()?;
 
     Ok(shm_handle)
-}
-
-fn create_shm_buffer(shm_handle: &WlShmHandle) -> Result<ShmBuffer, Box<dyn std::error::Error>> {
-    let mut shm_buffer = shm_handle.create_shm_buffer(CatImage::WIDTH, CatImage::HEIGHT, PixelFormat::Argb8888)?;
-
-    // SAFETY: Little risk of concurrent access since wl_buffer has yet to be
-    // attached to a surface for compositor reads.
-    unsafe {
-        shm_buffer.region_mut().write(CatImage::BYTES);
-    }
-
-    Ok(shm_buffer)
 }
 
 // TODO: for pointer grab functionality

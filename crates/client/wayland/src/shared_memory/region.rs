@@ -74,7 +74,7 @@ impl ShmRegion {
     /// # Safety
     ///
     /// Caller must unsure that the server will not read or write from the memory region.
-    pub unsafe fn write(&mut self, src: &[u8]) {
+    pub(crate) unsafe fn write(&mut self, src: &[u8]) {
         let src_ptr = src.as_ptr();
 
         assert!(src.len() <= self.len());
@@ -92,7 +92,7 @@ impl ShmRegion {
 
     // Never empty since new requires len of NonZeroUsize.
     #[expect(clippy::len_without_is_empty)]
-    pub fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         self.len
     }
 }

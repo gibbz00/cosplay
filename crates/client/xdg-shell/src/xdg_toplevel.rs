@@ -6,14 +6,14 @@ use cosplay_protocols_xdg_shell::{
     xdg_wm_base::GetXdgSurface,
 };
 use cosplay_wayland_client::{
-    compositor::{WlCompositorHandle, WlSurfaceHandle},
-    shared_memory::ShmBuffer,
+    compositor::{Empty, Pending, WlCompositorHandle, WlSurfaceHandle},
+    shared_memory::{Available, Committed, ShmBuffer},
 };
 
 use crate::*;
 
-pub struct XdgToplevelHandle {
-    wayland_surface_handle: WlSurfaceHandle,
+pub struct XdgToplevelHandle<S> {
+    wayland_surface_handle: WlSurfaceHandle<S>,
 
     // FIXME: Graceful destructor request; release toplevel before surface.
     // "An xdg_surface must only be destroyed after its role object has been destroyed, otherwise a defunct_role_object error is raised."
@@ -33,13 +33,8 @@ pub enum XdgToplevelError {
     EventChannelClosed,
 }
 
-impl XdgToplevelHandle {
-    pub(super) async fn new(
-        base_handle: &XdgWmBaseHandle,
-        compositor_handle: &WlCompositorHandle,
-        // TEMP: just for POC
-        buffer: ShmBuffer,
-    ) -> Result<Self, XdgToplevelError> {
+impl XdgToplevelHandle<Empty> {
+    pub(super) async fn new(base_handle: &XdgWmBaseHandle, compositor_handle: &WlCompositorHandle) -> Result<Self, XdgToplevelError> {
         // IMPROVEMENT: log and improve error messaging?
 
         // Encapsulated surface creation in order to prevent users from passing
@@ -48,7 +43,7 @@ impl XdgToplevelHandle {
         // - "A role must be assigned before any other requests are made to the xdg_surface object."
         // - "Creating an xdg_surface from a wl_surface which has a buffer attached or committed is a client
         //   error."
-        let mut wayland_surface = compositor_handle.create_surface()?;
+        let wayland_surface = compositor_handle.create_surface()?;
 
         let mut xdg_surface = base_handle
             .request_handle
@@ -72,6 +67,7 @@ impl XdgToplevelHandle {
         // - xdg_toplevel::configure_bounds
         // - xdg_toplevel::wm_capabilities
 
+        // "The client must acknowledge it and is then allowed to attach a buffer to map the surface."
         match xdg_surface.event().recv().await {
             Some(Ok(ObjectEvent::Event(XdgSurfaceEvent::Configure(Configure { serial })))) => {
                 xdg_surface.request().enqueue(AckConfigure { serial })?;
@@ -86,23 +82,30 @@ impl XdgToplevelHandle {
             }
         }
 
-        // "The client must acknowledge it and is then allowed to attach a buffer to map the surface."
-
-        // TODO: requires for setup or can this be moved out?
-        {
-            wayland_surface.attach(Some(buffer))?;
-
-            // TODO(extra): pass size parameters?
-            // A resizable client would store these [xdg_toplevel::configure args], and resize itself when
-            // receiving the xdg_surface.configure event.
-
-            wayland_surface.commit()?;
-        }
-
         Ok(Self {
             wayland_surface_handle: wayland_surface,
             xdg_surface_handle: xdg_surface,
             toplevel_handle: toplevel,
         })
+    }
+
+    pub fn attach(self, buffer: Option<ShmBuffer<Available>>) -> Result<XdgToplevelHandle<Pending>, RequestError> {
+        let Self { wayland_surface_handle, xdg_surface_handle, toplevel_handle } = self;
+
+        let wayland_surface_handle = wayland_surface_handle.attach(buffer)?;
+
+        Ok(XdgToplevelHandle { wayland_surface_handle, xdg_surface_handle, toplevel_handle })
+    }
+}
+
+impl XdgToplevelHandle<Pending> {
+    pub fn commit(self) -> Result<(XdgToplevelHandle<Empty>, Option<ShmBuffer<Committed>>), RequestError> {
+        let Self { wayland_surface_handle, xdg_surface_handle, toplevel_handle } = self;
+
+        let (surface, buffer) = wayland_surface_handle.commit()?;
+
+        let this = XdgToplevelHandle { wayland_surface_handle: surface, xdg_surface_handle, toplevel_handle };
+
+        Ok((this, buffer))
     }
 }

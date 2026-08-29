@@ -140,7 +140,7 @@ impl WlShmHandle {
     ///     Ok(())
     /// }
     /// ````
-    pub fn create_shm_buffer(&self, width: u16, height: u16, format: PixelFormat) -> Result<ShmBuffer, CreateBufferError> {
+    pub fn create_shm_buffer(&self, width: u16, height: u16, format: PixelFormat) -> Result<ShmBuffer<Available>, CreateBufferError> {
         if !self.supported_formats.contains(&format) {
             return Err(CreateBufferError::UnsupportedPixelFormat);
         }
@@ -240,9 +240,9 @@ mod tests {
         shm_handle.supported_formats.insert(PixelFormat::Y8);
 
         let buffer = shm_handle.create_shm_buffer(2, 2, PixelFormat::Argb8888).unwrap();
-        assert_eq!(2 * 2 * 4, buffer.region().len());
+        assert_eq!(2 * 2 * 4, buffer.len());
 
         let buffer = shm_handle.create_shm_buffer(2, 2, PixelFormat::Y8).unwrap();
-        assert_eq!(2 * 2, buffer.region().len());
+        assert_eq!(2 * 2, buffer.len());
     }
 }

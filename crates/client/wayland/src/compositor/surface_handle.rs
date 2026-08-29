@@ -1,60 +1,78 @@
-use std::collections::VecDeque;
-
 use cosplay_codec::ObjectId;
 use cosplay_core_client::*;
 use cosplay_protocols_wayland::wl_surface::{self, WlSurface};
 
 use crate::*;
 
+pub struct Empty {
+    _priv: (),
+}
+
+pub struct Pending {
+    /// Important to store a handle which is equal to or exceeds the lifetime of
+    /// the buffer in order to avoid a destroy request on drop.
+    ///
+    /// "If a pending wl_buffer has been destroyed, the result is not
+    /// specified... Clients seeking to maximise compatibility should not
+    /// destroy pending buffers..."
+    buffer: Option<ShmBuffer<Available>>,
+}
+
 /// Handle to a `wl_surface` instance.
 ///
 /// It is up the the creator of WlSurface to ensure its roles do not change.
 ///
 /// Drop implementation queues a [`wl_surface::Destroy`] request.
-pub struct WlSurfaceHandle {
+pub struct WlSurfaceHandle<S> {
+    state: S,
+
     handle: ScopedObjectHandle<WlSurface>,
-    /// Important to store a handle which is equal to or exceeds the lifetime of the buffer.
-    ///
-    /// "If a pending wl_buffer has been destroyed, the result is not specified... Clients seeking
-    /// to maximise compatibility should not destroy pending buffers...
-    pending_buffer: Option<ShmBuffer>,
-    applied_buffers: VecDeque<ShmBuffer>,
 }
 
-impl WlSurfaceHandle {
+impl<S> WlSurfaceHandle<S> {
     pub fn id(&self) -> ObjectId<WlSurface> {
         self.handle.id()
     }
+}
 
-    // FIXME: Return buffer if operation failed? pass &mut and to mem::take?
-    pub fn attach(&mut self, buffer: Option<ShmBuffer>) -> Result<(), RequestError> {
-        self.pending_buffer = buffer;
+impl WlSurfaceHandle<Empty> {
+    pub(crate) fn empty(handle: ObjectHandle<WlSurface>) -> Self {
+        Self { state: Empty { _priv: () }, handle: handle.into() }
+    }
 
+    /// Committing an empty surface.
+    ///
+    /// Mostly used as way to trigger a surface initialization procedure (say for an `xdg_surface`).
+    ///
+    /// See [`WlSurfaceHandle:<Pending>::commit`] for the more common commit use-case.
+    pub fn commit(&self) -> Result<(), RequestError> {
+        self.handle.request().enqueue(wl_surface::Commit)
+    }
+
+    // FIXME: Return buffer if operation failed?
+    pub fn attach(self, buffer: Option<ShmBuffer<Available>>) -> Result<WlSurfaceHandle<Pending>, RequestError> {
         self.handle.request().enqueue(wl_surface::Attach {
-            buffer: self.pending_buffer.as_ref().map(ShmBuffer::id),
+            buffer: buffer.as_ref().map(ShmBuffer::id),
             // See official `wl_surface::attach` for why x and y should be set
             // to zero. (Deprecated in favor of wl_surface::offset.)
             x: 0,
             y: 0,
-        })
+        })?;
+
+        Ok(WlSurfaceHandle { state: Pending { buffer }, handle: self.handle })
     }
+}
 
-    /// No-op if there are no pending buffers.
-    pub fn commit(&mut self) -> Result<(), RequestError> {
-        if let Some(pending_buffer) = std::mem::take(&mut self.pending_buffer) {
-            self.handle.request().enqueue(wl_surface::Commit)?;
-            self.applied_buffers.push_back(pending_buffer);
-        }
+impl WlSurfaceHandle<Pending> {
+    // FIXME: Return buffer if operation failed?
+    pub fn commit(self) -> Result<(WlSurfaceHandle<Empty>, Option<ShmBuffer<Committed>>), RequestError> {
+        self.handle.request().enqueue(wl_surface::Commit)?;
 
-        Ok(())
-    }
+        let this = WlSurfaceHandle { state: Empty { _priv: () }, handle: self.handle };
 
-    pub(crate) fn new(handle: ObjectHandle<WlSurface>) -> Self {
-        Self {
-            handle: handle.into(),
-            pending_buffer: None,
-            applied_buffers: VecDeque::new(),
-        }
+        let buffer = self.state.buffer.map(ShmBuffer::committed);
+
+        Ok((this, buffer))
     }
 }
 
@@ -65,7 +83,7 @@ mod tests {
     #[test]
     fn drop_sends_destroy() {
         let (mut driver, raw_handle) = TestDriver::new_raw();
-        let handle = WlSurfaceHandle::new(raw_handle);
+        let handle = WlSurfaceHandle::empty(raw_handle);
 
         driver.assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_surface::Destroy, _>(handle.id(), handle);
     }

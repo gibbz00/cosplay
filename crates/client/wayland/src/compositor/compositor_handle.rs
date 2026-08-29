@@ -20,11 +20,11 @@ impl GlobalHandle for WlCompositorHandle {
 
 impl WlCompositorHandle {
     // Wrapper for sending [`wl_compositor::CreateSurface`].
-    pub fn create_surface(&self) -> Result<WlSurfaceHandle, RequestError> {
+    pub fn create_surface(&self) -> Result<WlSurfaceHandle<Empty>, RequestError> {
         self.handle
             .request()
             .init_subobject(|id| wl_compositor::CreateSurface { id })
-            .map(WlSurfaceHandle::new)
+            .map(WlSurfaceHandle::empty)
     }
 
     // Wrapper for sending [`wl_compositor::CreateRegion`].
