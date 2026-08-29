@@ -1,6 +1,6 @@
 use std::{collections::HashSet, num::NonZeroUsize};
 
-use cosplay_codec::{ArgumentDecodeError, Enumeration};
+use cosplay_codec::Enumeration;
 use cosplay_core_client::*;
 use cosplay_protocols_wayland::{
     wl_shm::{self, PixelFormat, WlShm},
@@ -28,10 +28,6 @@ impl GlobalHandle for WlShmHandle {
 /// Returned from [`WlShmHandle::sync_supported_formats`].
 #[derive(Debug, thiserror::Error)]
 pub enum SyncSupportedFormatsError {
-    #[error("Failed to deserialize wl_shm::Format: {0}")]
-    Deserialize(#[from] ArgumentDecodeError),
-    #[error("Unknown event of opcode '{0}' forwarded to wl_shm.")]
-    UnknownEvent(u16),
     #[error("Unhandled error event forwarded to wl_shm. {code:?}. {message}")]
     UnhandledError { code: wl_shm::Error, message: String },
     #[error("Failed to retrieve object events: {0}")]
@@ -39,13 +35,6 @@ pub enum SyncSupportedFormatsError {
 }
 
 impl WlShmHandle {
-    /// Shorthand for calling [`Self::sync_supported_formats`] and then
-    /// [`Self::get_supported_formats`].
-    pub fn supported_formats(&mut self) -> Result<&HashSet<PixelFormat>, SyncSupportedFormatsError> {
-        self.sync_supported_formats()?;
-        Ok(self.get_supported_formats())
-    }
-
     /// Get the internally buffered set of supported formats as announced by the server.
     ///
     /// Note that the internal buffer may be out of sync with queued inbound events. Most
@@ -56,7 +45,7 @@ impl WlShmHandle {
 
     /// Checks if any new supported pixel formats have been announced by the
     /// server and updates the internal set accordingly. The set can then be
-    /// inspected with [`Self::supported_formats`].
+    /// inspected with [`Self::get_supported_formats`].
     pub fn sync_supported_formats(&mut self) -> Result<(), SyncSupportedFormatsError> {
         for inbound_result in self.handle.event().iter() {
             match inbound_result? {
@@ -66,6 +55,7 @@ impl WlShmHandle {
                         self.supported_formats.insert(format);
                     }
                 },
+                // Should in theory be unreachable as the handle makes sure the invariants are met.
                 ObjectEvent::Error { code, message } => {
                     let code = wl_shm::Error::from_repr(code);
                     return Err(SyncSupportedFormatsError::UnhandledError { code, message });
@@ -78,7 +68,9 @@ impl WlShmHandle {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum CreateCombinedBuffer {
+pub enum CreateBufferError {
+    #[error("Format not processed from a `wl_shm::format` event.")]
+    UnsupportedPixelFormat,
     #[error("Bytes per pixel for format not known.")]
     UnknownPixelDensity,
     #[error("Requested size does not fit into protocol message argument.")]
@@ -116,22 +108,58 @@ impl WlShmHandle {
     /// - Pixel format support is communicated to `wl_shm`, but passed as as argument to
     ///   `wl_shm_pool::create_buffer`. Combining both removes the need sync the supported formats
     ///   between the handles.
+    ///
+    /// # Pixel Format Support
+    ///
+    /// First thing `create_combined_buffer()` does is to check if the requested pixel format exists
+    /// in the internal set of supported formats. This set is in turn only populated by calling
+    /// [`Self::sync_supported_formats`]. As such, the user is expected to have synced the supported
+    /// formats at startup, or risk receiving [`CreateCombinedBuffer::UnsupportedPixelFormat`]
+    /// indefinitely.
+    ///
+    /// ```
+    /// use cosplay_core_client::{RegistryHandle, SyncHandle};
+    /// use cosplay_wayland_client::shared_memory::WlShmHandle;
+    /// use cosplay_protocols_wayland::wl_shm::PixelFormat;
+    ///
+    /// async fn run(
+    ///     registry_handle: &mut RegistryHandle,
+    ///     sync_handle: &SyncHandle,
+    /// ) -> Result<(), Box<dyn std::error::Error>> {
+    ///     let mut shm_handle = registry_handle.bind::<WlShmHandle>()?;
+    ///
+    ///     // Sync roundtrip to ensure that the server has finished its announcement of
+    ///     // all supported pixel formats over `wl_shm::format` events.
+    ///     sync_handle.sync().await?;
+    ///
+    ///     shm_handle.sync_supported_formats()?;
+    ///
+    ///     // It can now be assumed that `shm_handle` knows about all formats currently supported by the compositor.
+    ///     let _buffer = shm_handle.create_combined_buffer(128, 128, PixelFormat::Argb8888)?;
+    ///
+    ///     Ok(())
+    /// }
+    /// ````
     pub fn create_combined_buffer(
         &self,
         width: u16,
         height: u16,
         format: PixelFormat,
-    ) -> Result<WlCombinedBufferHandle, CreateCombinedBuffer> {
+    ) -> Result<WlCombinedBufferHandle, CreateBufferError> {
+        if !self.supported_formats.contains(&format) {
+            return Err(CreateBufferError::UnsupportedPixelFormat);
+        }
+
         // i32 used used in the wire protocol but doesn't make
         // sense to be negative from a user's standpoint.
         let height = height as i32;
         let width = width as i32;
-        let bytes_per_pixel = cosplay_agent::pixel_format::bytes_per_pixel(format).ok_or(CreateCombinedBuffer::UnknownPixelDensity)?;
+        let bytes_per_pixel = cosplay_agent::pixel_format::bytes_per_pixel(format).ok_or(CreateBufferError::UnknownPixelDensity)?;
         // u16 * u8 can't overflow a i32.
         let stride = width * (bytes_per_pixel as i32);
-        let size = stride.checked_mul(height).ok_or(CreateCombinedBuffer::SizeOverflow)?;
+        let size = stride.checked_mul(height).ok_or(CreateBufferError::SizeOverflow)?;
 
-        let len = NonZeroUsize::new(size as usize).ok_or(CreateCombinedBuffer::ZeroSized)?;
+        let len = NonZeroUsize::new(size as usize).ok_or(CreateBufferError::ZeroSized)?;
 
         let (shm_ptr, fd) = ShmRegion::new(len)?;
 
@@ -139,12 +167,12 @@ impl WlShmHandle {
             .handle
             .request()
             .init_subobject(|id| wl_shm::CreatePool { id, fd, size })
-            .map_err(CreateCombinedBuffer::CreatePool)?;
+            .map_err(CreateBufferError::CreatePool)?;
 
         let raw_buffer_handle = raw_pool_handle
             .request()
             .init_subobject(|id| wl_shm_pool::CreateBuffer { id, offset: 0, width, height, stride, format: format.into() })
-            .map_err(CreateCombinedBuffer::CreateBuffer)?;
+            .map_err(CreateBufferError::CreateBuffer)?;
 
         Ok(WlCombinedBufferHandle::new(raw_pool_handle, raw_buffer_handle, shm_ptr))
     }
@@ -183,26 +211,38 @@ mod tests {
     }
 
     #[test]
-    fn create_combined_buffer_unknown_density_err() {
+    fn create_combined_buffer_unknown_format_err() {
         let (_driver, shm_handle) = TestDriver::new_global::<WlShmHandle>();
 
+        let error = shm_handle.create_combined_buffer(0, 0, PixelFormat::Argb8888).unwrap_err();
+        assert_matches!(error, CreateBufferError::UnsupportedPixelFormat);
+    }
+
+    #[test]
+    fn create_combined_buffer_unknown_density_err() {
+        let (_driver, mut shm_handle) = TestDriver::new_global::<WlShmHandle>();
+        shm_handle.supported_formats.insert(PixelFormat::Other(0));
+
         let error = shm_handle.create_combined_buffer(0, 0, PixelFormat::Other(0)).unwrap_err();
-        assert_matches!(error, CreateCombinedBuffer::UnknownPixelDensity);
+        assert_matches!(error, CreateBufferError::UnknownPixelDensity);
     }
 
     #[test]
     fn create_combined_buffer_size_overflow() {
-        let (_driver, shm_handle) = TestDriver::new_global::<WlShmHandle>();
+        let (_driver, mut shm_handle) = TestDriver::new_global::<WlShmHandle>();
+        shm_handle.supported_formats.insert(PixelFormat::Y8);
 
         assert_matches!(
             shm_handle.create_combined_buffer(u16::MAX, u16::MAX, PixelFormat::Y8),
-            Err(CreateCombinedBuffer::SizeOverflow)
+            Err(CreateBufferError::SizeOverflow)
         );
     }
 
     #[test]
     fn create_combined_buffer_with_stride() {
-        let (_driver, shm_handle) = TestDriver::new_global::<WlShmHandle>();
+        let (_driver, mut shm_handle) = TestDriver::new_global::<WlShmHandle>();
+        shm_handle.supported_formats.insert(PixelFormat::Argb8888);
+        shm_handle.supported_formats.insert(PixelFormat::Y8);
 
         let buffer = shm_handle.create_combined_buffer(2, 2, PixelFormat::Argb8888).unwrap();
         assert_eq!(2 * 2 * 4, buffer.region().len());

@@ -21,10 +21,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(request_queue.run());
     tokio::spawn(event_mediator.run());
 
-    // Sync roundtrip to ensure globals advertisement has finished.
+    // Sync roundtrip to ensure that all globals have been advertised.
     sync_handle.sync().await?;
 
-    let buffer = create_buffer(&mut registry_handle)?;
+    let shm_handle = create_shm_handle(&mut registry_handle, &sync_handle).await?;
+
+    let buffer = create_buffer(&shm_handle)?;
 
     let wl_compositor_handle = registry_handle.bind::<WlCompositorHandle>()?;
 
@@ -37,10 +39,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-fn create_buffer(registry_handle: &mut RegistryHandle) -> Result<WlCombinedBufferHandle, Box<dyn std::error::Error>> {
-    let wl_shm_handle = registry_handle.bind::<WlShmHandle>()?;
+async fn create_shm_handle(
+    registry_handle: &mut RegistryHandle,
+    sync_handle: &SyncHandle,
+) -> Result<WlShmHandle, Box<dyn std::error::Error>> {
+    let mut shm_handle = registry_handle.bind::<WlShmHandle>()?;
 
-    let mut wl_buffer = wl_shm_handle.create_combined_buffer(CatImage::WIDTH, CatImage::HEIGHT, PixelFormat::Argb8888)?;
+    // Sync roundtrip to ensure that the server has finished its announcement of
+    // all supported pixel formats over `wl_shm::format` events.
+    sync_handle.sync().await?;
+
+    shm_handle.sync_supported_formats()?;
+
+    Ok(shm_handle)
+}
+
+fn create_buffer(shm_handle: &WlShmHandle) -> Result<WlCombinedBufferHandle, Box<dyn std::error::Error>> {
+    let mut wl_buffer = shm_handle.create_combined_buffer(CatImage::WIDTH, CatImage::HEIGHT, PixelFormat::Argb8888)?;
 
     // SAFETY: Little risk of concurrent access since wl_buffer has yet to be
     // attached to a surface for compositor reads.
@@ -54,6 +69,7 @@ fn create_buffer(registry_handle: &mut RegistryHandle) -> Result<WlCombinedBuffe
 // TODO: for pointer grab functionality
 async fn create_pointer(registry_handle: &mut RegistryHandle, sync_handle: &SyncHandle) -> Result<(), Box<dyn std::error::Error>> {
     let mut wl_seat_handle = registry_handle.bind::<WlSeatHandle>()?;
+
     // Sync roundtrip to ensure seat capability exchange has finished.
     sync_handle.sync().await?;
 
