@@ -52,7 +52,7 @@ impl ShmBuffer<Available> {
         }
     }
 
-    /// Expected to only be called in [`WlSurfaceHandle::<Pending>::commit`].
+    /// Expected to only be called in [`SurfaceHandle::<Pending>::commit`].
     pub(crate) fn committed(self) -> ShmBuffer<Committed> {
         let Self { pool_handle, buffer_handle, region, .. } = self;
         ShmBuffer { state_marker: PhantomData, pool_handle, buffer_handle, region }
@@ -64,7 +64,7 @@ impl ShmBuffer<Available> {
 /// # Safety
 ///
 /// Server should only read from buffer if the buffer is committed. This invariant is ensured by
-/// returning said buffer as `Shmbuffer<Committed>` from `WlSurfaceHandle::commit`.
+/// returning said buffer as `Shmbuffer<Committed>` from `SurfaceHandle::commit`.
 impl ShmBuffer<Available> {
     /// # Panics
     ///

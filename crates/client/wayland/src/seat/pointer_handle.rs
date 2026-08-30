@@ -8,17 +8,17 @@ use cosplay_protocols_wayland::{
 use crate::*;
 
 #[derive(Debug)]
-pub struct WlPointerHandle {
-    object_handle: ScopedObjectHandle<WlPointer>,
+pub struct PointerHandle {
+    inner: ScopedObjectHandle<WlPointer>,
     capability_removed_rx: CapabilityRemovedRx<Pointer>,
 }
 
-impl DeviceHandle for WlPointerHandle {
+impl DeviceHandle for PointerHandle {
     type Device = Pointer;
     type Inner = WlPointer;
 
-    fn new(object_handle: ObjectHandle<Self::Inner>, capability_removed_rx: CapabilityRemovedRx<Pointer>) -> Self {
-        Self { object_handle: object_handle.into(), capability_removed_rx }
+    fn new(handle: ObjectHandle<Self::Inner>, capability_removed_rx: CapabilityRemovedRx<Pointer>) -> Self {
+        Self { inner: handle.into(), capability_removed_rx }
     }
 
     fn request(new_id: NewObjectId<Self::Inner>) -> impl Message<Interface = WlSeat> + EncodeMessage {
@@ -36,10 +36,10 @@ mod tests {
 
         let (mut test_driver, object_handle) = TestDriver::new_raw();
 
-        let pointer_handle = WlPointerHandle::new(object_handle, capability_broadcast.subscribe());
+        let pointer_handle = PointerHandle::new(object_handle, capability_broadcast.subscribe());
 
         test_driver.assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_pointer::Release, _>(
-            pointer_handle.object_handle.id(),
+            pointer_handle.inner.id(),
             pointer_handle,
         );
     }

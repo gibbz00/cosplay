@@ -24,30 +24,29 @@ pub struct Pending {
 /// It is up the the creator of WlSurface to ensure its roles do not change.
 ///
 /// Drop implementation queues a [`wl_surface::Destroy`] request.
-pub struct WlSurfaceHandle<S> {
+pub struct SurfaceHandle<S> {
     state: S,
-
-    handle: ScopedObjectHandle<WlSurface>,
+    inner: ScopedObjectHandle<WlSurface>,
 }
 
-impl<S> WlSurfaceHandle<S> {
+impl<S> SurfaceHandle<S> {
     pub fn id(&self) -> ObjectId<WlSurface> {
-        self.handle.id()
+        self.inner.id()
     }
 
     pub fn callback_frame(&self) -> Result<CallbackHandle, RequestError> {
-        self.handle.request().init_callback(|id| wl_surface::Frame { callback: id })
+        self.inner.request().init_callback(|id| wl_surface::Frame { callback: id })
     }
 }
 
-impl WlSurfaceHandle<Empty> {
+impl SurfaceHandle<Empty> {
     pub(crate) fn empty(handle: ObjectHandle<WlSurface>) -> Self {
-        Self { state: Empty { _priv: () }, handle: handle.into() }
+        Self { state: Empty { _priv: () }, inner: handle.into() }
     }
 
     // FIXME: Return buffer if operation failed?
-    pub fn attach(self, buffer: Option<ShmBuffer<Available>>) -> Result<WlSurfaceHandle<Pending>, RequestError> {
-        self.handle.request().enqueue(wl_surface::Attach {
+    pub fn attach(self, buffer: Option<ShmBuffer<Available>>) -> Result<SurfaceHandle<Pending>, RequestError> {
+        self.inner.request().enqueue(wl_surface::Attach {
             buffer: buffer.as_ref().map(ShmBuffer::id),
             // See official `wl_surface::attach` for why x and y should be set
             // to zero. (Deprecated in favor of wl_surface::offset.)
@@ -55,25 +54,25 @@ impl WlSurfaceHandle<Empty> {
             y: 0,
         })?;
 
-        Ok(WlSurfaceHandle { state: Pending { buffer }, handle: self.handle })
+        Ok(SurfaceHandle { state: Pending { buffer }, inner: self.inner })
     }
 
     /// Committing an empty surface.
     ///
     /// Mostly used as way to trigger a surface initialization procedure (say for an `xdg_surface`).
     ///
-    /// See [`WlSurfaceHandle:<Pending>::commit`] for the more common commit use-case.
+    /// See [`SurfaceHandle:<Pending>::commit`] for the more common commit use-case.
     pub fn commit(&self) -> Result<(), RequestError> {
-        self.handle.request().enqueue(wl_surface::Commit)
+        self.inner.request().enqueue(wl_surface::Commit)
     }
 }
 
-impl WlSurfaceHandle<Pending> {
+impl SurfaceHandle<Pending> {
     // FIXME: Return buffer if operation failed?
-    pub fn commit(self) -> Result<(WlSurfaceHandle<Empty>, Option<ShmBuffer<Committed>>), RequestError> {
-        self.handle.request().enqueue(wl_surface::Commit)?;
+    pub fn commit(self) -> Result<(SurfaceHandle<Empty>, Option<ShmBuffer<Committed>>), RequestError> {
+        self.inner.request().enqueue(wl_surface::Commit)?;
 
-        let this = WlSurfaceHandle { state: Empty { _priv: () }, handle: self.handle };
+        let this = SurfaceHandle { state: Empty { _priv: () }, inner: self.inner };
 
         let buffer = self.state.buffer.map(ShmBuffer::committed);
 
@@ -84,7 +83,7 @@ impl WlSurfaceHandle<Pending> {
         // FIXME: What happens if coordinates are out of bounds?
         let Rectangle { x, y, width, height } = rectangle;
 
-        self.handle
+        self.inner
             .request()
             .enqueue(wl_surface::DamageBuffer { x, y, width: width as i32, height: height as i32 })
     }
@@ -97,8 +96,8 @@ mod tests {
     #[test]
     fn drop_sends_destroy() {
         let (mut driver, raw_handle) = TestDriver::new_raw();
-        let handle = WlSurfaceHandle::empty(raw_handle);
+        let surface_handle = SurfaceHandle::empty(raw_handle);
 
-        driver.assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_surface::Destroy, _>(handle.id(), handle);
+        driver.assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_surface::Destroy, _>(surface_handle.id(), surface_handle);
     }
 }

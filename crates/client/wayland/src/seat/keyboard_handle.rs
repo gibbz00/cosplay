@@ -8,17 +8,17 @@ use cosplay_protocols_wayland::{
 use crate::*;
 
 #[derive(Debug)]
-pub struct WlKeyboardHandle {
-    handle: ScopedObjectHandle<WlKeyboard>,
+pub struct KeyboardHandle {
+    inner: ScopedObjectHandle<WlKeyboard>,
     capability_removed_rx: CapabilityRemovedRx<Keyboard>,
 }
 
-impl DeviceHandle for WlKeyboardHandle {
+impl DeviceHandle for KeyboardHandle {
     type Device = Keyboard;
     type Inner = WlKeyboard;
 
     fn new(handle: ObjectHandle<Self::Inner>, capability_removed_rx: CapabilityRemovedRx<Keyboard>) -> Self {
-        Self { handle: handle.into(), capability_removed_rx }
+        Self { inner: handle.into(), capability_removed_rx }
     }
 
     fn request(new_id: NewObjectId<Self::Inner>) -> impl Message<Interface = WlSeat> + EncodeMessage {
@@ -36,10 +36,10 @@ mod tests {
 
         let (mut test_driver, object_handle) = TestDriver::new_raw();
 
-        let keyboard_handle = WlKeyboardHandle::new(object_handle, capability_broadcast.subscribe());
+        let keyboard_handle = KeyboardHandle::new(object_handle, capability_broadcast.subscribe());
 
         test_driver.assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_keyboard::Release, _>(
-            keyboard_handle.handle.id(),
+            keyboard_handle.inner.id(),
             keyboard_handle,
         );
     }

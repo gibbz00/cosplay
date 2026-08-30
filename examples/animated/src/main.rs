@@ -4,10 +4,10 @@ use cosplay_agent::geometry::Rectangle;
 use cosplay_core_client::{RegistryHandle, SyncHandle};
 use cosplay_protocols_wayland::wl_shm::PixelFormat;
 use cosplay_wayland_client::{
-    compositor::{Empty, WlCompositorHandle},
-    shared_memory::{Available, ShmBuffer, WlShmHandle},
+    compositor::{CompositorHandle, Empty},
+    shared_memory::{Available, ShmBuffer, ShmHandle},
 };
-use cosplay_xdg_shell_client::{XdgToplevelHandle, XdgWmBaseGlobal};
+use cosplay_xdg_shell_client::{ToplevelHandle, XdgWmBaseGlobal};
 
 const HEIGHT: u16 = u8::MAX as u16;
 const WIDTH: u16 = u8::MAX as u16;
@@ -32,10 +32,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     sync_handle.sync().await?;
 
     // Prepare surface.
-    let wl_compositor_handle = registry_handle.bind::<WlCompositorHandle>()?;
-    let (xdg_base_handle, ping_pong_task) = registry_handle.bind::<XdgWmBaseGlobal>()?.into_parts();
+    let compositor_handle = registry_handle.bind::<CompositorHandle>()?;
+    let (wm_base_handle, ping_pong_task) = registry_handle.bind::<XdgWmBaseGlobal>()?.into_parts();
     tokio::spawn(ping_pong_task.run());
-    let toplevel_surface = xdg_base_handle.create_toplevel(&wl_compositor_handle).await?;
+    let toplevel_surface = wm_base_handle.create_toplevel(&compositor_handle).await?;
 
     // Prepare buffer.
     let shm_handle = create_shm_handle(&mut registry_handle, &sync_handle).await?;
@@ -47,8 +47,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn create_shm_handle(
     registry_handle: &mut RegistryHandle,
     sync_handle: &SyncHandle,
-) -> Result<WlShmHandle, Box<dyn std::error::Error>> {
-    let mut shm_handle = registry_handle.bind::<WlShmHandle>()?;
+) -> Result<ShmHandle, Box<dyn std::error::Error>> {
+    let mut shm_handle = registry_handle.bind::<ShmHandle>()?;
 
     // Sync roundtrip to ensure that the server has finished its announcement of
     // all supported pixel formats over `wl_shm::format` events.
@@ -59,7 +59,7 @@ async fn create_shm_handle(
     Ok(shm_handle)
 }
 
-async fn animate(mut surface: XdgToplevelHandle<Empty>, mut buffer: ShmBuffer<Available>) -> Result<(), Box<dyn std::error::Error>> {
+async fn animate(mut surface: ToplevelHandle<Empty>, mut buffer: ShmBuffer<Available>) -> Result<(), Box<dyn std::error::Error>> {
     let mut timestamp = 0;
 
     loop {

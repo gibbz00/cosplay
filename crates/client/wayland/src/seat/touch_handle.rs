@@ -8,17 +8,17 @@ use cosplay_protocols_wayland::{
 use crate::*;
 
 #[derive(Debug)]
-pub struct WlTouchHandle {
-    object_handle: ScopedObjectHandle<WlTouch>,
+pub struct TouchHandle {
+    inner: ScopedObjectHandle<WlTouch>,
     capability_removed_rx: CapabilityRemovedRx<Touch>,
 }
 
-impl DeviceHandle for WlTouchHandle {
+impl DeviceHandle for TouchHandle {
     type Device = Touch;
     type Inner = WlTouch;
 
-    fn new(object_handle: ObjectHandle<Self::Inner>, capability_removed_rx: CapabilityRemovedRx<Touch>) -> Self {
-        Self { object_handle: object_handle.into(), capability_removed_rx }
+    fn new(handle: ObjectHandle<Self::Inner>, capability_removed_rx: CapabilityRemovedRx<Touch>) -> Self {
+        Self { inner: handle.into(), capability_removed_rx }
     }
 
     fn request(new_id: NewObjectId<Self::Inner>) -> impl Message<Interface = WlSeat> + EncodeMessage {
@@ -36,8 +36,8 @@ mod tests {
 
         let (mut test_driver, object_handle) = TestDriver::new_raw();
 
-        let handle = WlTouchHandle::new(object_handle, capability_broadcast.subscribe());
+        let handle = TouchHandle::new(object_handle, capability_broadcast.subscribe());
 
-        test_driver.assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_touch::Release, _>(handle.object_handle.id(), handle);
+        test_driver.assert_queued_destructor_on_drop::<cosplay_protocols_wayland::wl_touch::Release, _>(handle.inner.id(), handle);
     }
 }

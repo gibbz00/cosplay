@@ -6,19 +6,19 @@ use cosplay_protocols_xdg_shell::{
     xdg_wm_base::GetXdgSurface,
 };
 use cosplay_wayland_client::{
-    compositor::{Empty, Pending, WlCompositorHandle, WlSurfaceHandle},
+    compositor::{CompositorHandle, Empty, Pending, SurfaceHandle},
     shared_memory::{Available, Committed, ShmBuffer},
 };
 
 use crate::*;
 
-pub struct XdgToplevelHandle<S> {
-    wayland_surface_handle: WlSurfaceHandle<S>,
+pub struct ToplevelHandle<S> {
+    wayland_surface_handle: SurfaceHandle<S>,
     raw_handles: RawHandles,
 }
 
-impl<S> AsRef<WlSurfaceHandle<S>> for XdgToplevelHandle<S> {
-    fn as_ref(&self) -> &WlSurfaceHandle<S> {
+impl<S> AsRef<SurfaceHandle<S>> for ToplevelHandle<S> {
+    fn as_ref(&self) -> &SurfaceHandle<S> {
         &self.wayland_surface_handle
     }
 }
@@ -40,15 +40,15 @@ impl Drop for RawHandles {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum XdgToplevelError {
+pub enum ToplevelError {
     #[error("Failed to encqueue request.")]
     Request(#[from] RequestError),
     #[error("Failed to receive inbound event: {0}")]
     Event(#[from] ObjectEventsError),
 }
 
-impl XdgToplevelHandle<Empty> {
-    pub(super) async fn new(base_handle: &XdgWmBaseHandle, compositor_handle: &WlCompositorHandle) -> Result<Self, XdgToplevelError> {
+impl ToplevelHandle<Empty> {
+    pub(super) async fn new(base_handle: &WmBaseHandle, compositor_handle: &CompositorHandle) -> Result<Self, ToplevelError> {
         // IMPROVEMENT: log and improve error messaging?
 
         // Encapsulated surface creation in order to prevent users from passing
@@ -92,22 +92,22 @@ impl XdgToplevelHandle<Empty> {
         })
     }
 
-    pub fn attach(self, buffer: Option<ShmBuffer<Available>>) -> Result<XdgToplevelHandle<Pending>, RequestError> {
+    pub fn attach(self, buffer: Option<ShmBuffer<Available>>) -> Result<ToplevelHandle<Pending>, RequestError> {
         let Self { wayland_surface_handle, raw_handles: handles } = self;
 
         let wayland_surface_handle = wayland_surface_handle.attach(buffer)?;
 
-        Ok(XdgToplevelHandle { wayland_surface_handle, raw_handles: handles })
+        Ok(ToplevelHandle { wayland_surface_handle, raw_handles: handles })
     }
 }
 
-impl XdgToplevelHandle<Pending> {
-    pub fn commit(self) -> Result<(XdgToplevelHandle<Empty>, Option<ShmBuffer<Committed>>), RequestError> {
+impl ToplevelHandle<Pending> {
+    pub fn commit(self) -> Result<(ToplevelHandle<Empty>, Option<ShmBuffer<Committed>>), RequestError> {
         let Self { wayland_surface_handle, raw_handles: handles } = self;
 
         let (surface, buffer) = wayland_surface_handle.commit()?;
 
-        let this = XdgToplevelHandle { wayland_surface_handle: surface, raw_handles: handles };
+        let this = ToplevelHandle { wayland_surface_handle: surface, raw_handles: handles };
 
         Ok((this, buffer))
     }

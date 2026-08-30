@@ -11,20 +11,20 @@ use crate::*;
 /// Handle to a `wl_shm` instance.
 ///
 /// Drop implementation automatically queue a [`wl_shm::Release`] request.
-pub struct WlShmHandle {
-    handle: ScopedObjectHandle<WlShm>,
+pub struct ShmHandle {
+    inner: ScopedObjectHandle<WlShm>,
     supported_formats: HashSet<PixelFormat>,
 }
 
-impl GlobalHandle for WlShmHandle {
+impl GlobalHandle for ShmHandle {
     type Interface = WlShm;
 
     fn from_raw(handle: ObjectHandle<Self::Interface>) -> Self {
-        Self { handle: handle.into(), supported_formats: Default::default() }
+        Self { inner: handle.into(), supported_formats: Default::default() }
     }
 }
 
-impl WlShmHandle {
+impl ShmHandle {
     /// Get the internally buffered set of supported formats as announced by the server.
     ///
     /// Note that the internal buffer may be out of sync with queued inbound events. Most
@@ -37,7 +37,7 @@ impl WlShmHandle {
     /// server and updates the internal set accordingly. The set can then be
     /// inspected with [`Self::get_supported_formats`].
     pub fn sync_supported_formats(&mut self) -> Result<(), ObjectEventsError> {
-        for inbound_result in self.handle.event().iter() {
+        for inbound_result in self.inner.event().iter() {
             match inbound_result? {
                 wl_shm::WlShmEvent::Format(format) => {
                     let format = format.format.inner();
@@ -51,7 +51,7 @@ impl WlShmHandle {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum CreateBufferError {
+pub enum CreateShmBufferError {
     #[error("Format not processed from a `wl_shm::format` event.")]
     UnsupportedPixelFormat,
     #[error("Bytes per pixel for format not known.")]
@@ -68,7 +68,7 @@ pub enum CreateBufferError {
     CreateBuffer(RequestError),
 }
 
-impl WlShmHandle {
+impl ShmHandle {
     /// Create a buffer without creating a standalone pool handle. (The `wl_shm_pool` is held within
     /// the wrapped `wl_buffer`)
     ///
@@ -123,34 +123,34 @@ impl WlShmHandle {
     ///     Ok(())
     /// }
     /// ````
-    pub fn create_shm_buffer(&self, width: u16, height: u16, format: PixelFormat) -> Result<ShmBuffer<Available>, CreateBufferError> {
+    pub fn create_shm_buffer(&self, width: u16, height: u16, format: PixelFormat) -> Result<ShmBuffer<Available>, CreateShmBufferError> {
         if !self.supported_formats.contains(&format) {
-            return Err(CreateBufferError::UnsupportedPixelFormat);
+            return Err(CreateShmBufferError::UnsupportedPixelFormat);
         }
 
         // i32 used used in the wire protocol but doesn't make
         // sense to be negative from a user's standpoint.
         let height = height as i32;
         let width = width as i32;
-        let bytes_per_pixel = cosplay_agent::pixel_format::bytes_per_pixel(format).ok_or(CreateBufferError::UnknownPixelDensity)?;
+        let bytes_per_pixel = cosplay_agent::pixel_format::bytes_per_pixel(format).ok_or(CreateShmBufferError::UnknownPixelDensity)?;
         // u16 * u8 can't overflow a i32.
         let stride = width * (bytes_per_pixel as i32);
-        let size = stride.checked_mul(height).ok_or(CreateBufferError::SizeOverflow)?;
+        let size = stride.checked_mul(height).ok_or(CreateShmBufferError::SizeOverflow)?;
 
-        let len = NonZeroUsize::new(size as usize).ok_or(CreateBufferError::ZeroSized)?;
+        let len = NonZeroUsize::new(size as usize).ok_or(CreateShmBufferError::ZeroSized)?;
 
         let (shm_ptr, fd) = ShmRegion::new(len)?;
 
         let raw_pool_handle = self
-            .handle
+            .inner
             .request()
             .init_subobject(|id| wl_shm::CreatePool { id, fd, size })
-            .map_err(CreateBufferError::CreatePool)?;
+            .map_err(CreateShmBufferError::CreatePool)?;
 
         let raw_buffer_handle = raw_pool_handle
             .request()
             .init_subobject(|id| wl_shm_pool::CreateBuffer { id, offset: 0, width, height, stride, format: format.into() })
-            .map_err(CreateBufferError::CreateBuffer)?;
+            .map_err(CreateShmBufferError::CreateBuffer)?;
 
         Ok(ShmBuffer::new(raw_pool_handle, raw_buffer_handle, shm_ptr))
     }
@@ -164,7 +164,7 @@ mod tests {
 
     #[test]
     fn sync_supported_formats() {
-        let (driver, mut shm_handle) = TestDriver::new_global::<WlShmHandle>();
+        let (driver, mut shm_handle) = TestDriver::new_global::<ShmHandle>();
 
         assert!(shm_handle.supported_formats.is_empty());
 
@@ -172,8 +172,8 @@ mod tests {
 
         assert!(shm_handle.supported_formats.is_empty());
 
-        driver.send_event(shm_handle.handle.id(), wl_shm::Format { format: PixelFormat::C8.into() });
-        driver.send_event(shm_handle.handle.id(), wl_shm::Format { format: PixelFormat::Xrgb4444.into() });
+        driver.send_event(shm_handle.inner.id(), wl_shm::Format { format: PixelFormat::C8.into() });
+        driver.send_event(shm_handle.inner.id(), wl_shm::Format { format: PixelFormat::Xrgb4444.into() });
 
         shm_handle.sync_supported_formats().unwrap();
 
@@ -183,42 +183,42 @@ mod tests {
 
     #[test]
     fn send_release_on_drop() {
-        let (mut driver, shm_handle) = TestDriver::new_global::<WlShmHandle>();
+        let (mut driver, shm_handle) = TestDriver::new_global::<ShmHandle>();
 
-        driver.assert_queued_destructor_on_drop::<wl_shm::Release, _>(shm_handle.handle.id(), shm_handle);
+        driver.assert_queued_destructor_on_drop::<wl_shm::Release, _>(shm_handle.inner.id(), shm_handle);
     }
 
     #[test]
     fn create_buffer_unknown_format_err() {
-        let (_driver, shm_handle) = TestDriver::new_global::<WlShmHandle>();
+        let (_driver, shm_handle) = TestDriver::new_global::<ShmHandle>();
 
         let error = shm_handle.create_shm_buffer(0, 0, PixelFormat::Argb8888).unwrap_err();
-        assert_matches!(error, CreateBufferError::UnsupportedPixelFormat);
+        assert_matches!(error, CreateShmBufferError::UnsupportedPixelFormat);
     }
 
     #[test]
     fn create_buffer_unknown_density_err() {
-        let (_driver, mut shm_handle) = TestDriver::new_global::<WlShmHandle>();
+        let (_driver, mut shm_handle) = TestDriver::new_global::<ShmHandle>();
         shm_handle.supported_formats.insert(PixelFormat::Other(0));
 
         let error = shm_handle.create_shm_buffer(0, 0, PixelFormat::Other(0)).unwrap_err();
-        assert_matches!(error, CreateBufferError::UnknownPixelDensity);
+        assert_matches!(error, CreateShmBufferError::UnknownPixelDensity);
     }
 
     #[test]
     fn create_buffer_size_overflow() {
-        let (_driver, mut shm_handle) = TestDriver::new_global::<WlShmHandle>();
+        let (_driver, mut shm_handle) = TestDriver::new_global::<ShmHandle>();
         shm_handle.supported_formats.insert(PixelFormat::Y8);
 
         assert_matches!(
             shm_handle.create_shm_buffer(u16::MAX, u16::MAX, PixelFormat::Y8),
-            Err(CreateBufferError::SizeOverflow)
+            Err(CreateShmBufferError::SizeOverflow)
         );
     }
 
     #[test]
     fn create_buffer_with_stride() {
-        let (_driver, mut shm_handle) = TestDriver::new_global::<WlShmHandle>();
+        let (_driver, mut shm_handle) = TestDriver::new_global::<ShmHandle>();
         shm_handle.supported_formats.insert(PixelFormat::Argb8888);
         shm_handle.supported_formats.insert(PixelFormat::Y8);
 

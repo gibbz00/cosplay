@@ -5,13 +5,13 @@ mod capability_broadcast;
 pub(crate) use capability_broadcast::{CapabilityBroadcast, CapabilityRemovedRx};
 
 mod seat_handle;
-pub use seat_handle::{WlSeatGetInputError, WlSeatHandle};
+pub use seat_handle::{SeatGetInputError, SeatHandle};
 
 mod pointer_handle;
-pub use pointer_handle::WlPointerHandle;
+pub use pointer_handle::PointerHandle;
 
 mod keyboard_handle;
-pub use keyboard_handle::WlKeyboardHandle;
+pub use keyboard_handle::KeyboardHandle;
 
 mod touch_handle;
-pub use touch_handle::WlTouchHandle;
+pub use touch_handle::TouchHandle;

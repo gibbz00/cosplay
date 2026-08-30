@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
 use cosplay_agent::{misc::WL_DISPLAY_ID, object_id_pool::ObjectIdRetriever};
-use cosplay_protocols_wayland::{
-    wl_callback::{self},
-    wl_display::{self, WlDisplay},
-};
+use cosplay_protocols_wayland::wl_display::{self, WlDisplay};
 
 use crate::*;
 
