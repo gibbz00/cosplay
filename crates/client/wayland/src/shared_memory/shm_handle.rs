@@ -102,14 +102,14 @@ impl ShmHandle {
     ///
     /// ```
     /// use cosplay_core_client::{RegistryHandle, SyncHandle};
-    /// use cosplay_wayland_client::shared_memory::WlShmHandle;
+    /// use cosplay_wayland_client::shared_memory::ShmHandle;
     /// use cosplay_protocols_wayland::wl_shm::PixelFormat;
     ///
     /// async fn run(
     ///     registry_handle: &mut RegistryHandle,
     ///     sync_handle: &SyncHandle,
     /// ) -> Result<(), Box<dyn std::error::Error>> {
-    ///     let mut shm_handle = registry_handle.bind::<WlShmHandle>()?;
+    ///     let mut shm_handle = registry_handle.bind::<ShmHandle>()?;
     ///
     ///     // Sync roundtrip to ensure that the server has finished its announcement of
     ///     // all supported pixel formats over `wl_shm::format` events.

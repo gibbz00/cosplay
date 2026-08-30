@@ -3,7 +3,8 @@ use std::{marker::PhantomData, sync::Arc};
 use cosplay_agent::object_id_pool::ObjectIdReturner;
 use cosplay_codec::{DecodeMessage, EncodeMessage, Message, ObjectId, OpaqueMessage, OpaqueObjectId};
 
-use crate::{event_mediator::MediatorRx, request_queue::RequestQueueRx, *};
+use super::{event_mediator::MediatorRx, request_queue::RequestQueueRx};
+use crate::*;
 
 pub struct TestDriver {
     pub id_returner: ObjectIdReturner,
