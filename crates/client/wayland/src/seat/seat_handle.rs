@@ -76,26 +76,11 @@ impl WlSeatHandle {
 
         for inbound_result in events {
             match inbound_result? {
-                ObjectEvent::Event(event) => match event {
-                    WlSeatEvent::Name(event) => {
-                        self.name = Some(event.name);
-                    }
-                    WlSeatEvent::Capabilities(event) => {
-                        self.handle_capability_change(event.capabilities.inner());
-                    }
-                },
-                ObjectEvent::Error { code, message } => {
-                    // Considered "unreachable". Implementation should have
-                    // encapsulated the respective safeguards.
-                    //
-                    // May however be triggered if there's a data race between
-                    // sending get_<input> and receiving a capability removal
-                    // event for the same input. The trailing capability
-                    // removal would in that case close the corresponding input
-                    // channels, so the resulting handle state would still be
-                    // considered valid.
-                    let code = wl_seat::Error::from_repr(code);
-                    tracing::warn!(?code, message, "Received error.");
+                WlSeatEvent::Name(event) => {
+                    self.name = Some(event.name);
+                }
+                WlSeatEvent::Capabilities(event) => {
+                    self.handle_capability_change(event.capabilities.inner());
                 }
             }
         }

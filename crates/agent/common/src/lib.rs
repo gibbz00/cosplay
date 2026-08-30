@@ -23,8 +23,8 @@ pub mod geometry {
     pub struct Rectangle {
         pub x: i32,
         pub y: i32,
-        pub width: i32,
-        pub height: i32,
+        pub width: u16,
+        pub height: u16,
     }
 }
 

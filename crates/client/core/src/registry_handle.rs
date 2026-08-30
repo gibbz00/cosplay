@@ -52,19 +52,11 @@ impl RegistryHandle {
         // Make sure that map is up to date.
         for inbound_result in self.handle.event.iter() {
             match inbound_result? {
-                ObjectEvent::Event(event) => match event {
-                    WlRegistryEvent::Global(global) => {
-                        self.registry_map.register(global);
-                    }
-                    WlRegistryEvent::GlobalRemove(global_remove) => {
-                        self.registry_map.remove(global_remove);
-                    }
-                },
-                ObjectEvent::Error { code, message } => {
-                    // Assuming that this should not occur so long as
-                    // the registry implementation is correct? Hard to
-                    // tell from the wayland.xml
-                    tracing::error!(code, message, "Registry received an unhandled error.")
+                WlRegistryEvent::Global(global) => {
+                    self.registry_map.register(global);
+                }
+                WlRegistryEvent::GlobalRemove(global_remove) => {
+                    self.registry_map.remove(global_remove);
                 }
             }
         }

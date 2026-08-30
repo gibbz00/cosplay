@@ -53,9 +53,9 @@ pub struct XdgPingPongTask {
 
 impl XdgPingPongTask {
     pub async fn run(mut self) {
-        while let Some(result) = self.event_handle.recv().await {
-            match result {
-                Ok(ObjectEvent::Event(XdgWmBaseEvent::Ping(Ping { serial }))) => {
+        loop {
+            match self.event_handle.recv().await {
+                Ok(XdgWmBaseEvent::Ping(Ping { serial })) => {
                     tracing::debug!(serial, "Received ping request. Returning pong.");
 
                     if self.request_handle.enqueue(Pong { serial }).is_err() {
@@ -63,15 +63,19 @@ impl XdgPingPongTask {
                         return;
                     }
                 }
-                Ok(ObjectEvent::Error { code, message }) => {
-                    tracing::warn!(code, message, "Received unhandled error event.");
-                }
-                Err(error) => {
-                    tracing::error!(%error, "Failed to deserialize inbound event.");
-                }
+                Err(error) => match error {
+                    ObjectEventsError::MediatorDown => {
+                        tracing::info!("Event channel closed. Aborting.");
+                        break;
+                    }
+                    ObjectEventsError::Convert(error) => {
+                        tracing::error!(%error, "Failed to deserialize inbound event.");
+                    }
+                    ObjectEventsError::ErrorEvent { code, message } => {
+                        tracing::warn!(code, message, "Received unhandled error event.");
+                    }
+                },
             }
         }
-
-        tracing::info!("Event channel closed. Aborting.");
     }
 }

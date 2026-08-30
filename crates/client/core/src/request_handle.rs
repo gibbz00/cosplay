@@ -2,6 +2,7 @@ use std::{marker::PhantomData, sync::Arc};
 
 use cosplay_agent::object_id_pool::ObjectIdRetriever;
 use cosplay_codec::{EncodeMessage, Interface, Message, NewObjectId, ObjectId, OpaqueMessage};
+use cosplay_protocols_wayland::wl_callback::WlCallback;
 
 use crate::*;
 
@@ -31,6 +32,13 @@ impl<I> RequestHandle<I> {
             .send(OpaqueMessage::from_concrete(self.id, message))
             // IMPROVEMENT: return message object back?
             .map_err(|_| RequestError::RequestQueueDown)
+    }
+
+    pub fn init_callback<M: Message<Interface = I> + EncodeMessage>(
+        &self,
+        create_request: impl FnOnce(NewObjectId<WlCallback>) -> M,
+    ) -> Result<CallbackHandle, RequestError> {
+        self.init_subobject(create_request).map(CallbackHandle::new)
     }
 
     pub fn init_subobject<M: Message<Interface = I> + EncodeMessage, J: Interface>(

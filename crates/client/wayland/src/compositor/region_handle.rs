@@ -17,13 +17,19 @@ impl WlRegionHandle {
     // Wrapper for sending [`wl_region::Add`].
     pub fn add(&self, rectangle: &Rectangle) -> Result<(), RequestError> {
         let Rectangle { x, y, width, height } = rectangle.clone();
-        self.handle.request().enqueue(wl_region::Add { x, y, width, height })
+
+        self.handle
+            .request()
+            .enqueue(wl_region::Add { x, y, width: width as i32, height: height as i32 })
     }
 
     // Wrapper for sending [`wl_region::Subtract`].
     pub fn subtract(&self, rectangle: &Rectangle) -> Result<(), RequestError> {
         let Rectangle { x, y, width, height } = rectangle.clone();
-        self.handle.request().enqueue(wl_region::Subtract { x, y, width, height })
+
+        self.handle
+            .request()
+            .enqueue(wl_region::Subtract { x, y, width: width as i32, height: height as i32 })
     }
 }
 

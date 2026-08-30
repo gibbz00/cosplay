@@ -71,7 +71,7 @@ impl EventMediator {
     fn handle_mediator_message(&mut self, message: MediatorMessage) {
         match message {
             MediatorMessage::Register(object_id, object_handle_tx) => {
-                tracing::debug!(%object_id, "Registering new object handle.");
+                tracing::trace!(%object_id, "Registering new object handle.");
 
                 if self.object_map.insert(object_id, object_handle_tx).is_some() {
                     tracing::error!(%object_id, "Object map insertion wrote over previous object transmitter. Object identifiers should be unique.");

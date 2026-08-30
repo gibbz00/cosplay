@@ -73,7 +73,8 @@ impl ShmRegion {
     ///
     /// # Safety
     ///
-    /// Caller must unsure that the server will not read or write from the memory region.
+    /// Caller must unsure that the server will not concurrently read or write from the memory
+    /// region.
     pub(crate) unsafe fn write(&mut self, src: &[u8]) {
         let src_ptr = src.as_ptr();
 
@@ -88,6 +89,15 @@ impl ShmRegion {
         //   - `self.len() <= src.len()`
         //   - Caller ensures that the backing memory region is not being accessed concurrently.
         unsafe { std::ptr::copy_nonoverlapping(src_ptr, self.ptr.cast(), src.len()) };
+    }
+
+    /// # Safety
+    ///
+    /// Caller must unsure that the server will not concurrently read or write from the memory
+    /// region.
+    pub(crate) unsafe fn as_mut_slice(&mut self) -> &mut [u8] {
+        // SAFETY: Same variants as those held for `Self::write`.
+        unsafe { std::slice::from_raw_parts_mut(self.ptr.cast(), self.len) }
     }
 
     pub(crate) fn len(&self) -> usize {

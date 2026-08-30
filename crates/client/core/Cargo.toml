@@ -15,6 +15,7 @@ cosplay-net.workspace = true
 cosplay-protocols-wayland.workspace = true
 
 impl-tools.workspace = true
+pin-project.workspace = true
 sealed.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "sync"] }

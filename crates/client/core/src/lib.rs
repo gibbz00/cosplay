@@ -21,7 +21,7 @@ mod request_handle;
 pub use request_handle::{RequestError, RequestHandle};
 
 mod event_handle;
-pub use event_handle::{EventHandle, ObjectEvent, ObjectEventsError, ObjectEventsIter};
+pub use event_handle::{EventHandle, ObjectEventsError, ObjectEventsIter};
 
 mod object_handle;
 pub use object_handle::{ObjectHandle, ObjectHandleMessage};
@@ -31,7 +31,7 @@ mod scoped_handle;
 pub use scoped_handle::ScopedObjectHandle;
 
 mod callback_handle;
-pub(crate) use callback_handle::CallbackHandle;
+pub use callback_handle::CallbackHandle;
 
 mod sync_handle;
 pub use sync_handle::{SyncError, SyncHandle};

@@ -42,12 +42,13 @@ impl SyncHandle {
         Self { request_handle }
     }
 
-    pub async fn sync(&self) -> Result<wl_callback::Done, SyncError> {
+    pub async fn sync(&self) -> Result<(), SyncError> {
         self.request_handle
-            .init_subobject(|id| wl_display::Sync { callback: id })
-            .map(CallbackHandle::new)?
-            .receive()
+            .init_callback(|id| wl_display::Sync { callback: id })?
             .await
+            // "The callback_data passed in the callback
+            // is undefined and should be ignored."
+            .map(|_data| ())
             .map_err(Into::into)
     }
 }

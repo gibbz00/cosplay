@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use cosplay_codec::ObjectId;
-use cosplay_core_client::{ObjectHandle, ScopedObjectHandle};
+use cosplay_core_client::{ObjectEventsError, ObjectHandle, ScopedObjectHandle};
 use cosplay_protocols_wayland::{wl_buffer::WlBuffer, wl_shm_pool::WlShmPool};
 
 use crate::*;
@@ -30,16 +30,19 @@ pub struct ShmBuffer<S> {
     region: ShmRegion,
 }
 
-impl ShmBuffer<Available> {
-    /// # Panics
-    ///
-    /// Panics if `src.len()` > `self.len()`.
-    pub fn write(&mut self, src: &[u8]) {
-        // SAFETY: Server should only read from buffer if the buffer is committed. This invariant is ensured
-        // by returning said buffer as `Shmbuffer<Committed>` from `WlSurfaceHandle::commit`.
-        unsafe { self.region.write(src) };
+impl<S> ShmBuffer<S> {
+    pub(crate) fn id(&self) -> ObjectId<WlBuffer> {
+        self.buffer_handle.id()
     }
 
+    // Never empty since ShmRegion::new requires len of NonZeroUsize.
+    #[expect(clippy::len_without_is_empty)]
+    pub fn len(&self) -> usize {
+        self.region.len()
+    }
+}
+
+impl ShmBuffer<Available> {
     pub(super) fn new(pool_handle: ObjectHandle<WlShmPool>, buffer_handle: ObjectHandle<WlBuffer>, region: ShmRegion) -> Self {
         Self {
             state_marker: PhantomData,
@@ -56,15 +59,36 @@ impl ShmBuffer<Available> {
     }
 }
 
-impl<S> ShmBuffer<S> {
-    pub(crate) fn id(&self) -> ObjectId<WlBuffer> {
-        self.buffer_handle.id()
+/// Mutable access to the shared memory region.
+///
+/// # Safety
+///
+/// Server should only read from buffer if the buffer is committed. This invariant is ensured by
+/// returning said buffer as `Shmbuffer<Committed>` from `WlSurfaceHandle::commit`.
+impl ShmBuffer<Available> {
+    /// # Panics
+    ///
+    /// Panics if `src.len()` > `self.len()`.
+    pub fn write(&mut self, src: &[u8]) {
+        // SAFETY: See safety section of implementation block comment.
+        unsafe { self.region.write(src) };
     }
 
-    // Never empty since ShmRegion::new requires len of NonZeroUsize.
-    #[expect(clippy::len_without_is_empty)]
-    pub fn len(&self) -> usize {
-        self.region.len()
+    pub fn as_mut_slice(&mut self) -> &mut [u8] {
+        // SAFETY: See safety section of implementation block comment.
+        unsafe { self.region.as_mut_slice() }
+    }
+}
+
+impl ShmBuffer<Committed> {
+    // FIXME: return commit buffer back if request error?
+    pub async fn release(mut self) -> Result<ShmBuffer<Available>, ObjectEventsError> {
+        // wl_buffer interface is frozen to one event, no need to match on them.
+        self.buffer_handle.event().recv().await?;
+
+        let Self { pool_handle, buffer_handle, region, .. } = self;
+
+        Ok(ShmBuffer { state_marker: PhantomData, pool_handle, buffer_handle, region })
     }
 }
 

@@ -1,7 +1,7 @@
-use cosplay_codec::{Enumeration, IntoInboundError, ReleaseRequest};
-use cosplay_core_client::{ObjectEvent, ObjectHandle, RequestError};
+use cosplay_codec::ReleaseRequest;
+use cosplay_core_client::{ObjectEventsError, ObjectHandle, RequestError};
 use cosplay_protocols_xdg_shell::{
-    xdg_surface::{AckConfigure, Configure, Error, GetToplevel, XdgSurface, XdgSurfaceEvent},
+    xdg_surface::{AckConfigure, Configure, GetToplevel, XdgSurface, XdgSurfaceEvent},
     xdg_toplevel::XdgToplevel,
     xdg_wm_base::GetXdgSurface,
 };
@@ -15,6 +15,12 @@ use crate::*;
 pub struct XdgToplevelHandle<S> {
     wayland_surface_handle: WlSurfaceHandle<S>,
     raw_handles: RawHandles,
+}
+
+impl<S> AsRef<WlSurfaceHandle<S>> for XdgToplevelHandle<S> {
+    fn as_ref(&self) -> &WlSurfaceHandle<S> {
+        &self.wayland_surface_handle
+    }
 }
 
 // NB: handles not wrapped in `ScopedObjectHandle` for manual
@@ -37,12 +43,8 @@ impl Drop for RawHandles {
 pub enum XdgToplevelError {
     #[error("Failed to encqueue request.")]
     Request(#[from] RequestError),
-    #[error("Unexpected error forwarded to xdg_surface, code: {0:?}, message: {1}")]
-    XdgSurfaceEventError(Error, String),
-    #[error("Unable to convert inbound event: {0}")]
-    IntoInbound(#[from] IntoInboundError),
-    #[error("Event channel closed.")]
-    EventChannelClosed,
+    #[error("Failed to receive inbound event: {0}")]
+    Event(#[from] ObjectEventsError),
 }
 
 impl XdgToplevelHandle<Empty> {
@@ -78,17 +80,9 @@ impl XdgToplevelHandle<Empty> {
         // - xdg_toplevel::wm_capabilities
 
         // "The client must acknowledge it and is then allowed to attach a buffer to map the surface."
-        match xdg_surface.event().recv().await {
-            Some(Ok(ObjectEvent::Event(XdgSurfaceEvent::Configure(Configure { serial })))) => {
+        match xdg_surface.event().recv().await? {
+            XdgSurfaceEvent::Configure(Configure { serial }) => {
                 xdg_surface.request().enqueue(AckConfigure { serial })?;
-            }
-            Some(Ok(ObjectEvent::Error { code, message })) => {
-                let code = Error::from_repr(code);
-                return Err(XdgToplevelError::XdgSurfaceEventError(code, message));
-            }
-            Some(Err(inbound_err)) => return Err(XdgToplevelError::IntoInbound(inbound_err)),
-            None => {
-                return Err(XdgToplevelError::EventChannelClosed);
             }
         }
 

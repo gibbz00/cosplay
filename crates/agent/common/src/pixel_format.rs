@@ -1,6 +1,6 @@
 use cosplay_protocols_wayland::wl_shm::PixelFormat;
 
-pub fn bytes_per_pixel(format: PixelFormat) -> Option<u8> {
+pub const fn bytes_per_pixel(format: PixelFormat) -> Option<u8> {
     let n = match format {
         // 8
         PixelFormat::C8 | PixelFormat::Rgb332 | PixelFormat::Bgr233 | PixelFormat::R8 | PixelFormat::Y8 => 1,

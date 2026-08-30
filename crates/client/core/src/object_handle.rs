@@ -10,8 +10,10 @@ use crate::*;
 // ensures that the server sends a `wl_display::delete_id` event, which in turn allows the event
 // mediator to return the ID to the object ID pool.
 #[impl_tools::autoimpl(Debug)]
+#[pin_project::pin_project]
 pub struct ObjectHandle<I> {
     pub(crate) request: RequestHandle<I>,
+    #[pin]
     pub(crate) event: EventHandle<I>,
 }
 

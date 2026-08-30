@@ -20,18 +20,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Sync roundtrip to ensure that all globals have been advertised.
     sync_handle.sync().await?;
 
+    // Prepare surface.
+    let wl_compositor_handle = registry_handle.bind::<WlCompositorHandle>()?;
+    let (xdg_base_handle, ping_pong_task) = registry_handle.bind::<XdgWmBaseGlobal>()?.into_parts();
+    tokio::spawn(ping_pong_task.run());
+    let toplevel_surface = xdg_base_handle.create_toplevel(&wl_compositor_handle).await?;
+
     // Prepare buffer.
     let shm_handle = create_shm_handle(&mut registry_handle, &sync_handle).await?;
     let mut buffer = shm_handle.create_shm_buffer(CatImage::WIDTH, CatImage::HEIGHT, PixelFormat::Argb8888)?;
     buffer.write(CatImage::BYTES);
-
-    // Prepare surface.
-    let wl_compositor_handle = registry_handle.bind::<WlCompositorHandle>()?;
-
-    let (xdg_base_handle, ping_pong_task) = registry_handle.bind::<XdgWmBaseGlobal>()?.into_parts();
-    tokio::spawn(ping_pong_task.run());
-
-    let toplevel_surface = xdg_base_handle.create_toplevel(&wl_compositor_handle).await?;
 
     // Display buffer. Dropping the assigned variables causes the corresponding
     // object destructors to be sent.

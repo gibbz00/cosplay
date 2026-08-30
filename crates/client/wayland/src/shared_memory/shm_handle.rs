@@ -25,15 +25,6 @@ impl GlobalHandle for WlShmHandle {
     }
 }
 
-/// Returned from [`WlShmHandle::sync_supported_formats`].
-#[derive(Debug, thiserror::Error)]
-pub enum SyncSupportedFormatsError {
-    #[error("Unhandled error event forwarded to wl_shm. {code:?}. {message}")]
-    UnhandledError { code: wl_shm::Error, message: String },
-    #[error("Failed to retrieve object events: {0}")]
-    Events(#[from] ObjectEventsError),
-}
-
 impl WlShmHandle {
     /// Get the internally buffered set of supported formats as announced by the server.
     ///
@@ -46,19 +37,12 @@ impl WlShmHandle {
     /// Checks if any new supported pixel formats have been announced by the
     /// server and updates the internal set accordingly. The set can then be
     /// inspected with [`Self::get_supported_formats`].
-    pub fn sync_supported_formats(&mut self) -> Result<(), SyncSupportedFormatsError> {
+    pub fn sync_supported_formats(&mut self) -> Result<(), ObjectEventsError> {
         for inbound_result in self.handle.event().iter() {
             match inbound_result? {
-                ObjectEvent::Event(event) => match event {
-                    wl_shm::WlShmEvent::Format(format) => {
-                        let format = format.format.inner();
-                        self.supported_formats.insert(format);
-                    }
-                },
-                // Should in theory be unreachable as the handle makes sure the invariants are met.
-                ObjectEvent::Error { code, message } => {
-                    let code = wl_shm::Error::from_repr(code);
-                    return Err(SyncSupportedFormatsError::UnhandledError { code, message });
+                wl_shm::WlShmEvent::Format(format) => {
+                    let format = format.format.inner();
+                    self.supported_formats.insert(format);
                 }
             }
         }
