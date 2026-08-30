@@ -3,7 +3,7 @@
 use cosplay_core_client::{RegistryHandle, SyncHandle};
 use cosplay_protocols_wayland::wl_shm::PixelFormat;
 use cosplay_wayland_client::{compositor::CompositorHandle, seat::SeatHandle, shared_memory::ShmHandle};
-use cosplay_xdg_shell_client::XdgWmBaseGlobal;
+use cosplay_xdg_shell_client::{TopLevelState, XdgWmBaseGlobal};
 
 mod cat;
 use cat::CatImage;
@@ -22,9 +22,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Prepare surface.
     let wl_compositor_handle = registry_handle.bind::<CompositorHandle>()?;
+
     let (wm_base_handle, ping_pong_task) = registry_handle.bind::<XdgWmBaseGlobal>()?.into_parts();
     tokio::spawn(ping_pong_task.run());
-    let toplevel_surface = wm_base_handle.create_toplevel(&wl_compositor_handle).await?;
+
+    let toplevel = wm_base_handle.create_toplevel(&wl_compositor_handle).await?;
 
     // Prepare buffer.
     let shm_handle = create_shm_handle(&mut registry_handle, &sync_handle).await?;
@@ -33,11 +35,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Display buffer. Dropping the assigned variables causes the corresponding
     // object destructors to be sent.
-    let (_toplevel_surface, _committed_buffer) = toplevel_surface.attach(Some(buffer))?.commit()?;
+    let (mut toplevel, _committed_buffer) = toplevel.attach(Some(buffer))?.commit()?;
 
     loop {
-        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        match toplevel.next_state().await? {
+            TopLevelState::ShouldClose => break,
+            TopLevelState::Configure { .. } => continue,
+        }
     }
+
+    Ok(())
 }
 
 async fn create_shm_handle(

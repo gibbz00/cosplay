@@ -41,7 +41,7 @@ pub struct WmBaseHandle {
 }
 
 impl WmBaseHandle {
-    pub async fn create_toplevel(&self, compositor: &CompositorHandle) -> Result<ToplevelHandle<Empty>, ToplevelError> {
+    pub async fn create_toplevel(&self, compositor: &CompositorHandle) -> Result<ToplevelHandle<Empty>, ToplevelCreateError> {
         ToplevelHandle::new(self, compositor).await
     }
 }

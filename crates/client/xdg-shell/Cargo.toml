@@ -5,15 +5,16 @@ edition.workspace = true
 version.workspace = true
 
 [dependencies]
+cosplay-agent.workspace = true
 cosplay-codec.workspace = true
 cosplay-core-client.workspace = true
+cosplay-wayland-client.workspace = true
 
 cosplay-protocols-wayland.workspace = true
 cosplay-protocols-xdg-shell.workspace = true
 
-cosplay-wayland-client.workspace = true
-
 thiserror.workspace = true
+tokio = { workspace = true, features = ["macros"] }
 tracing.workspace = true
 
 [dev-dependencies]

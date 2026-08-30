@@ -233,12 +233,14 @@ dependencies = [
 name = "cosplay-xdg-shell-client"
 version = "0.1.0"
 dependencies = [
+ "cosplay-agent",
  "cosplay-codec",
  "cosplay-core-client",
  "cosplay-protocols-wayland",
  "cosplay-protocols-xdg-shell",
  "cosplay-wayland-client",
  "thiserror",
+ "tokio",
  "tracing",
 ]
 

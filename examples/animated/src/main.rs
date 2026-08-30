@@ -7,7 +7,7 @@ use cosplay_wayland_client::{
     compositor::{CompositorHandle, Empty},
     shared_memory::{Available, ShmBuffer, ShmHandle},
 };
-use cosplay_xdg_shell_client::{ToplevelHandle, XdgWmBaseGlobal};
+use cosplay_xdg_shell_client::{TopLevelState, ToplevelHandle, XdgWmBaseGlobal};
 
 const HEIGHT: u16 = u8::MAX as u16;
 const WIDTH: u16 = u8::MAX as u16;
@@ -33,15 +33,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Prepare surface.
     let compositor_handle = registry_handle.bind::<CompositorHandle>()?;
+
     let (wm_base_handle, ping_pong_task) = registry_handle.bind::<XdgWmBaseGlobal>()?.into_parts();
     tokio::spawn(ping_pong_task.run());
-    let toplevel_surface = wm_base_handle.create_toplevel(&compositor_handle).await?;
+
+    let toplevel = wm_base_handle.create_toplevel(&compositor_handle).await?;
 
     // Prepare buffer.
     let shm_handle = create_shm_handle(&mut registry_handle, &sync_handle).await?;
     let buffer = shm_handle.create_shm_buffer(HEIGHT, WIDTH, PIXEL_FORMAT)?;
 
-    animate(toplevel_surface, buffer).await
+    animate(toplevel, buffer).await
 }
 
 async fn create_shm_handle(
@@ -85,7 +87,17 @@ async fn animate(mut surface: ToplevelHandle<Empty>, mut buffer: ShmBuffer<Avail
 
         // Wait for when the callback suggests that we should commit a new frame.
         timestamp = callback_frame.await?;
+
+        if let Some(config) = surface.try_next_state().await? {
+            match config {
+                TopLevelState::ShouldClose => break,
+                // TODO: handle change
+                TopLevelState::Configure { serial, change } => {}
+            }
+        }
     }
+
+    Ok(())
 }
 
 fn timestamp_to_period(timestamp: u32) -> u8 {
