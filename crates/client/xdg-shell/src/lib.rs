@@ -1,8 +1,8 @@
 // TEMP:
 #![allow(missing_docs)]
 
-mod xdg_wm_base_handle;
-pub use xdg_wm_base_handle::{WmBaseHandle, WmHandlePingPong, XdgWmBaseGlobal};
+mod wm_base_handle;
+pub use wm_base_handle::{WmBaseHandle, WmHandlePingPong, XdgWmBaseGlobal};
 
-mod xdg_toplevel;
-pub use xdg_toplevel::{ToplevelError, ToplevelHandle};
+mod toplevel;
+pub use toplevel::{ToplevelError, ToplevelHandle};
