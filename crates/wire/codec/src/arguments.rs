@@ -218,8 +218,9 @@ impl MarshalArgument for Vec<u8> {
     fn marshal(self, bag: &mut ArgumentBag<'_>) {
         let length = self.len();
 
-        // FIXME: Handle potential overflow, ~4.2 GB
-        // is not entirely unfeasable to create.
+        // IMPROVEMENT: Handle potential overflow? ~4.2 GB is not unfeasable
+        // to create, but goes against how wayland prefers working with shared
+        // memory mapped buffers.
         bag.bytes.put_u32_ne(length as u32);
         bag.bytes.extend_from_slice(&self);
         bag.bytes.put_bytes(0, padding(length));

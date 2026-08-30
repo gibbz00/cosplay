@@ -154,7 +154,8 @@ impl MessageItem {
 
         // NB: Assumes destructor is a unit struct.
         //
-        // FIXME: add exemption to destructor impl, needed if the the destructor has arguments.
+        // TODO: Add configurable exemption to destructor impl,
+        // needed if the the destructor has arguments.
 
         Some(quote! {
             impl ::cosplay_codec::ReleaseRequest for #interface_ident {
