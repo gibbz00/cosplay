@@ -1,6 +1,5 @@
 use std::{collections::HashSet, num::NonZeroUsize};
 
-use cosplay_codec::Enumeration;
 use cosplay_core_client::*;
 use cosplay_protocols_wayland::{
     wl_shm::{self, PixelFormat, WlShm},

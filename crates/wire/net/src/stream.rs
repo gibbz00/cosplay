@@ -113,7 +113,7 @@ impl<const S: usize> tokio::io::AsyncWrite for UnixStream<S> {
 
 #[cfg(test)]
 mod tests {
-    use std::os::fd::AsRawFd;
+    use std::io::Read;
 
     use rustix::cmsg_space;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -163,11 +163,11 @@ mod tests {
 
     #[tokio::test]
     async fn preserve_fd_order() {
-        let (first, second) = mock_pair_fds();
+        // Can't just compare fd values here as the kernel may change them
+        // arbitrarily when send over the socket.
 
-        // NB: Assert order preservation by fd number increment since Kernel may sometimes
-        // return new FD value when passed through a unix socket. Ex. [16, 17] -> [23, 24]
-        let fd_increment = second.as_raw_fd() - first.as_raw_fd();
+        let first = init_memfd("ABC");
+        let second = init_memfd("DEF");
 
         let (mut reader, mut writer) = mock_pair();
 
@@ -179,9 +179,46 @@ mod tests {
         let received_first = reader.pop_inbound().unwrap();
         let received_second = reader.pop_inbound().unwrap();
 
-        let received_increment = received_second.as_raw_fd() - received_first.as_raw_fd();
+        assert_fd_content(received_first, "ABC");
+        assert_fd_content(received_second, "DEF");
 
-        assert_eq!(fd_increment, received_increment);
+        fn init_memfd(str: &str) -> OwnedFd {
+            let fd = rustix::fs::memfd_create("foo", rustix::fs::MemfdFlags::CLOEXEC).unwrap();
+
+            // WORKAROUND: Using File::from(fd).write() resulted in the file
+            // being being deleted before sent over the socket, resulting to
+            // this instead.
+            {
+                rustix::fs::ftruncate(&fd, str.len() as u64).unwrap();
+
+                unsafe {
+                    // SAFETY: passed pointer is not null
+                    let mem_ptr = rustix::mm::mmap(
+                        std::ptr::null_mut(),
+                        str.len(),
+                        rustix::mm::ProtFlags::WRITE | rustix::mm::ProtFlags::READ,
+                        rustix::mm::MapFlags::SHARED,
+                        &fd,
+                        0,
+                    )
+                    .unwrap();
+
+                    // SAFETY: mem_ptr points to a continuous allocation of length str.len().
+                    std::ptr::copy_nonoverlapping(str.as_ptr(), mem_ptr.cast(), str.len());
+                }
+            }
+
+            fd
+        }
+
+        fn assert_fd_content(fd: OwnedFd, str: &str) {
+            let mut file = std::fs::File::from(fd);
+
+            let mut string = String::with_capacity(str.len());
+            file.read_to_string(&mut string).unwrap();
+
+            assert_eq!(str, &string);
+        }
     }
 
     #[tokio::test]
