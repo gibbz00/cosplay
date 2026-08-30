@@ -1,8 +1,8 @@
-mod compositor_handle;
-pub use compositor_handle::CompositorHandle;
+mod handle;
+pub use handle::CompositorHandle;
 
-mod region_handle;
-pub use region_handle::RegionHandle;
+mod region;
+pub use region::RegionHandle;
 
-mod surface_handle;
-pub use surface_handle::{Empty, Pending, SurfaceHandle};
+mod surface;
+pub use surface::{Empty, Pending, SurfaceHandle};
