@@ -38,6 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(ping_pong_task.run());
 
     let toplevel = wm_base_handle.create_toplevel(&compositor_handle).await?;
+    toplevel.set_title("animated")?;
 
     // Prepare buffer.
     let shm_handle = create_shm_handle(&mut registry_handle, &sync_handle).await?;

@@ -74,8 +74,6 @@ impl ToplevelHandle<Empty> {
 
         let toplevel = xdg_surface.request().init_subobject(|id| GetToplevel { id })?;
 
-        // TODO: Intermediary toplevel setup before first commit? (Title, app ID etc.)
-
         // "After creating a role-specific object and setting it up (e.g. by sending the title, app ID, size
         // constraints, parent, etc), the client must perform an initial commit without any buffer
         // attached."
@@ -86,7 +84,8 @@ impl ToplevelHandle<Empty> {
             inner: Inner { xdg_surface, toplevel },
         };
 
-        // "The client must acknowledge it and is then allowed to attach a buffer to map the surface."
+        // "The client must acknowledge it [xdg_surface.configure] and is then
+        // allowed to attach a buffer to map the surface."
         match this.next_state().await? {
             TopLevelState::ShouldClose => Err(ToplevelCreateError::Close),
             TopLevelState::Configure { serial, .. } => {
@@ -167,6 +166,20 @@ pub enum ToplevelStateError {
 }
 
 impl<S> ToplevelHandle<S> {
+    pub fn set_title(&self, title: impl Into<String>) -> Result<(), RequestError> {
+        self.inner
+            .toplevel
+            .request()
+            .enqueue(xdg_toplevel::SetTitle { title: title.into() })
+    }
+
+    pub fn set_app_id(&self, app_id: impl Into<String>) -> Result<(), RequestError> {
+        self.inner
+            .toplevel
+            .request()
+            .enqueue(xdg_toplevel::SetAppId { app_id: app_id.into() })
+    }
+
     /// Will only wait if config context events have been received, but not the final
     /// `xdg_surface::configure`.
     pub async fn try_next_state(&mut self) -> Result<Option<TopLevelState>, ToplevelStateError> {
